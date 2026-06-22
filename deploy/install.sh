@@ -2,7 +2,7 @@
 #
 # Sub2API Installation Script
 # Sub2API 安装脚本
-# Usage: curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/1459547510/sub2api-so-fy/main/deploy/install.sh | bash
 #
 
 set -e
@@ -31,7 +31,9 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration
-GITHUB_REPO="Wei-Shaw/sub2api"
+# Default to this fork's release channel. Override with GITHUB_REPO=owner/repo
+# only when intentionally switching update/install targets.
+GITHUB_REPO="${GITHUB_REPO:-1459547510/sub2api-so-fy}"
 INSTALL_DIR="/opt/sub2api"
 SERVICE_NAME="sub2api"
 SERVICE_USER="sub2api"
@@ -670,7 +672,7 @@ install_service() {
     cat > /etc/systemd/system/sub2api.service << EOF
 [Unit]
 Description=Sub2API - AI API Gateway Platform
-Documentation=https://github.com/Wei-Shaw/sub2api
+Documentation=https://github.com/1459547510/sub2api-so-fy
 After=network.target postgresql.service redis.service
 Wants=postgresql.service redis.service
 

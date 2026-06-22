@@ -28,7 +28,12 @@ var (
 const (
 	updateCacheKey = "update_check_cache"
 	updateCacheTTL = 1200 // 20 minutes
-	githubRepo     = "Wei-Shaw/sub2api"
+
+	// Update releases must be resolved from this fork instead of the original
+	// upstream repository. This keeps the online updater on the branch-specific
+	// release channel so fork-only additions/fixes are not overwritten by
+	// Wei-Shaw/sub2api release artifacts.
+	githubRepo = "1459547510/sub2api-so-fy"
 
 	// Security: allowed download domains for updates
 	allowedDownloadHost = "github.com"

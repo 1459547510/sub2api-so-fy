@@ -20,8 +20,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# GitHub raw content base URL
-GITHUB_RAW_URL="https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy"
+# GitHub raw content base URL. Defaults to this fork so deploy/update helpers do
+# not pull files from the original upstream repository.
+GITHUB_RAW_URL="${GITHUB_RAW_URL:-https://raw.githubusercontent.com/1459547510/sub2api-so-fy/main/deploy}"
 
 # Print colored message
 print_info() {

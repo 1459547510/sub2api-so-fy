@@ -6655,7 +6655,7 @@ export default {
     viewChangelog: 'View Changelog',
     refresh: 'Refresh',
     sourceMode: 'Source Build',
-    sourceModeHint: 'Source build, use git pull to update',
+    sourceModeHint: 'Source build: pull from the current repository/branch; do not reset to the original upstream',
     updateNow: 'Update Now',
     updating: 'Updating...',
     updateComplete: 'Update Complete',
