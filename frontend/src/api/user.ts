@@ -17,6 +17,7 @@ import type {
   UserAffiliateDetail,
   AffiliateTransferResponse,
   PlatformQuotasResponse,
+  TokenIncentiveStatus,
 } from '@/types'
 
 /**
@@ -194,6 +195,16 @@ export async function getMyPlatformQuotas(): Promise<PlatformQuotasResponse> {
   return data
 }
 
+export async function getTokenIncentiveStatus(): Promise<TokenIncentiveStatus> {
+  const { data } = await apiClient.get<TokenIncentiveStatus>('/user/token-incentive')
+  return data
+}
+
+export async function claimTokenIncentive(): Promise<TokenIncentiveStatus> {
+  const { data } = await apiClient.post<TokenIncentiveStatus>('/user/token-incentive/claim')
+  return data
+}
+
 export const userAPI = {
   getProfile,
   updateProfile,
@@ -210,6 +221,8 @@ export const userAPI = {
   getAffiliateDetail,
   transferAffiliateQuota,
   getMyPlatformQuotas,
+  getTokenIncentiveStatus,
+  claimTokenIncentive,
 }
 
 export default userAPI

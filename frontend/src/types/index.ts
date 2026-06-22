@@ -1436,6 +1436,19 @@ export interface UsageStatsResponse {
   models?: Record<string, number>
 }
 
+export interface TokenIncentiveStatus {
+  enabled: boolean
+  eligible: boolean
+  claimed: boolean
+  week_start: string
+  week_end: string
+  tokens: number
+  threshold_tokens: number
+  reward_amount: number
+  claimed_at?: string | null
+  current_balance?: number | null
+}
+
 // ==================== Trend & Chart Types ====================
 
 export interface TrendDataPoint {

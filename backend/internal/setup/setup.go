@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -63,12 +64,12 @@ func GetDataDir() string {
 
 // GetConfigFilePath returns the full path to config.yaml
 func GetConfigFilePath() string {
-	return GetDataDir() + "/" + ConfigFileName
+	return filepath.Join(GetDataDir(), ConfigFileName)
 }
 
 // GetInstallLockPath returns the full path to .installed lock file
 func GetInstallLockPath() string {
-	return GetDataDir() + "/" + InstallLockFile
+	return filepath.Join(GetDataDir(), InstallLockFile)
 }
 
 // SetupConfig holds the setup configuration
@@ -328,6 +329,9 @@ func Install(cfg *SetupConfig) error {
 
 // createInstallLock creates a lock file to prevent re-installation attacks
 func createInstallLock() error {
+	if err := os.MkdirAll(GetDataDir(), 0700); err != nil {
+		return err
+	}
 	content := fmt.Sprintf("installed_at=%s\n", time.Now().UTC().Format(time.RFC3339))
 	return os.WriteFile(GetInstallLockPath(), []byte(content), 0400) // Read-only for owner
 }
@@ -350,7 +354,7 @@ func initializeDatabase(cfg *SetupConfig) error {
 		}
 	}()
 
-	migrationCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	migrationCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	return repository.ApplyMigrations(migrationCtx, db)
 }
@@ -434,6 +438,10 @@ func createAdminUser(cfg *SetupConfig) (bool, string, error) {
 }
 
 func writeConfigFile(cfg *SetupConfig) error {
+	if err := os.MkdirAll(GetDataDir(), 0700); err != nil {
+		return err
+	}
+
 	// Ensure timezone has a default value
 	tz := cfg.Timezone
 	if tz == "" {

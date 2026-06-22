@@ -2,6 +2,7 @@
   <AppLayout>
     <TablePageLayout>
       <template #actions>
+        <div class="space-y-4">
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <!-- Total Requests -->
           <div class="card p-4">
@@ -96,6 +97,65 @@
               </p>
               <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.perRequest') }}</p>
             </div>
+          </div>
+        </div>
+        </div>
+
+        <div
+          v-if="tokenIncentive?.enabled"
+          class="card overflow-hidden border border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 p-5 dark:border-amber-900/40 dark:from-amber-950/30 dark:to-orange-950/20"
+        >
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-3">
+                <div class="rounded-xl bg-amber-100 p-2 dark:bg-amber-900/40">
+                  <Icon name="gift" size="md" class="text-amber-600 dark:text-amber-300" />
+                </div>
+                <div>
+                  <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                    {{ t('usage.tokenIncentive.title') }}
+                  </h3>
+                  <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-300">
+                    {{ t('usage.tokenIncentive.description') }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="mt-4 grid gap-3 md:grid-cols-3">
+                <div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.tokenIncentive.progress') }}</p>
+                  <p class="mt-1 font-semibold text-gray-900 dark:text-white">{{ tokenIncentiveProgressText }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.tokenIncentive.reward') }}</p>
+                  <p class="mt-1 font-semibold text-amber-700 dark:text-amber-300">{{ formatTokenIncentiveReward(tokenIncentive.reward_amount) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.tokenIncentive.week') }}</p>
+                  <p class="mt-1 font-semibold text-gray-900 dark:text-white">{{ tokenIncentiveWeekLabel }}</p>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="h-2 overflow-hidden rounded-full bg-amber-100 dark:bg-amber-950">
+                  <div
+                    class="h-full rounded-full bg-amber-500 transition-all duration-300 dark:bg-amber-400"
+                    :style="{ width: `${tokenIncentiveProgressPercent}%` }"
+                  ></div>
+                </div>
+                <p class="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  {{ tokenIncentiveStatusLabel }}
+                </p>
+              </div>
+            </div>
+
+            <button
+              class="btn btn-primary shrink-0"
+              :disabled="tokenIncentiveClaiming || tokenIncentive.claimed || !tokenIncentive.eligible"
+              @click="claimTokenIncentiveReward"
+            >
+              {{ tokenIncentiveClaimButtonLabel }}
+            </button>
           </div>
         </div>
         </div>
@@ -610,7 +670,8 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
-import { usageAPI, keysAPI } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+import { usageAPI, keysAPI, userAPI } from '@/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
@@ -620,7 +681,7 @@ import Select from '@/components/common/Select.vue'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import Icon from '@/components/icons/Icon.vue'
 import UserErrorRequestsTable from '@/components/user/UserErrorRequestsTable.vue'
-import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse, UserErrorRequest } from '@/types'
+import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse, UserErrorRequest, TokenIncentiveStatus } from '@/types'
 import type { Column } from '@/components/common/types'
 import { formatDateTime, formatReasoningEffort } from '@/utils/format'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
@@ -649,6 +710,7 @@ import {
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const authStore = useAuthStore()
 
 let abortController: AbortController | null = null
 
@@ -664,6 +726,8 @@ const tokenTooltipData = ref<UsageLog | null>(null)
 
 // Usage stats from API
 const usageStats = ref<UsageStatsResponse | null>(null)
+const tokenIncentive = ref<TokenIncentiveStatus | null>(null)
+const tokenIncentiveClaiming = ref(false)
 
 // 缓存命中率 = cache_read / (input + cache_read)
 // 分母为 0（无任何输入）时显示 '-'
@@ -815,6 +879,59 @@ const formatTokens = (value: number): string => {
   return value.toLocaleString()
 }
 
+const tokenIncentiveProgressPercent = computed(() => {
+  const status = tokenIncentive.value
+  if (!status || status.threshold_tokens <= 0) return 0
+  return Math.min(100, Math.floor((status.tokens / status.threshold_tokens) * 100))
+})
+
+const tokenIncentiveProgressText = computed(() => {
+  const status = tokenIncentive.value
+  if (!status) return '-'
+  return `${formatTokens(status.tokens)} / ${formatTokens(status.threshold_tokens)}`
+})
+
+const tokenIncentiveRemainingTokens = computed(() => {
+  const status = tokenIncentive.value
+  if (!status) return 0
+  return Math.max(status.threshold_tokens - status.tokens, 0)
+})
+
+const tokenIncentiveStatusLabel = computed(() => {
+  const status = tokenIncentive.value
+  if (!status) return ''
+  if (status.claimed) return t('usage.tokenIncentive.claimed')
+  if (status.eligible) return t('usage.tokenIncentive.eligible')
+  return t('usage.tokenIncentive.remaining', { tokens: formatTokens(tokenIncentiveRemainingTokens.value) })
+})
+
+const tokenIncentiveClaimButtonLabel = computed(() => {
+  const status = tokenIncentive.value
+  if (tokenIncentiveClaiming.value) return t('usage.tokenIncentive.claiming')
+  if (status?.claimed) return t('usage.tokenIncentive.claimed')
+  if (!status?.eligible) return t('usage.tokenIncentive.inProgress')
+  return t('usage.tokenIncentive.claim')
+})
+
+const formatTokenIncentiveDate = (value?: string | null): string => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return formatLocalDate(date)
+}
+
+const tokenIncentiveWeekLabel = computed(() => {
+  const status = tokenIncentive.value
+  if (!status) return '-'
+  const weekEnd = new Date(status.week_end)
+  if (!Number.isNaN(weekEnd.getTime())) {
+    weekEnd.setDate(weekEnd.getDate() - 1)
+  }
+  return `${formatTokenIncentiveDate(status.week_start)} ~ ${Number.isNaN(weekEnd.getTime()) ? formatTokenIncentiveDate(status.week_end) : formatLocalDate(weekEnd)}`
+})
+
+const formatTokenIncentiveReward = (amount: number): string => `¥${amount.toFixed(2)}`
+
 type UsageTableQueryParams = UsageQueryParams & {
   sort_by?: string
   sort_order?: 'asc' | 'desc'
@@ -886,10 +1003,45 @@ const loadUsageStats = async () => {
   }
 }
 
+const loadTokenIncentive = async () => {
+  try {
+    tokenIncentive.value = await userAPI.getTokenIncentiveStatus()
+  } catch (error) {
+    console.error('Failed to load token incentive status:', error)
+    appStore.showError(t('usage.tokenIncentive.loadFailed'))
+  }
+}
+
+const tokenIncentiveClaimErrorMessage = (error: unknown): string => {
+  const err = error as { reason?: string; code?: string | number }
+  const code = String(err.reason || err.code || '')
+  if (code === 'TOKEN_INCENTIVE_DISABLED') return t('usage.tokenIncentive.disabled')
+  if (code === 'TOKEN_INCENTIVE_NOT_ELIGIBLE') return t('usage.tokenIncentive.notEligible')
+  if (code === 'TOKEN_INCENTIVE_ALREADY_CLAIMED') return t('usage.tokenIncentive.alreadyClaimed')
+  return t('usage.tokenIncentive.claimFailed')
+}
+
+const claimTokenIncentiveReward = async () => {
+  if (!tokenIncentive.value?.eligible || tokenIncentive.value.claimed || tokenIncentiveClaiming.value) {
+    return
+  }
+  tokenIncentiveClaiming.value = true
+  try {
+    tokenIncentive.value = await userAPI.claimTokenIncentive()
+    await authStore.refreshUser().catch(() => {})
+    appStore.showSuccess(t('usage.tokenIncentive.claimSuccess'))
+  } catch (error) {
+    appStore.showError(tokenIncentiveClaimErrorMessage(error))
+  } finally {
+    tokenIncentiveClaiming.value = false
+  }
+}
+
 const applyFilters = () => {
   pagination.page = 1
   loadUsageLogs()
   loadUsageStats()
+  loadTokenIncentive()
 }
 
 const resetFilters = () => {
@@ -909,6 +1061,7 @@ const resetFilters = () => {
   pagination.page = 1
   loadUsageLogs()
   loadUsageStats()
+  loadTokenIncentive()
 }
 
 const handlePageChange = (page: number) => {
@@ -1119,5 +1272,6 @@ onMounted(() => {
   loadApiKeys()
   loadUsageLogs()
   loadUsageStats()
+  loadTokenIncentive()
 })
 </script>

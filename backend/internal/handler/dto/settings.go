@@ -254,6 +254,9 @@ type SystemSettings struct {
 	// Affiliate (邀请返利) feature switch
 	AffiliateEnabled bool `json:"affiliate_enabled"`
 
+	// Token incentive feature switch
+	TokenIncentiveEnabled bool `json:"token_incentive_enabled"`
+
 	// OpenAI fast/flex policy
 	OpenAIFastPolicySettings *OpenAIFastPolicySettings `json:"openai_fast_policy_settings,omitempty"`
 
@@ -324,6 +327,9 @@ type PublicSettings struct {
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
 
 	AffiliateEnabled bool `json:"affiliate_enabled"`
+
+	// Token incentive feature switch
+	TokenIncentiveEnabled bool `json:"token_incentive_enabled"`
 
 	RiskControlEnabled bool `json:"risk_control_enabled"`
 

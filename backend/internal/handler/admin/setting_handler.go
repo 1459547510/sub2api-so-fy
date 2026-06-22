@@ -303,6 +303,8 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 
 		AffiliateEnabled: settings.AffiliateEnabled,
 
+		TokenIncentiveEnabled: settings.TokenIncentiveEnabled,
+
 		AllowUserViewErrorRequests: settings.AllowUserViewErrorRequests,
 	}
 
@@ -650,6 +652,9 @@ type UpdateSettingsRequest struct {
 
 	// Affiliate (邀请返利) feature switch
 	AffiliateEnabled *bool `json:"affiliate_enabled"`
+
+	// Token incentive feature switch
+	TokenIncentiveEnabled *bool `json:"token_incentive_enabled"`
 
 	// 风控中心功能开关
 	RiskControlEnabled *bool `json:"risk_control_enabled"`
@@ -1799,6 +1804,12 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.AffiliateEnabled
 		}(),
+		TokenIncentiveEnabled: func() bool {
+			if req.TokenIncentiveEnabled != nil {
+				return *req.TokenIncentiveEnabled
+			}
+			return previousSettings.TokenIncentiveEnabled
+		}(),
 		RiskControlEnabled: func() bool {
 			if req.RiskControlEnabled != nil {
 				return *req.RiskControlEnabled
@@ -2140,6 +2151,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
 
 		AffiliateEnabled: updatedSettings.AffiliateEnabled,
+
+		TokenIncentiveEnabled: updatedSettings.TokenIncentiveEnabled,
 
 		RiskControlEnabled:          updatedSettings.RiskControlEnabled,
 		CyberSessionBlockEnabled:    updatedSettings.CyberSessionBlockEnabled,
@@ -2630,6 +2643,9 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	}
 	if before.AffiliateEnabled != after.AffiliateEnabled {
 		changed = append(changed, "affiliate_enabled")
+	}
+	if before.TokenIncentiveEnabled != after.TokenIncentiveEnabled {
+		changed = append(changed, service.SettingKeyTokenIncentiveEnabled)
 	}
 	if before.RiskControlEnabled != after.RiskControlEnabled {
 		changed = append(changed, "risk_control_enabled")
