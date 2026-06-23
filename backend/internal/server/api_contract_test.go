@@ -906,6 +906,12 @@ func TestAPIContracts(t *testing.T) {
 					"wechat_connect_redirect_url": "",
 					"wechat_connect_frontend_redirect_url": "/auth/wechat/callback",
 					"wechat_connect_scopes": "snsapi_login",
+					"token_incentive_enabled": false,
+					"token_incentive_rules": [
+						{"threshold_tokens": 50000000, "reward_amount": 2},
+						{"threshold_tokens": 100000000, "reward_amount": 5},
+						{"threshold_tokens": 500000000, "reward_amount": 10}
+					],
 					"allow_user_view_error_requests": false
 				}
 			}`,
@@ -1183,6 +1189,12 @@ func TestAPIContracts(t *testing.T) {
 					"auth_source_default_dingtalk_grant_on_signup": false,
 					"auth_source_default_dingtalk_grant_on_first_bind": false,
 					"force_email_on_third_party_signup": false,
+					"token_incentive_enabled": false,
+					"token_incentive_rules": [
+						{"threshold_tokens": 50000000, "reward_amount": 2},
+						{"threshold_tokens": 100000000, "reward_amount": 5},
+						{"threshold_tokens": 500000000, "reward_amount": 10}
+					],
 					"allow_user_view_error_requests": false
 				}
 			}`,

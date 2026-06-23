@@ -890,20 +890,6 @@ func commitMatches(current, latest string) bool {
 	return strings.HasPrefix(latest, current)
 }
 
-func appendWarning(primary string, secondary error) string {
-	if secondary == nil {
-		return primary
-	}
-	secondaryMessage := strings.TrimSpace(secondary.Error())
-	if secondaryMessage == "" {
-		return primary
-	}
-	if strings.TrimSpace(primary) == "" {
-		return secondaryMessage
-	}
-	return primary + "; branch update check failed: " + secondaryMessage
-}
-
 func appendWarnings(errs ...error) string {
 	messages := make([]string, 0, len(errs))
 	for _, err := range errs {
