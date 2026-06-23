@@ -11,11 +11,24 @@ export interface ReleaseInfo {
   html_url: string
 }
 
+export interface BranchInfo {
+  repo: string
+  branch: string
+  current_commit: string
+  latest_commit: string
+  has_new_commit: boolean
+  can_compare: boolean
+  status: string
+  compare_url?: string
+  commit_url?: string
+}
+
 export interface VersionInfo {
   current_version: string
   latest_version: string
   has_update: boolean
   release_info?: ReleaseInfo
+  branch_info?: BranchInfo
   cached: boolean
   warning?: string
   build_type: string // "source" for manual builds, "release" for CI builds

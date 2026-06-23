@@ -6,11 +6,17 @@
         @click="toggleDropdown"
         class="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs transition-colors"
         :class="[
-          hasUpdate
+          versionNeedsAttention
             ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
             : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-800 dark:text-dark-400 dark:hover:bg-dark-700'
         ]"
-        :title="hasUpdate ? t('version.updateAvailable') : t('version.upToDate')"
+        :title="
+          hasUpdate
+            ? t('version.updateAvailable')
+            : hasBranchUpdate
+              ? t('version.branchUpdateAvailable')
+              : t('version.upToDate')
+        "
       >
         <span v-if="currentVersion" class="font-medium">v{{ currentVersion }}</span>
         <span
@@ -18,7 +24,7 @@
           class="h-3 w-12 animate-pulse rounded bg-gray-200 font-medium dark:bg-dark-600"
         ></span>
         <!-- Update indicator -->
-        <span v-if="hasUpdate" class="relative flex h-2 w-2">
+        <span v-if="versionNeedsAttention" class="relative flex h-2 w-2">
           <span
             class="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"
           ></span>
@@ -88,7 +94,7 @@
                   <span v-else class="text-2xl font-bold text-gray-400 dark:text-dark-500">--</span>
                   <!-- Show check mark when up to date -->
                   <span
-                    v-if="!hasUpdate"
+                    v-if="!versionNeedsAttention"
                     class="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30"
                   >
                     <svg
@@ -108,6 +114,8 @@
                   {{
                     hasUpdate
                       ? t('version.latestVersion') + ': v' + latestVersion
+                      : hasBranchUpdate
+                        ? t('version.branchUpdateAvailable')
                       : t('version.upToDate')
                   }}
                 </p>
@@ -350,7 +358,64 @@
                 </a>
               </div>
 
-              <!-- Priority 5: Up to date - show GitHub link -->
+              <!-- Priority 5: Branch has newer commits but release tag is unchanged -->
+              <div v-else-if="hasBranchUpdate" class="space-y-2">
+                <a
+                  v-if="branchLink"
+                  :href="branchLink"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 transition-colors hover:bg-amber-100 dark:border-amber-800/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+                >
+                  <div
+                    class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50"
+                  >
+                    <Icon
+                      name="download"
+                      size="sm"
+                      :stroke-width="2"
+                      class="text-amber-600 dark:text-amber-400"
+                    />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-amber-700 dark:text-amber-300">
+                      {{ t('version.branchUpdateAvailable') }}
+                    </p>
+                    <p class="text-xs text-amber-600/70 dark:text-amber-400/70">
+                      {{ branchSummary }}
+                    </p>
+                  </div>
+                  <Icon
+                    name="externalLink"
+                    size="xs"
+                    :stroke-width="2"
+                    class="text-amber-500 transition-transform group-hover:translate-x-0.5 dark:text-amber-400"
+                  />
+                </a>
+
+                <div
+                  class="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800/50 dark:bg-blue-900/20"
+                >
+                  <svg
+                    class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-blue-500 dark:text-blue-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p class="text-xs text-blue-600 dark:text-blue-400">
+                    {{ t('version.branchUpdateHint') }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Priority 6: Up to date - show GitHub link -->
               <a
                 v-else-if="releaseInfo?.html_url && releaseInfo.html_url !== '#'"
                 :href="releaseInfo.html_url"
@@ -407,7 +472,22 @@ const currentVersion = computed(() => appStore.currentVersion || props.version |
 const latestVersion = computed(() => appStore.latestVersion)
 const hasUpdate = computed(() => appStore.hasUpdate)
 const releaseInfo = computed(() => appStore.releaseInfo)
+const branchInfo = computed(() => appStore.branchInfo)
 const buildType = computed(() => appStore.buildType)
+const hasBranchUpdate = computed(() => Boolean(branchInfo.value?.has_new_commit))
+const versionNeedsAttention = computed(() => hasUpdate.value || hasBranchUpdate.value)
+const branchLink = computed(() => branchInfo.value?.compare_url || branchInfo.value?.commit_url || '')
+const branchSummary = computed(() => {
+  const info = branchInfo.value
+  if (!info) return ''
+  const branch = `${info.repo}/${info.branch}`
+  const latest = shortCommit(info.latest_commit)
+  const current = shortCommit(info.current_commit)
+  if (info.can_compare && current) {
+    return `${branch}: ${current} → ${latest}`
+  }
+  return `${branch}: ${latest}`
+})
 
 // Update process states (local to this component)
 const updating = ref(false)
@@ -419,6 +499,11 @@ const restartCountdown = ref(0)
 
 // Only show update check for release builds (binary/docker deployment)
 const isReleaseBuild = computed(() => buildType.value === 'release')
+
+function shortCommit(commit?: string): string {
+  if (!commit || commit === 'unknown') return ''
+  return commit.slice(0, 7)
+}
 
 function toggleDropdown() {
   dropdownOpen.value = !dropdownOpen.value

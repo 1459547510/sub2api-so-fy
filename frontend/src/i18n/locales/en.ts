@@ -6681,6 +6681,8 @@ export default {
     refresh: 'Refresh',
     sourceMode: 'Source Build',
     sourceModeHint: 'Source build: pull from the current repository/branch; do not reset to the original upstream',
+    branchUpdateAvailable: 'New commits detected on the branch',
+    branchUpdateHint: 'The Release version has not changed, so one-click update will not overwrite fork changes. Pull the current repository/branch and rebuild or publish a new Release first.',
     updateNow: 'Update Now',
     updating: 'Updating...',
     updateComplete: 'Update Complete',

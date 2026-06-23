@@ -10,7 +10,8 @@ import { i18n } from '@/i18n'
 import {
   checkUpdates as checkUpdatesAPI,
   type VersionInfo,
-  type ReleaseInfo
+  type ReleaseInfo,
+  type BranchInfo
 } from '@/api/admin/system'
 import { getPublicSettings as fetchPublicSettingsAPI } from '@/api/auth'
 
@@ -41,6 +42,7 @@ export const useAppStore = defineStore('app', () => {
   const hasUpdate = ref<boolean>(false)
   const buildType = ref<string>('source')
   const releaseInfo = ref<ReleaseInfo | null>(null)
+  const branchInfo = ref<BranchInfo | null>(null)
 
   // Auto-incrementing ID for toasts
   let toastIdCounter = 0
@@ -247,6 +249,7 @@ export const useAppStore = defineStore('app', () => {
         has_update: hasUpdate.value,
         build_type: buildType.value,
         release_info: releaseInfo.value || undefined,
+        branch_info: branchInfo.value || undefined,
         cached: true
       }
     }
@@ -264,6 +267,7 @@ export const useAppStore = defineStore('app', () => {
       hasUpdate.value = data.has_update
       buildType.value = data.build_type || 'source'
       releaseInfo.value = data.release_info || null
+      branchInfo.value = data.branch_info || null
       versionLoaded.value = true
       return data
     } catch (error) {
@@ -280,6 +284,7 @@ export const useAppStore = defineStore('app', () => {
   function clearVersionCache(): void {
     versionLoaded.value = false
     hasUpdate.value = false
+    branchInfo.value = null
   }
 
   // ==================== Public Settings Management ====================
@@ -430,6 +435,7 @@ export const useAppStore = defineStore('app', () => {
     hasUpdate,
     buildType,
     releaseInfo,
+    branchInfo,
 
     // Computed
     hasActiveToasts,

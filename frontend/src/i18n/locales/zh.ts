@@ -6836,6 +6836,8 @@ export default {
     refresh: '刷新',
     sourceMode: '源码构建',
     sourceModeHint: '源码构建请从当前仓库/分支 git pull 更新，不要 reset 到原上游仓库',
+    branchUpdateAvailable: '检测到分支有新提交',
+    branchUpdateHint: '当前 Release 版本号未变化，一键更新不会覆盖二开内容；请先同步当前仓库/分支并重新构建或发布新 Release。',
     updateNow: '立即更新',
     updating: '正在更新...',
     updateComplete: '更新完成',

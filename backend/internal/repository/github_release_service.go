@@ -67,6 +67,10 @@ func (c *githubReleaseClientError) FetchLatestRelease(ctx context.Context, repo 
 	return nil, c.err
 }
 
+func (c *githubReleaseClientError) FetchBranch(ctx context.Context, repo, branch string) (*service.GitHubBranch, error) {
+	return nil, c.err
+}
+
 func (c *githubReleaseClientError) DownloadFile(ctx context.Context, url, dest string, maxSize int64) error {
 	return c.err
 }
@@ -101,6 +105,34 @@ func (c *githubReleaseClient) FetchLatestRelease(ctx context.Context, repo strin
 	}
 
 	return &release, nil
+}
+
+func (c *githubReleaseClient) FetchBranch(ctx context.Context, repo, branch string) (*service.GitHubBranch, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/branches/%s", repo, branch)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "Sub2API-Updater")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
+	}
+
+	var branchInfo service.GitHubBranch
+	if err := json.NewDecoder(resp.Body).Decode(&branchInfo); err != nil {
+		return nil, err
+	}
+
+	return &branchInfo, nil
 }
 
 func (c *githubReleaseClient) DownloadFile(ctx context.Context, url, dest string, maxSize int64) error {

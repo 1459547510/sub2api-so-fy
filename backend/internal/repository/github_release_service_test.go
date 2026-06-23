@@ -298,6 +298,54 @@ func (s *GitHubReleaseServiceSuite) TestFetchLatestRelease_ContextCancel() {
 	require.Error(s.T(), err)
 }
 
+func (s *GitHubReleaseServiceSuite) TestFetchBranch_Success() {
+	branchJSON := `{
+		"name": "main",
+		"commit": {
+			"sha": "abcdef1234567890abcdef1234567890abcdef12",
+			"url": "https://api.github.com/repos/test/repo/commits/abcdef1234567890abcdef1234567890abcdef12"
+		}
+	}`
+
+	s.srv = newLocalTestServer(s.T(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(s.T(), "/repos/test/repo/branches/main", r.URL.Path)
+		require.Equal(s.T(), "application/vnd.github.v3+json", r.Header.Get("Accept"))
+		require.Equal(s.T(), "Sub2API-Updater", r.Header.Get("User-Agent"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(branchJSON))
+	}))
+
+	s.client = &githubReleaseClient{
+		httpClient: &http.Client{
+			Transport: &testTransport{testServerURL: s.srv.URL},
+		},
+		downloadHTTPClient: &http.Client{},
+	}
+
+	branch, err := s.client.FetchBranch(context.Background(), "test/repo", "main")
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), "main", branch.Name)
+	require.Equal(s.T(), "abcdef1234567890abcdef1234567890abcdef12", branch.Commit.SHA)
+}
+
+func (s *GitHubReleaseServiceSuite) TestFetchBranch_Non200() {
+	s.srv = newLocalTestServer(s.T(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+
+	s.client = &githubReleaseClient{
+		httpClient: &http.Client{
+			Transport: &testTransport{testServerURL: s.srv.URL},
+		},
+		downloadHTTPClient: &http.Client{},
+	}
+
+	_, err := s.client.FetchBranch(context.Background(), "test/repo", "main")
+	require.Error(s.T(), err)
+	require.Contains(s.T(), err.Error(), "404")
+}
+
 func (s *GitHubReleaseServiceSuite) TestFetchChecksumFile_ContextCancel() {
 	s.srv = newLocalTestServer(s.T(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-r.Context().Done()
