@@ -147,6 +147,16 @@
                   {{ tokenIncentiveStatusLabel }}
                 </p>
               </div>
+
+              <div v-if="tokenIncentiveRules.length" class="mt-3 flex flex-wrap gap-2">
+                <span
+                  v-for="rule in tokenIncentiveRules"
+                  :key="rule.threshold_tokens"
+                  class="rounded-full border border-amber-200 bg-white/70 px-2.5 py-1 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                >
+                  {{ formatTokens(rule.threshold_tokens) }} → {{ formatTokenIncentiveReward(rule.reward_amount) }}
+                </span>
+              </div>
             </div>
 
             <button
@@ -895,6 +905,12 @@ const tokenIncentiveRemainingTokens = computed(() => {
   const status = tokenIncentive.value
   if (!status) return 0
   return Math.max(status.threshold_tokens - status.tokens, 0)
+})
+
+const tokenIncentiveRules = computed(() => {
+  const rules = tokenIncentive.value?.rules
+  if (!Array.isArray(rules)) return []
+  return [...rules].sort((a, b) => a.threshold_tokens - b.threshold_tokens)
 })
 
 const tokenIncentiveStatusLabel = computed(() => {

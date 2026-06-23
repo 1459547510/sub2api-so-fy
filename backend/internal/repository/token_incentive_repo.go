@@ -46,7 +46,7 @@ LIMIT 1`, userID, weekStart))
 	return claim, nil
 }
 
-func (r *tokenIncentiveRepository) ClaimReward(ctx context.Context, userID int64, weekStart, weekEnd time.Time, _ int64, rewardAmount float64) (*service.TokenIncentiveClaim, float64, error) {
+func (r *tokenIncentiveRepository) ClaimReward(ctx context.Context, userID int64, weekStart, weekEnd time.Time, _ int64, thresholdTokens int64, rewardAmount float64) (*service.TokenIncentiveClaim, float64, error) {
 	if r == nil || r.db == nil {
 		return nil, 0, fmt.Errorf("token incentive repository is not initialized")
 	}
@@ -57,7 +57,7 @@ func (r *tokenIncentiveRepository) ClaimReward(ctx context.Context, userID int64
 	defer func() { _ = tx.Rollback() }()
 
 	claim, err := scanTokenIncentiveClaim(tx.QueryRowContext(ctx, tokenIncentiveClaimInsertSQL,
-		userID, weekStart, weekEnd, rewardAmount, service.TokenIncentiveThresholdTokens,
+		userID, weekStart, weekEnd, rewardAmount, thresholdTokens,
 	))
 	if errors.Is(err, sql.ErrNoRows) {
 		existingClaim, getErr := scanTokenIncentiveClaim(tx.QueryRowContext(ctx, tokenIncentiveClaimSelectSQL+`
@@ -102,10 +102,7 @@ SELECT COALESCE(SUM(
     COALESCE(input_tokens, 0)::bigint +
     COALESCE(output_tokens, 0)::bigint +
     COALESCE(cache_creation_tokens, 0)::bigint +
-    COALESCE(cache_read_tokens, 0)::bigint +
-    COALESCE(cache_creation_5m_tokens, 0)::bigint +
-    COALESCE(cache_creation_1h_tokens, 0)::bigint +
-    COALESCE(image_output_tokens, 0)::bigint
+    COALESCE(cache_read_tokens, 0)::bigint
 ), 0) AS tokens
 FROM usage_logs
 WHERE user_id = $1

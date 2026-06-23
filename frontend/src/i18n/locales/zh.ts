@@ -981,7 +981,7 @@ export default {
     userAgent: 'User-Agent',
     tokenIncentive: {
       title: 'Token 激励计划',
-      description: '本周累计消耗 Token 达 1B 后，可领取 10 元返现到余额。',
+      description: '本周累计消耗 Token 达到配置档位后，可领取对应返现到余额。',
       progress: '本周进度',
       reward: '奖励',
       week: '统计周期',
@@ -5646,9 +5646,14 @@ export default {
         },
         tokenIncentive: {
           title: 'Token 激励计划',
-          description: '用户每自然周累计消耗 Token 达 1B 后，可自行领取 10 元返现到余额。',
+          description: '用户每自然周累计消耗 Token 达到配置档位后，可自行领取对应返现到余额。',
           enabled: '启用 Token 激励计划',
-          enabledHint: '关闭后用户端入口隐藏，领取接口不可用。规则固定为每周 1B Token 返现 10 元。',
+          enabledHint: '关闭后用户端入口隐藏，领取接口不可用。返现档位可在下方自定义。',
+          rules: '返现档位',
+          rulesHint: '按每周累计 Token 消耗升序配置；用户每周只能领取一次，按已达到的最高档发放。',
+          thresholdTokens: '消耗 Token 数',
+          rewardAmount: '返现金额（元）',
+          addRule: '添加档位',
         },
         affiliate: {
           title: '邀请返利',

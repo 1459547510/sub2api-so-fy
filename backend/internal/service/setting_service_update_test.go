@@ -290,6 +290,26 @@ func TestSettingService_UpdateSettings_AntigravityUserAgentVersion(t *testing.T)
 	require.Equal(t, "1.23.2", repo.updates[SettingKeyAntigravityUserAgentVersion])
 }
 
+func TestSettingService_UpdateSettings_TokenIncentiveRules(t *testing.T) {
+	repo := &settingUpdateRepoStub{}
+	svc := NewSettingService(repo, &config.Config{})
+
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		TokenIncentiveRules: []TokenIncentiveRule{
+			{ThresholdTokens: 100_000_000, RewardAmount: 5},
+			{ThresholdTokens: 50_000_000, RewardAmount: 2},
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, `[{"threshold_tokens":50000000,"reward_amount":2},{"threshold_tokens":100000000,"reward_amount":5}]`, repo.updates[SettingKeyTokenIncentiveRules])
+
+	err = svc.UpdateSettings(context.Background(), &SystemSettings{
+		TokenIncentiveRules: []TokenIncentiveRule{{ThresholdTokens: -1, RewardAmount: 2}},
+	})
+	require.Error(t, err)
+	require.Equal(t, "INVALID_TOKEN_INCENTIVE_RULES", infraerrors.Reason(err))
+}
+
 func TestSettingService_UpdateSettings_APIKeyACLTrustForwardedIPRefreshesConfig(t *testing.T) {
 	repo := &settingUpdateRepoStub{}
 	cfg := &config.Config{}

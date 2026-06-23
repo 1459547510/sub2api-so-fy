@@ -25,6 +25,11 @@ type CustomEndpoint struct {
 	Description string `json:"description"`
 }
 
+type TokenIncentiveRule struct {
+	ThresholdTokens int64   `json:"threshold_tokens"`
+	RewardAmount    float64 `json:"reward_amount"`
+}
+
 // SystemSettings represents the admin settings API response payload.
 type SystemSettings struct {
 	RegistrationEnabled              bool                     `json:"registration_enabled"`
@@ -255,7 +260,8 @@ type SystemSettings struct {
 	AffiliateEnabled bool `json:"affiliate_enabled"`
 
 	// Token incentive feature switch
-	TokenIncentiveEnabled bool `json:"token_incentive_enabled"`
+	TokenIncentiveEnabled bool                 `json:"token_incentive_enabled"`
+	TokenIncentiveRules   []TokenIncentiveRule `json:"token_incentive_rules"`
 
 	// OpenAI fast/flex policy
 	OpenAIFastPolicySettings *OpenAIFastPolicySettings `json:"openai_fast_policy_settings,omitempty"`

@@ -235,6 +235,7 @@ export interface PublicSettings {
   available_channels_enabled: boolean
   service_quota_enabled: boolean
   affiliate_enabled: boolean
+  token_incentive_enabled: boolean
   allow_user_view_error_requests?: boolean
 }
 
@@ -1445,8 +1446,16 @@ export interface TokenIncentiveStatus {
   tokens: number
   threshold_tokens: number
   reward_amount: number
+  rules: TokenIncentiveRule[]
+  next_threshold_tokens?: number
+  next_reward_amount?: number
   claimed_at?: string | null
   current_balance?: number | null
+}
+
+export interface TokenIncentiveRule {
+  threshold_tokens: number
+  reward_amount: number
 }
 
 // ==================== Trend & Chart Types ====================

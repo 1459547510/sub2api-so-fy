@@ -304,6 +304,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		AffiliateEnabled: settings.AffiliateEnabled,
 
 		TokenIncentiveEnabled: settings.TokenIncentiveEnabled,
+		TokenIncentiveRules:   tokenIncentiveRulesToDTO(settings.TokenIncentiveRules),
 
 		AllowUserViewErrorRequests: settings.AllowUserViewErrorRequests,
 	}
@@ -357,6 +358,28 @@ func openaiFastPolicySettingsFromDTO(s *dto.OpenAIFastPolicySettings) *service.O
 		rules[i].ServiceTier = tier
 	}
 	return &service.OpenAIFastPolicySettings{Rules: rules}
+}
+
+func tokenIncentiveRulesToDTO(rules []service.TokenIncentiveRule) []dto.TokenIncentiveRule {
+	result := make([]dto.TokenIncentiveRule, len(rules))
+	for i, rule := range rules {
+		result[i] = dto.TokenIncentiveRule{
+			ThresholdTokens: rule.ThresholdTokens,
+			RewardAmount:    rule.RewardAmount,
+		}
+	}
+	return result
+}
+
+func tokenIncentiveRulesFromDTO(rules []dto.TokenIncentiveRule) []service.TokenIncentiveRule {
+	result := make([]service.TokenIncentiveRule, len(rules))
+	for i, rule := range rules {
+		result[i] = service.TokenIncentiveRule{
+			ThresholdTokens: rule.ThresholdTokens,
+			RewardAmount:    rule.RewardAmount,
+		}
+	}
+	return result
 }
 
 func loginAgreementDocumentsToDTO(items []service.LoginAgreementDocument) []dto.LoginAgreementDocument {
@@ -654,7 +677,8 @@ type UpdateSettingsRequest struct {
 	AffiliateEnabled *bool `json:"affiliate_enabled"`
 
 	// Token incentive feature switch
-	TokenIncentiveEnabled *bool `json:"token_incentive_enabled"`
+	TokenIncentiveEnabled *bool                    `json:"token_incentive_enabled"`
+	TokenIncentiveRules   []dto.TokenIncentiveRule `json:"token_incentive_rules"`
 
 	// 风控中心功能开关
 	RiskControlEnabled *bool `json:"risk_control_enabled"`
@@ -1810,6 +1834,12 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.TokenIncentiveEnabled
 		}(),
+		TokenIncentiveRules: func() []service.TokenIncentiveRule {
+			if req.TokenIncentiveRules != nil {
+				return tokenIncentiveRulesFromDTO(req.TokenIncentiveRules)
+			}
+			return previousSettings.TokenIncentiveRules
+		}(),
 		RiskControlEnabled: func() bool {
 			if req.RiskControlEnabled != nil {
 				return *req.RiskControlEnabled
@@ -2153,6 +2183,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		AffiliateEnabled: updatedSettings.AffiliateEnabled,
 
 		TokenIncentiveEnabled: updatedSettings.TokenIncentiveEnabled,
+		TokenIncentiveRules:   tokenIncentiveRulesToDTO(updatedSettings.TokenIncentiveRules),
 
 		RiskControlEnabled:          updatedSettings.RiskControlEnabled,
 		CyberSessionBlockEnabled:    updatedSettings.CyberSessionBlockEnabled,
@@ -2647,6 +2678,9 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	if before.TokenIncentiveEnabled != after.TokenIncentiveEnabled {
 		changed = append(changed, service.SettingKeyTokenIncentiveEnabled)
 	}
+	if req.TokenIncentiveRules != nil && !equalTokenIncentiveRules(before.TokenIncentiveRules, after.TokenIncentiveRules) {
+		changed = append(changed, service.SettingKeyTokenIncentiveRules)
+	}
 	if before.RiskControlEnabled != after.RiskControlEnabled {
 		changed = append(changed, "risk_control_enabled")
 	}
@@ -2860,6 +2894,18 @@ func equalDefaultSubscriptions(a, b []service.DefaultSubscriptionSetting) bool {
 	}
 	for i := range a {
 		if a[i].GroupID != b[i].GroupID || a[i].ValidityDays != b[i].ValidityDays {
+			return false
+		}
+	}
+	return true
+}
+
+func equalTokenIncentiveRules(a, b []service.TokenIncentiveRule) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].ThresholdTokens != b[i].ThresholdTokens || a[i].RewardAmount != b[i].RewardAmount {
 			return false
 		}
 	}

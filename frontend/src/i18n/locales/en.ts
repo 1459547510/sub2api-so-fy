@@ -977,7 +977,7 @@ export default {
     userAgent: 'User-Agent',
     tokenIncentive: {
       title: 'Token Incentive Plan',
-      description: 'Spend 1B tokens this week to claim a ¥10 cashback reward to your balance.',
+      description: 'Spend enough tokens this week to reach a configured tier and claim the matching cashback reward to your balance.',
       progress: 'Weekly progress',
       reward: 'Reward',
       week: 'Period',
@@ -5486,9 +5486,14 @@ export default {
         },
         tokenIncentive: {
           title: 'Token Incentive Plan',
-          description: 'Users can self-claim ¥10 cashback to balance once their weekly token usage reaches 1B.',
+          description: 'Users can self-claim the configured cashback tier once their weekly token usage reaches a configured threshold.',
           enabled: 'Enable Token Incentive Plan',
-          enabledHint: 'When off, the user entry is hidden and the claim API is unavailable. Fixed rule: 1B tokens per week grants ¥10 cashback.',
+          enabledHint: 'When off, the user entry is hidden and the claim API is unavailable. Reward tiers can be customized below.',
+          rules: 'Reward tiers',
+          rulesHint: 'Configure weekly token thresholds in ascending order. Users can claim once per week at the highest reached tier.',
+          thresholdTokens: 'Token threshold',
+          rewardAmount: 'Cashback amount (CNY)',
+          addRule: 'Add tier',
         },
         affiliate: {
           title: 'Affiliate (Invite Rebate)',

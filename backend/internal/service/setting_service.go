@@ -835,6 +835,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyAvailableChannelsEnabled,
 		SettingKeyAffiliateEnabled,
 		SettingKeyTokenIncentiveEnabled,
+		SettingKeyTokenIncentiveRules,
 		SettingKeyRiskControlEnabled,
 		SettingKeyAllowUserViewErrorRequests,
 	}
@@ -1265,6 +1266,7 @@ type PublicSettingsInjectionPayload struct {
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 	AvailableChannelsEnabled             bool `json:"available_channels_enabled"`
 	AffiliateEnabled                     bool `json:"affiliate_enabled"`
+	TokenIncentiveEnabled                bool `json:"token_incentive_enabled"`
 	RiskControlEnabled                   bool `json:"risk_control_enabled"`
 	AllowUserViewErrorRequests           bool `json:"allow_user_view_error_requests"`
 }
@@ -1328,6 +1330,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 		AvailableChannelsEnabled:             settings.AvailableChannelsEnabled,
 		AffiliateEnabled:                     settings.AffiliateEnabled,
+		TokenIncentiveEnabled:                settings.TokenIncentiveEnabled,
 		RiskControlEnabled:                   settings.RiskControlEnabled,
 		AllowUserViewErrorRequests:           settings.AllowUserViewErrorRequests,
 	}, nil
@@ -1969,6 +1972,20 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	// Affiliate (邀请返利) feature switch
 	updates[SettingKeyAffiliateEnabled] = strconv.FormatBool(settings.AffiliateEnabled)
 	updates[SettingKeyTokenIncentiveEnabled] = strconv.FormatBool(settings.TokenIncentiveEnabled)
+	tokenIncentiveRules := settings.TokenIncentiveRules
+	if len(tokenIncentiveRules) == 0 {
+		tokenIncentiveRules = DefaultTokenIncentiveRules()
+	}
+	tokenIncentiveRules, err = NormalizeTokenIncentiveRules(tokenIncentiveRules)
+	if err != nil {
+		return nil, err
+	}
+	settings.TokenIncentiveRules = tokenIncentiveRules
+	tokenIncentiveRulesJSON, err := json.Marshal(tokenIncentiveRules)
+	if err != nil {
+		return nil, fmt.Errorf("marshal token incentive rules: %w", err)
+	}
+	updates[SettingKeyTokenIncentiveRules] = string(tokenIncentiveRulesJSON)
 
 	// 风控中心功能开关
 	updates[SettingKeyRiskControlEnabled] = strconv.FormatBool(settings.RiskControlEnabled)
@@ -2530,6 +2547,42 @@ func (s *SettingService) IsTokenIncentiveEnabled(ctx context.Context) bool {
 	return strings.TrimSpace(value) == "true"
 }
 
+func (s *SettingService) GetTokenIncentiveRules(ctx context.Context) []TokenIncentiveRule {
+	if s == nil || s.settingRepo == nil {
+		return DefaultTokenIncentiveRules()
+	}
+	raw, err := s.settingRepo.GetValue(ctx, SettingKeyTokenIncentiveRules)
+	if err != nil || strings.TrimSpace(raw) == "" {
+		return DefaultTokenIncentiveRules()
+	}
+	rules, err := ParseTokenIncentiveRules(raw)
+	if err != nil {
+		slog.Warn("invalid token incentive rules setting, fallback to default", "error", err)
+		return DefaultTokenIncentiveRules()
+	}
+	return rules
+}
+
+func ParseTokenIncentiveRules(raw string) ([]TokenIncentiveRule, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return DefaultTokenIncentiveRules(), nil
+	}
+	var rules []TokenIncentiveRule
+	if err := json.Unmarshal([]byte(raw), &rules); err != nil {
+		return nil, infraerrors.BadRequest("INVALID_TOKEN_INCENTIVE_RULES", "token incentive rules must be a JSON array").WithCause(err)
+	}
+	return NormalizeTokenIncentiveRules(rules)
+}
+
+func mustMarshalDefaultTokenIncentiveRules() string {
+	data, err := json.Marshal(DefaultTokenIncentiveRules())
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
+}
+
 // GetAffiliateRebateRatePercent 读取并 clamp 全局返利比例。
 // 解析失败、缺失或越界都回退到 AffiliateRebateRateDefault — 该比例从不抛错，
 // 调用方只关心一个可用的数值。
@@ -2951,6 +3004,7 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 
 		// Token incentive plan (default disabled; opt-in)
 		SettingKeyTokenIncentiveEnabled: "false",
+		SettingKeyTokenIncentiveRules:   mustMarshalDefaultTokenIncentiveRules(),
 
 		// 风控中心功能（默认关闭，显式启用）
 		SettingKeyRiskControlEnabled: "false",
@@ -3467,6 +3521,12 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 
 	// Token incentive plan (default: disabled; strict true)
 	result.TokenIncentiveEnabled = settings[SettingKeyTokenIncentiveEnabled] == "true"
+	if rules, err := ParseTokenIncentiveRules(settings[SettingKeyTokenIncentiveRules]); err != nil {
+		slog.Warn("[Setting] parseSettings: invalid token_incentive_rules, fallback to default", "error", err)
+		result.TokenIncentiveRules = DefaultTokenIncentiveRules()
+	} else {
+		result.TokenIncentiveRules = rules
+	}
 
 	// 风控中心功能（默认关闭，严格 true 才启用）
 	result.RiskControlEnabled = settings[SettingKeyRiskControlEnabled] == "true"

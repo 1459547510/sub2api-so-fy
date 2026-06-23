@@ -16,6 +16,11 @@ export interface DefaultSubscriptionSetting {
   validity_days: number;
 }
 
+export interface TokenIncentiveRule {
+  threshold_tokens: number;
+  reward_amount: number;
+}
+
 // ── 平台限额类型 ──────────────────────────────────────────────────
 export type PlatformType = "anthropic" | "openai" | "gemini" | "antigravity"
 export type QuotaWindowType = "daily" | "weekly" | "monthly"
@@ -620,6 +625,7 @@ export interface SystemSettings {
 
   // Token incentive feature switch
   token_incentive_enabled: boolean;
+  token_incentive_rules: TokenIncentiveRule[];
 
   // OpenAI fast/flex policy
   openai_fast_policy_settings?: OpenAIFastPolicySettings;
@@ -864,6 +870,7 @@ export interface UpdateSettingsRequest {
 
   // Token incentive feature switch
   token_incentive_enabled?: boolean;
+  token_incentive_rules?: TokenIncentiveRule[];
 
   // OpenAI fast/flex policy
   openai_fast_policy_settings?: OpenAIFastPolicySettings;

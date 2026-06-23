@@ -5578,6 +5578,67 @@
               </div>
               <Toggle v-model="form.token_incentive_enabled" />
             </div>
+
+            <div class="space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('admin.settings.features.tokenIncentive.rules') }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t('admin.settings.features.tokenIncentive.rulesHint') }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  :disabled="form.token_incentive_rules.length >= TOKEN_INCENTIVE_MAX_RULES"
+                  @click="addTokenIncentiveRule"
+                >
+                  + {{ t('admin.settings.features.tokenIncentive.addRule') }}
+                </button>
+              </div>
+              <div class="space-y-2">
+                <div
+                  v-for="(rule, index) in form.token_incentive_rules"
+                  :key="index"
+                  class="grid gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-dark-700 dark:bg-dark-800 md:grid-cols-[1fr_1fr_auto]"
+                >
+                  <div>
+                    <label class="input-label">{{ t('admin.settings.features.tokenIncentive.thresholdTokens') }}</label>
+                    <input
+                      v-model.number="rule.threshold_tokens"
+                      type="number"
+                      min="1"
+                      :max="TOKEN_INCENTIVE_MAX_THRESHOLD_TOKENS"
+                      step="1"
+                      class="input"
+                    />
+                  </div>
+                  <div>
+                    <label class="input-label">{{ t('admin.settings.features.tokenIncentive.rewardAmount') }}</label>
+                    <input
+                      v-model.number="rule.reward_amount"
+                      type="number"
+                      min="0.01"
+                      :max="TOKEN_INCENTIVE_MAX_REWARD_AMOUNT"
+                      step="0.01"
+                      class="input"
+                    />
+                  </div>
+                  <div class="flex items-end">
+                    <button
+                      type="button"
+                      class="btn btn-secondary w-full md:w-auto"
+                      :disabled="form.token_incentive_rules.length <= 1"
+                      @click="removeTokenIncentiveRule(index)"
+                    >
+                      {{ t('common.delete') }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -6994,6 +7055,7 @@ import type {
   UpdateSettingsRequest,
   DefaultSubscriptionSetting,
   DefaultPlatformQuotasMap,
+  TokenIncentiveRule,
   OpenAIFastPolicyRule,
   WeChatConnectMode,
   WebSearchEmulationConfig,
@@ -7627,6 +7689,55 @@ function resetClaudeOAuthSystemPromptBlocks(): void {
   syncClaudeOAuthSystemPromptBlocksFormField();
 }
 
+const defaultTokenIncentiveRules = (): TokenIncentiveRule[] => [
+  { threshold_tokens: 50_000_000, reward_amount: 2 },
+  { threshold_tokens: 100_000_000, reward_amount: 5 },
+  { threshold_tokens: 500_000_000, reward_amount: 10 },
+];
+const TOKEN_INCENTIVE_MAX_RULES = 20;
+const TOKEN_INCENTIVE_MAX_REWARD_AMOUNT = 10_000;
+const TOKEN_INCENTIVE_MAX_THRESHOLD_TOKENS = Number.MAX_SAFE_INTEGER;
+
+function normalizeTokenIncentiveRules(
+  rules?: TokenIncentiveRule[] | null,
+): TokenIncentiveRule[] {
+  const source =
+    Array.isArray(rules) && rules.length > 0
+      ? rules
+      : defaultTokenIncentiveRules();
+  const seenThresholds = new Set<number>();
+  const normalized = source
+    .map((rule) => ({
+      threshold_tokens: Math.min(
+        TOKEN_INCENTIVE_MAX_THRESHOLD_TOKENS,
+        Math.max(1, Math.floor(Number(rule.threshold_tokens) || 0)),
+      ),
+      reward_amount: Math.min(
+        TOKEN_INCENTIVE_MAX_REWARD_AMOUNT,
+        Math.max(0.01, Number(rule.reward_amount) || 0),
+      ),
+    }))
+    .filter((rule) => rule.threshold_tokens > 0 && rule.reward_amount > 0)
+    .sort((a, b) => a.threshold_tokens - b.threshold_tokens)
+    .filter((rule) => {
+      if (seenThresholds.has(rule.threshold_tokens)) return false;
+      seenThresholds.add(rule.threshold_tokens);
+      return true;
+    })
+    .slice(0, TOKEN_INCENTIVE_MAX_RULES);
+  return normalized.length > 0 ? normalized : defaultTokenIncentiveRules();
+}
+
+function addTokenIncentiveRule(): void {
+  if (form.token_incentive_rules.length >= TOKEN_INCENTIVE_MAX_RULES) return;
+  form.token_incentive_rules.push({ threshold_tokens: 50_000_000, reward_amount: 2 });
+}
+
+function removeTokenIncentiveRule(index: number): void {
+  if (form.token_incentive_rules.length <= 1) return;
+  form.token_incentive_rules.splice(index, 1);
+}
+
 
 interface DefaultSubscriptionGroupOption {
   value: number;
@@ -7879,6 +7990,7 @@ const form = reactive<SettingsForm>({
   affiliate_enabled: false,
   // Token incentive feature switch
   token_incentive_enabled: false,
+  token_incentive_rules: defaultTokenIncentiveRules(),
   // Allow user view error requests
   allow_user_view_error_requests: false,
 });
@@ -8507,6 +8619,7 @@ async function loadSettings() {
         : defaultLoginAgreementDocuments();
     Object.assign(authSourceDefaults, buildAuthSourceDefaultsState(settings));
     form.default_platform_quotas = normalizePlatformQuotasMap(settings.default_platform_quotas);
+    form.token_incentive_rules = normalizeTokenIncentiveRules(settings.token_incentive_rules);
     form.backend_mode_enabled = settings.backend_mode_enabled;
     form.default_subscriptions = normalizeDefaultSubscriptionSettings(
       settings.default_subscriptions,
@@ -9048,6 +9161,7 @@ async function saveSettings() {
       affiliate_enabled: form.affiliate_enabled,
       // Token incentive feature switch
       token_incentive_enabled: form.token_incentive_enabled,
+      token_incentive_rules: normalizeTokenIncentiveRules(form.token_incentive_rules),
       allow_user_view_error_requests: form.allow_user_view_error_requests,
     };
 
@@ -9091,6 +9205,7 @@ async function saveSettings() {
     }
     Object.assign(authSourceDefaults, buildAuthSourceDefaultsState(updated));
     form.default_platform_quotas = normalizePlatformQuotasMap(updated.default_platform_quotas);
+    form.token_incentive_rules = normalizeTokenIncentiveRules(updated.token_incentive_rules);
     registrationEmailSuffixWhitelistTags.value =
       normalizeRegistrationEmailSuffixDomains(
         updated.registration_email_suffix_whitelist,

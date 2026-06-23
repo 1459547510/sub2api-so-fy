@@ -149,6 +149,7 @@ type SystemSettings struct {
 	CyberSessionBlockTTLSeconds  int
 	AffiliateEnabled             bool
 	TokenIncentiveEnabled        bool
+	TokenIncentiveRules          []TokenIncentiveRule
 	AffiliateRebateRate          float64
 	AffiliateRebateFreezeHours   int
 	AffiliateRebateDurationDays  int
