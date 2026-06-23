@@ -11,11 +11,13 @@
             : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-800 dark:text-dark-400 dark:hover:bg-dark-700'
         ]"
         :title="
-          hasUpdate
+          updateReady
             ? t('version.updateAvailable')
-            : hasBranchUpdate
-              ? t('version.branchUpdateAvailable')
-              : t('version.upToDate')
+            : hasUpstreamUpdate
+              ? t('version.upstreamUpdateAvailable')
+              : hasBranchUpdate
+                ? t('version.branchUpdateAvailable')
+                : t('version.upToDate')
         "
       >
         <span v-if="currentVersion" class="font-medium">v{{ currentVersion }}</span>
@@ -112,11 +114,13 @@
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">
                   {{
-                    hasUpdate
-                      ? t('version.latestVersion') + ': v' + latestVersion
-                      : hasBranchUpdate
-                        ? t('version.branchUpdateAvailable')
-                      : t('version.upToDate')
+                    updateReady
+                      ? t('version.forkReleaseReady') + ': v' + forkLatestVersion
+                      : hasUpstreamUpdate
+                        ? t('version.upstreamUpdateAvailable') + ': v' + upstreamLatestVersion
+                        : hasBranchUpdate
+                          ? t('version.branchUpdateAvailable')
+                          : t('version.upToDate')
                   }}
                 </p>
               </div>
@@ -234,8 +238,8 @@
                 </button>
               </div>
 
-              <!-- Priority 3: Update available for source build - show git pull hint -->
-              <div v-else-if="hasUpdate && !isReleaseBuild" class="space-y-2">
+              <!-- Priority 3: Fork Release ready for source build - show git pull hint -->
+              <div v-else-if="updateReady && !isReleaseBuild" class="space-y-2">
                 <a
                   v-if="releaseInfo?.html_url && releaseInfo.html_url !== '#'"
                   :href="releaseInfo.html_url"
@@ -255,10 +259,10 @@
                   </div>
                   <div class="min-w-0 flex-1">
                     <p class="text-sm font-medium text-amber-700 dark:text-amber-300">
-                      {{ t('version.updateAvailable') }}
+                      {{ t('version.forkReleaseReady') }}
                     </p>
                     <p class="text-xs text-amber-600/70 dark:text-amber-400/70">
-                      v{{ latestVersion }}
+                      v{{ forkLatestVersion }}
                     </p>
                   </div>
                   <svg
@@ -294,8 +298,8 @@
                 </div>
               </div>
 
-              <!-- Priority 4: Update available for release build - show update button -->
-              <div v-else-if="hasUpdate && isReleaseBuild" class="space-y-2">
+              <!-- Priority 4: Fork Release ready for release build - show update button -->
+              <div v-else-if="canPerformUpdate" class="space-y-2">
                 <!-- Update info card -->
                 <div
                   class="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/50 dark:bg-amber-900/20"
@@ -312,10 +316,10 @@
                 </div>
                   <div class="min-w-0 flex-1">
                     <p class="text-sm font-medium text-amber-700 dark:text-amber-300">
-                      {{ t('version.updateAvailable') }}
+                      {{ t('version.forkReleaseReady') }}
                     </p>
                     <p class="text-xs text-amber-600/70 dark:text-amber-400/70">
-                      v{{ latestVersion }}
+                      v{{ forkLatestVersion }}
                     </p>
                   </div>
                 </div>
@@ -358,7 +362,79 @@
                 </a>
               </div>
 
-              <!-- Priority 5: Branch has newer commits but release tag is unchanged -->
+              <!-- Priority 5: Original upstream has updates, fork must sync/release first -->
+              <div v-else-if="hasUpstreamUpdate" class="space-y-2">
+                <a
+                  v-if="upstreamLink"
+                  :href="upstreamLink"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 transition-colors hover:bg-amber-100 dark:border-amber-800/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+                >
+                  <div
+                    class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50"
+                  >
+                    <Icon
+                      name="download"
+                      size="sm"
+                      :stroke-width="2"
+                      class="text-amber-600 dark:text-amber-400"
+                    />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-amber-700 dark:text-amber-300">
+                      {{ t('version.upstreamUpdateAvailable') }}
+                    </p>
+                    <p class="text-xs text-amber-600/70 dark:text-amber-400/70">
+                      {{ upstreamSummary }}
+                    </p>
+                  </div>
+                  <Icon
+                    name="externalLink"
+                    size="xs"
+                    :stroke-width="2"
+                    class="text-amber-500 transition-transform group-hover:translate-x-0.5 dark:text-amber-400"
+                  />
+                </a>
+
+                <div
+                  class="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800/50 dark:bg-blue-900/20"
+                >
+                  <svg
+                    class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-blue-500 dark:text-blue-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p class="text-xs text-blue-600 dark:text-blue-400">
+                    {{ t('version.upstreamSyncRequiredHint') }}
+                  </p>
+                </div>
+
+                <div
+                  v-if="isReleaseBuild"
+                  class="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-dark-700 dark:bg-dark-700/40"
+                >
+                  <Icon
+                    name="infoCircle"
+                    size="xs"
+                    :stroke-width="2"
+                    class="mt-0.5 flex-shrink-0 text-gray-500 dark:text-dark-300"
+                  />
+                  <p class="text-xs text-gray-600 dark:text-dark-300">
+                    {{ t('version.noForkReleaseReadyHint') }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Priority 6: Branch has newer commits but release tag is unchanged -->
               <div v-else-if="hasBranchUpdate" class="space-y-2">
                 <a
                   v-if="branchLink"
@@ -415,7 +491,7 @@
                 </div>
               </div>
 
-              <!-- Priority 6: Up to date - show GitHub link -->
+              <!-- Priority 7: Up to date - show GitHub link -->
               <a
                 v-else-if="releaseInfo?.html_url && releaseInfo.html_url !== '#'"
                 :href="releaseInfo.html_url"
@@ -470,13 +546,26 @@ const dropdownRef = ref<HTMLElement | null>(null)
 const loading = computed(() => appStore.versionLoading)
 const currentVersion = computed(() => appStore.currentVersion || props.version || '')
 const latestVersion = computed(() => appStore.latestVersion)
-const hasUpdate = computed(() => appStore.hasUpdate)
+const forkLatestVersion = computed(() => appStore.forkLatestVersion || appStore.latestVersion)
+const updateReady = computed(() => appStore.updateReady)
 const releaseInfo = computed(() => appStore.releaseInfo)
 const branchInfo = computed(() => appStore.branchInfo)
+const upstreamInfo = computed(() => appStore.upstreamInfo)
 const buildType = computed(() => appStore.buildType)
 const hasBranchUpdate = computed(() => Boolean(branchInfo.value?.has_new_commit))
-const versionNeedsAttention = computed(() => hasUpdate.value || hasBranchUpdate.value)
+const hasUpstreamUpdate = computed(() => Boolean(upstreamInfo.value?.has_update))
+const upstreamLatestVersion = computed(() => upstreamInfo.value?.latest_version || latestVersion.value)
+const versionNeedsAttention = computed(
+  () => updateReady.value || hasUpstreamUpdate.value || hasBranchUpdate.value
+)
 const branchLink = computed(() => branchInfo.value?.compare_url || branchInfo.value?.commit_url || '')
+const upstreamLink = computed(
+  () =>
+    upstreamInfo.value?.compare_url ||
+    upstreamInfo.value?.commit_url ||
+    upstreamInfo.value?.release_info?.html_url ||
+    ''
+)
 const branchSummary = computed(() => {
   const info = branchInfo.value
   if (!info) return ''
@@ -484,9 +573,27 @@ const branchSummary = computed(() => {
   const latest = shortCommit(info.latest_commit)
   const current = shortCommit(info.current_commit)
   if (info.can_compare && current) {
-    return `${branch}: ${current} → ${latest}`
+    return `${branch}: ${current} -> ${latest}`
   }
   return `${branch}: ${latest}`
+})
+const upstreamSummary = computed(() => {
+  const info = upstreamInfo.value
+  if (!info) return ''
+  const parts: string[] = []
+  if (info.has_new_version && info.latest_version) {
+    parts.push(`v${info.latest_version}`)
+  }
+  if (info.has_new_commit) {
+    const latest = shortCommit(info.latest_commit)
+    const current = shortCommit(info.current_commit)
+    if (info.can_compare && current) {
+      parts.push(`${current} -> ${latest}`)
+    } else if (latest) {
+      parts.push(latest)
+    }
+  }
+  return parts.length > 0 ? parts.join(' / ') : `${info.repo}/${info.branch}`
 })
 
 // Update process states (local to this component)
@@ -499,6 +606,7 @@ const restartCountdown = ref(0)
 
 // Only show update check for release builds (binary/docker deployment)
 const isReleaseBuild = computed(() => buildType.value === 'release')
+const canPerformUpdate = computed(() => updateReady.value && isReleaseBuild.value)
 
 function shortCommit(commit?: string): string {
   if (!commit || commit === 'unknown') return ''
@@ -525,7 +633,7 @@ async function refreshVersion(force = true) {
 }
 
 async function handleUpdate() {
-  if (updating.value) return
+  if (updating.value || !canPerformUpdate.value) return
 
   updating.value = true
   updateError.value = ''

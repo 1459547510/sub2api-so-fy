@@ -329,6 +329,56 @@ func (s *GitHubReleaseServiceSuite) TestFetchBranch_Success() {
 	require.Equal(s.T(), "abcdef1234567890abcdef1234567890abcdef12", branch.Commit.SHA)
 }
 
+func (s *GitHubReleaseServiceSuite) TestCompareCommits_Success() {
+	compareJSON := `{
+		"status": "ahead",
+		"ahead_by": 2,
+		"behind_by": 0,
+		"html_url": "https://github.com/test/repo/compare/base...head",
+		"permalink_url": "https://github.com/test/repo/compare/base...head",
+		"total_commits": 2
+	}`
+
+	s.srv = newLocalTestServer(s.T(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(s.T(), "/repos/test/repo/compare/base...head", r.URL.Path)
+		require.Equal(s.T(), "application/vnd.github.v3+json", r.Header.Get("Accept"))
+		require.Equal(s.T(), "Sub2API-Updater", r.Header.Get("User-Agent"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(compareJSON))
+	}))
+
+	s.client = &githubReleaseClient{
+		httpClient: &http.Client{
+			Transport: &testTransport{testServerURL: s.srv.URL},
+		},
+		downloadHTTPClient: &http.Client{},
+	}
+
+	compare, err := s.client.CompareCommits(context.Background(), "test/repo", "base", "head")
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), "ahead", compare.Status)
+	require.Equal(s.T(), 2, compare.AheadBy)
+	require.Equal(s.T(), "https://github.com/test/repo/compare/base...head", compare.HTMLURL)
+}
+
+func (s *GitHubReleaseServiceSuite) TestCompareCommits_Non200() {
+	s.srv = newLocalTestServer(s.T(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+
+	s.client = &githubReleaseClient{
+		httpClient: &http.Client{
+			Transport: &testTransport{testServerURL: s.srv.URL},
+		},
+		downloadHTTPClient: &http.Client{},
+	}
+
+	_, err := s.client.CompareCommits(context.Background(), "test/repo", "base", "head")
+	require.Error(s.T(), err)
+	require.Contains(s.T(), err.Error(), "404")
+}
+
 func (s *GitHubReleaseServiceSuite) TestFetchBranch_Non200() {
 	s.srv = newLocalTestServer(s.T(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)

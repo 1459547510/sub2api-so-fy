@@ -29,24 +29,40 @@ import (
 //go:embed VERSION
 var embeddedVersion string
 
+//go:embed UPSTREAM_COMMIT
+var embeddedUpstreamCommit string
+
 // Build-time variables (can be set by ldflags)
 var (
-	Version   = ""
-	Commit    = "unknown"
-	Date      = "unknown"
-	BuildType = "source" // "source" for manual builds, "release" for CI builds (set by ldflags)
+	Version        = ""
+	Commit         = "unknown"
+	UpstreamCommit = "unknown"
+	Date           = "unknown"
+	BuildType      = "source" // "source" for manual builds, "release" for CI builds (set by ldflags)
 )
 
 func init() {
-	// 如果 Version 已通过 ldflags 注入（例如 -X main.Version=...），则不要覆盖。
+	// 如果 Version 已通过 ldflags 注入，则不要覆盖。
 	if strings.TrimSpace(Version) != "" {
+		initUpstreamCommit()
 		return
 	}
 
-	// 默认从 embedded VERSION 文件读取版本号（编译期打包进二进制）。
+	// 默认从 embedded VERSION 文件读取版本号。
 	Version = strings.TrimSpace(embeddedVersion)
 	if Version == "" {
 		Version = "0.0.0-dev"
+	}
+	initUpstreamCommit()
+}
+
+func initUpstreamCommit() {
+	if strings.TrimSpace(UpstreamCommit) != "" && strings.TrimSpace(UpstreamCommit) != "unknown" {
+		return
+	}
+	UpstreamCommit = strings.TrimSpace(embeddedUpstreamCommit)
+	if UpstreamCommit == "" {
+		UpstreamCommit = "unknown"
 	}
 }
 
@@ -144,9 +160,10 @@ func runMainServer() {
 	}
 
 	buildInfo := handler.BuildInfo{
-		Version:   Version,
-		BuildType: BuildType,
-		Commit:    Commit,
+		Version:        Version,
+		BuildType:      BuildType,
+		Commit:         Commit,
+		UpstreamCommit: UpstreamCommit,
 	}
 
 	app, err := initializeApplication(buildInfo)

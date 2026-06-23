@@ -23,6 +23,7 @@ builds:
     ldflags:
       - -s -w
       - -X main.Commit={{.Commit}}
+      - -X main.UpstreamCommit={{ if index .Env "UPSTREAM_COMMIT" }}{{ .Env.UPSTREAM_COMMIT }}{{ else }}unknown{{ end }}
       - -X main.Date={{.Date}}
       - -X main.BuildType=release
 

@@ -16,9 +16,10 @@ import (
 
 // BuildInfo contains build information
 type BuildInfo struct {
-	Version   string
-	BuildType string
-	Commit    string
+	Version        string
+	BuildType      string
+	Commit         string
+	UpstreamCommit string
 }
 
 // ProvidePricingService creates and initializes PricingService
@@ -33,7 +34,7 @@ func ProvidePricingService(cfg *config.Config, remoteClient PricingRemoteClient)
 
 // ProvideUpdateService creates UpdateService with BuildInfo
 func ProvideUpdateService(cache UpdateCache, githubClient GitHubReleaseClient, buildInfo BuildInfo) *UpdateService {
-	return NewUpdateService(cache, githubClient, buildInfo.Version, buildInfo.BuildType, buildInfo.Commit)
+	return NewUpdateService(cache, githubClient, buildInfo.Version, buildInfo.BuildType, buildInfo.Commit, buildInfo.UpstreamCommit)
 }
 
 // ProvideEmailQueueService creates EmailQueueService with default worker count

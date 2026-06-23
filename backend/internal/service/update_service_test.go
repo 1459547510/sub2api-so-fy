@@ -28,21 +28,39 @@ func (s *updateServiceCacheStub) SetUpdateInfo(_ context.Context, data string, _
 }
 
 type updateServiceGitHubClientStub struct {
-	release    *GitHubRelease
-	branch     *GitHubBranch
-	repo       string
-	branchRepo string
-	branchName string
+	release        *GitHubRelease
+	releases       map[string]*GitHubRelease
+	branch         *GitHubBranch
+	branches       map[string]*GitHubBranch
+	compare        *GitHubCompare
+	compares       map[string]*GitHubCompare
+	repo           string
+	releaseRepos   []string
+	branchRepo     string
+	branchName     string
+	branchRequests []string
 }
 
 func (s *updateServiceGitHubClientStub) FetchLatestRelease(_ context.Context, repo string) (*GitHubRelease, error) {
 	s.repo = repo
+	s.releaseRepos = append(s.releaseRepos, repo)
+	if s.releases != nil {
+		if release, ok := s.releases[repo]; ok {
+			return release, nil
+		}
+	}
 	return s.release, nil
 }
 
 func (s *updateServiceGitHubClientStub) FetchBranch(_ context.Context, repo, branch string) (*GitHubBranch, error) {
 	s.branchRepo = repo
 	s.branchName = branch
+	s.branchRequests = append(s.branchRequests, repo+":"+branch)
+	if s.branches != nil {
+		if branchInfo, ok := s.branches[repo+":"+branch]; ok {
+			return branchInfo, nil
+		}
+	}
 	if s.branch != nil {
 		return s.branch, nil
 	}
@@ -52,6 +70,18 @@ func (s *updateServiceGitHubClientStub) FetchBranch(_ context.Context, repo, bra
 			SHA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		},
 	}, nil
+}
+
+func (s *updateServiceGitHubClientStub) CompareCommits(_ context.Context, repo, base, head string) (*GitHubCompare, error) {
+	if s.compares != nil {
+		if compare, ok := s.compares[repo+":"+base+":"+head]; ok {
+			return compare, nil
+		}
+	}
+	if s.compare != nil {
+		return s.compare, nil
+	}
+	return &GitHubCompare{Status: "ahead", AheadBy: 1, TotalCommits: 1}, nil
 }
 
 func (s *updateServiceGitHubClientStub) DownloadFile(context.Context, string, string, int64) error {
@@ -95,10 +125,11 @@ func TestUpdateServiceUsesForkReleaseRepository(t *testing.T) {
 
 	require.NoError(t, err)
 	require.False(t, info.HasUpdate)
-	require.Equal(t, githubRepo, client.repo)
-	require.Equal(t, "1459547510/sub2api-so-fy", client.repo)
-	require.Equal(t, githubRepo, client.branchRepo)
-	require.Equal(t, githubBranch, client.branchName)
+	require.Contains(t, client.releaseRepos, githubRepo)
+	require.Contains(t, client.releaseRepos, upstreamGithubRepo)
+	require.Equal(t, "1459547510/sub2api-so-fy", githubRepo)
+	require.Contains(t, client.branchRequests, githubRepo+":"+githubBranch)
+	require.Contains(t, client.branchRequests, upstreamGithubRepo+":"+githubBranch)
 }
 
 func TestUpdateServiceDetectsForkBranchCommitUpdate(t *testing.T) {
@@ -107,10 +138,18 @@ func TestUpdateServiceDetectsForkBranchCommitUpdate(t *testing.T) {
 			TagName: "v0.1.138",
 			Name:    "v0.1.138",
 		},
-		branch: &GitHubBranch{
-			Name: githubBranch,
-			Commit: GitHubCommitRef{
-				SHA: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		branches: map[string]*GitHubBranch{
+			githubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+				},
+			},
+			upstreamGithubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
 			},
 		},
 	}
@@ -133,6 +172,127 @@ func TestUpdateServiceDetectsForkBranchCommitUpdate(t *testing.T) {
 	require.Equal(t, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", info.BranchInfo.CurrentCommit)
 	require.Equal(t, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", info.BranchInfo.LatestCommit)
 	require.Contains(t, info.BranchInfo.CompareURL, "/compare/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+}
+
+func TestUpdateServiceDetectsUpstreamUpdateButBlocksOneClickUntilForkRelease(t *testing.T) {
+	forkHead := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	upstreamHead := "cccccccccccccccccccccccccccccccccccccccc"
+	client := &updateServiceGitHubClientStub{
+		releases: map[string]*GitHubRelease{
+			githubRepo: {
+				TagName: "v0.1.138",
+				Name:    "v0.1.138",
+			},
+			upstreamGithubRepo: {
+				TagName: "v0.1.139",
+				Name:    "v0.1.139",
+			},
+		},
+		branches: map[string]*GitHubBranch{
+			githubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: forkHead,
+				},
+			},
+			upstreamGithubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: upstreamHead,
+				},
+			},
+		},
+		compares: map[string]*GitHubCompare{
+			upstreamGithubRepo + ":" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + ":" + upstreamHead: {
+				Status:       "ahead",
+				AheadBy:      1,
+				TotalCommits: 1,
+				HTMLURL:      "https://github.com/Wei-Shaw/sub2api/compare/base...head",
+			},
+			githubRepo + ":" + upstreamHead + ":" + forkHead: {
+				Status:   "behind",
+				BehindBy: 1,
+			},
+		},
+	}
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		client,
+		"0.1.138",
+		"release",
+		forkHead,
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	)
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+
+	require.NoError(t, err)
+	require.True(t, info.HasUpdate)
+	require.False(t, info.UpdateReady, "upstream-only update must not be installed from an unsynced fork release")
+	require.Equal(t, "0.1.139", info.LatestVersion)
+	require.Equal(t, "0.1.138", info.ForkLatestVersion)
+	require.NotNil(t, info.UpstreamInfo)
+	require.True(t, info.UpstreamInfo.HasUpdate)
+	require.True(t, info.UpstreamInfo.HasNewVersion)
+	require.True(t, info.UpstreamInfo.SyncRequired)
+}
+
+func TestUpdateServiceAllowsForkReleaseWhenItContainsUpstreamHead(t *testing.T) {
+	upstreamHead := "cccccccccccccccccccccccccccccccccccccccc"
+	forkHead := "dddddddddddddddddddddddddddddddddddddddd"
+	client := &updateServiceGitHubClientStub{
+		releases: map[string]*GitHubRelease{
+			githubRepo: {
+				TagName: "v0.1.139",
+				Name:    "v0.1.139",
+			},
+			upstreamGithubRepo: {
+				TagName: "v0.1.139",
+				Name:    "v0.1.139",
+			},
+		},
+		branches: map[string]*GitHubBranch{
+			githubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: forkHead,
+				},
+			},
+			upstreamGithubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: upstreamHead,
+				},
+			},
+		},
+		compares: map[string]*GitHubCompare{
+			upstreamGithubRepo + ":" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + ":" + upstreamHead: {
+				Status:       "ahead",
+				AheadBy:      1,
+				TotalCommits: 1,
+			},
+			githubRepo + ":" + upstreamHead + ":" + forkHead: {
+				Status:  "ahead",
+				AheadBy: 2,
+			},
+		},
+	}
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		client,
+		"0.1.138",
+		"release",
+		"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	)
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+
+	require.NoError(t, err)
+	require.True(t, info.HasUpdate)
+	require.True(t, info.UpdateReady)
+	require.NotNil(t, info.UpstreamInfo)
+	require.False(t, info.UpstreamInfo.SyncRequired)
 }
 
 func TestUpdateServiceDoesNotFlagSameCommitPrefix(t *testing.T) {

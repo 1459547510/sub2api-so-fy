@@ -44,6 +44,7 @@ FROM ${GOLANG_IMAGE} AS backend-builder
 # Build arguments for version info (set by CI)
 ARG VERSION=
 ARG COMMIT=docker
+ARG UPSTREAM_COMMIT=unknown
 ARG DATE
 ARG GOPROXY
 ARG GOSUMDB
@@ -73,7 +74,7 @@ RUN VERSION_VALUE="${VERSION}" && \
     DATE_VALUE="${DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" && \
     CGO_ENABLED=0 GOOS=linux go build \
     -tags embed \
-    -ldflags="-s -w -X main.Version=${VERSION_VALUE} -X main.Commit=${COMMIT} -X main.Date=${DATE_VALUE} -X main.BuildType=release" \
+    -ldflags="-s -w -X main.Version=${VERSION_VALUE} -X main.Commit=${COMMIT} -X main.UpstreamCommit=${UPSTREAM_COMMIT} -X main.Date=${DATE_VALUE} -X main.BuildType=release" \
     -trimpath \
     -o /app/sub2api \
     ./cmd/server

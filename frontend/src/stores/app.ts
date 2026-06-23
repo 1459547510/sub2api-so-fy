@@ -11,7 +11,8 @@ import {
   checkUpdates as checkUpdatesAPI,
   type VersionInfo,
   type ReleaseInfo,
-  type BranchInfo
+  type BranchInfo,
+  type UpstreamInfo
 } from '@/api/admin/system'
 import { getPublicSettings as fetchPublicSettingsAPI } from '@/api/auth'
 
@@ -39,10 +40,13 @@ export const useAppStore = defineStore('app', () => {
   const versionLoading = ref<boolean>(false)
   const currentVersion = ref<string>('')
   const latestVersion = ref<string>('')
+  const forkLatestVersion = ref<string>('')
   const hasUpdate = ref<boolean>(false)
+  const updateReady = ref<boolean>(false)
   const buildType = ref<string>('source')
   const releaseInfo = ref<ReleaseInfo | null>(null)
   const branchInfo = ref<BranchInfo | null>(null)
+  const upstreamInfo = ref<UpstreamInfo | null>(null)
 
   // Auto-incrementing ID for toasts
   let toastIdCounter = 0
@@ -246,10 +250,13 @@ export const useAppStore = defineStore('app', () => {
       return {
         current_version: currentVersion.value,
         latest_version: latestVersion.value,
+        fork_latest_version: forkLatestVersion.value,
         has_update: hasUpdate.value,
+        update_ready: updateReady.value,
         build_type: buildType.value,
         release_info: releaseInfo.value || undefined,
         branch_info: branchInfo.value || undefined,
+        upstream_info: upstreamInfo.value || undefined,
         cached: true
       }
     }
@@ -264,10 +271,13 @@ export const useAppStore = defineStore('app', () => {
       const data = await checkUpdatesAPI(force)
       currentVersion.value = data.current_version
       latestVersion.value = data.latest_version
+      forkLatestVersion.value = data.fork_latest_version || data.latest_version
       hasUpdate.value = data.has_update
+      updateReady.value = data.update_ready || false
       buildType.value = data.build_type || 'source'
       releaseInfo.value = data.release_info || null
       branchInfo.value = data.branch_info || null
+      upstreamInfo.value = data.upstream_info || null
       versionLoaded.value = true
       return data
     } catch (error) {
@@ -284,7 +294,9 @@ export const useAppStore = defineStore('app', () => {
   function clearVersionCache(): void {
     versionLoaded.value = false
     hasUpdate.value = false
+    updateReady.value = false
     branchInfo.value = null
+    upstreamInfo.value = null
   }
 
   // ==================== Public Settings Management ====================
@@ -432,10 +444,13 @@ export const useAppStore = defineStore('app', () => {
     versionLoading,
     currentVersion,
     latestVersion,
+    forkLatestVersion,
     hasUpdate,
+    updateReady,
     buildType,
     releaseInfo,
     branchInfo,
+    upstreamInfo,
 
     // Computed
     hasActiveToasts,

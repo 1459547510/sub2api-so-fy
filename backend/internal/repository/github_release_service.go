@@ -71,6 +71,10 @@ func (c *githubReleaseClientError) FetchBranch(ctx context.Context, repo, branch
 	return nil, c.err
 }
 
+func (c *githubReleaseClientError) CompareCommits(ctx context.Context, repo, base, head string) (*service.GitHubCompare, error) {
+	return nil, c.err
+}
+
 func (c *githubReleaseClientError) DownloadFile(ctx context.Context, url, dest string, maxSize int64) error {
 	return c.err
 }
@@ -133,6 +137,34 @@ func (c *githubReleaseClient) FetchBranch(ctx context.Context, repo, branch stri
 	}
 
 	return &branchInfo, nil
+}
+
+func (c *githubReleaseClient) CompareCommits(ctx context.Context, repo, base, head string) (*service.GitHubCompare, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/compare/%s...%s", repo, base, head)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "Sub2API-Updater")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
+	}
+
+	var compare service.GitHubCompare
+	if err := json.NewDecoder(resp.Body).Decode(&compare); err != nil {
+		return nil, err
+	}
+
+	return &compare, nil
 }
 
 func (c *githubReleaseClient) DownloadFile(ctx context.Context, url, dest string, maxSize int64) error {

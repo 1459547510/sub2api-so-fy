@@ -34,8 +34,9 @@ const (
 	// upstream repository. This keeps the online updater on the branch-specific
 	// release channel so fork-only additions/fixes are not overwritten by
 	// Wei-Shaw/sub2api release artifacts.
-	githubRepo   = "1459547510/sub2api-so-fy"
-	githubBranch = "main"
+	githubRepo         = "1459547510/sub2api-so-fy"
+	upstreamGithubRepo = "Wei-Shaw/sub2api"
+	githubBranch       = "main"
 
 	// Security: allowed download domains for updates
 	allowedDownloadHost = "github.com"
@@ -55,6 +56,7 @@ type UpdateCache interface {
 type GitHubReleaseClient interface {
 	FetchLatestRelease(ctx context.Context, repo string) (*GitHubRelease, error)
 	FetchBranch(ctx context.Context, repo, branch string) (*GitHubBranch, error)
+	CompareCommits(ctx context.Context, repo, base, head string) (*GitHubCompare, error)
 	DownloadFile(ctx context.Context, url, dest string, maxSize int64) error
 	FetchChecksumFile(ctx context.Context, url string) ([]byte, error)
 }
@@ -65,6 +67,7 @@ type UpdateService struct {
 	githubClient   GitHubReleaseClient
 	currentVersion string
 	currentCommit  string
+	upstreamCommit string
 	buildType      string // "source" for manual builds, "release" for CI builds
 }
 
@@ -77,25 +80,33 @@ func NewUpdateService(cache UpdateCache, githubClient GitHubReleaseClient, versi
 	if normalizeCommitSHA(currentCommit) == "" {
 		currentCommit = resolveBuildCommit()
 	}
+	upstreamCommit := "unknown"
+	if len(commit) > 1 && strings.TrimSpace(commit[1]) != "" {
+		upstreamCommit = strings.TrimSpace(commit[1])
+	}
 	return &UpdateService{
 		cache:          cache,
 		githubClient:   githubClient,
 		currentVersion: version,
 		currentCommit:  currentCommit,
+		upstreamCommit: upstreamCommit,
 		buildType:      buildType,
 	}
 }
 
 // UpdateInfo contains update information
 type UpdateInfo struct {
-	CurrentVersion string       `json:"current_version"`
-	LatestVersion  string       `json:"latest_version"`
-	HasUpdate      bool         `json:"has_update"`
-	ReleaseInfo    *ReleaseInfo `json:"release_info,omitempty"`
-	BranchInfo     *BranchInfo  `json:"branch_info,omitempty"`
-	Cached         bool         `json:"cached"`
-	Warning        string       `json:"warning,omitempty"`
-	BuildType      string       `json:"build_type"` // "source" or "release"
+	CurrentVersion    string        `json:"current_version"`
+	LatestVersion     string        `json:"latest_version"`
+	ForkLatestVersion string        `json:"fork_latest_version"`
+	HasUpdate         bool          `json:"has_update"`
+	UpdateReady       bool          `json:"update_ready"`
+	ReleaseInfo       *ReleaseInfo  `json:"release_info,omitempty"`
+	BranchInfo        *BranchInfo   `json:"branch_info,omitempty"`
+	UpstreamInfo      *UpstreamInfo `json:"upstream_info,omitempty"`
+	Cached            bool          `json:"cached"`
+	Warning           string        `json:"warning,omitempty"`
+	BuildType         string        `json:"build_type"` // "source" or "release"
 }
 
 // ReleaseInfo contains GitHub release details
@@ -127,6 +138,25 @@ type BranchInfo struct {
 	CommitURL     string `json:"commit_url,omitempty"`
 }
 
+// UpstreamInfo contains original repository update information.
+type UpstreamInfo struct {
+	Repo          string       `json:"repo"`
+	Branch        string       `json:"branch"`
+	LatestVersion string       `json:"latest_version"`
+	HasUpdate     bool         `json:"has_update"`
+	HasNewVersion bool         `json:"has_new_version"`
+	HasNewCommit  bool         `json:"has_new_commit"`
+	SyncRequired  bool         `json:"sync_required"`
+	CanCompare    bool         `json:"can_compare"`
+	Status        string       `json:"status"`
+	ReleaseInfo   *ReleaseInfo `json:"release_info,omitempty"`
+	CurrentCommit string       `json:"current_commit"`
+	LatestCommit  string       `json:"latest_commit"`
+	CompareURL    string       `json:"compare_url,omitempty"`
+	CommitURL     string       `json:"commit_url,omitempty"`
+	Warning       string       `json:"warning,omitempty"`
+}
+
 // GitHubRelease represents GitHub API response
 type GitHubRelease struct {
 	TagName     string        `json:"tag_name"`
@@ -155,6 +185,16 @@ type GitHubCommitRef struct {
 	URL string `json:"url"`
 }
 
+// GitHubCompare represents GitHub compare API response.
+type GitHubCompare struct {
+	Status       string `json:"status"`
+	AheadBy      int    `json:"ahead_by"`
+	BehindBy     int    `json:"behind_by"`
+	HTMLURL      string `json:"html_url"`
+	Permalink    string `json:"permalink_url"`
+	TotalCommits int    `json:"total_commits"`
+}
+
 // CheckUpdate checks for available updates
 func (s *UpdateService) CheckUpdate(ctx context.Context, force bool) (*UpdateInfo, error) {
 	// Try cache first
@@ -168,21 +208,28 @@ func (s *UpdateService) CheckUpdate(ctx context.Context, force bool) (*UpdateInf
 	info, err := s.fetchLatestRelease(ctx)
 	if err != nil {
 		branchInfo, branchErr := s.fetchBranchInfo(ctx)
+		upstreamInfo, upstreamErr := s.fetchUpstreamInfo(ctx, nil, branchInfo)
 		// Return cached on error
 		if cached, cacheErr := s.getFromCache(ctx); cacheErr == nil && cached != nil {
-			cached.Warning = "Using cached data: " + appendWarning(err.Error(), branchErr)
+			cached.Warning = "Using cached data: " + appendWarnings(err, branchErr, upstreamErr)
 			if cached.BranchInfo == nil {
 				cached.BranchInfo = branchInfo
+			}
+			if cached.UpstreamInfo == nil {
+				cached.UpstreamInfo = upstreamInfo
 			}
 			return cached, nil
 		}
 		return &UpdateInfo{
-			CurrentVersion: s.currentVersion,
-			LatestVersion:  s.currentVersion,
-			HasUpdate:      false,
-			BranchInfo:     branchInfo,
-			Warning:        appendWarning(err.Error(), branchErr),
-			BuildType:      s.buildType,
+			CurrentVersion:    s.currentVersion,
+			LatestVersion:     upstreamLatestVersionOrCurrent(s.currentVersion, upstreamInfo),
+			ForkLatestVersion: s.currentVersion,
+			HasUpdate:         upstreamInfo != nil && upstreamInfo.HasUpdate,
+			UpdateReady:       false,
+			BranchInfo:        branchInfo,
+			UpstreamInfo:      upstreamInfo,
+			Warning:           appendWarnings(err, branchErr, upstreamErr),
+			BuildType:         s.buildType,
 		}, nil
 	}
 
@@ -199,7 +246,7 @@ func (s *UpdateService) PerformUpdate(ctx context.Context) error {
 		return err
 	}
 
-	if !info.HasUpdate {
+	if !info.UpdateReady {
 		return ErrNoUpdateAvailable
 	}
 
@@ -333,7 +380,8 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 		return nil, err
 	}
 
-	latestVersion := strings.TrimPrefix(release.TagName, "v")
+	forkLatestVersion := strings.TrimPrefix(release.TagName, "v")
+	forkHasUpdate := compareVersions(s.currentVersion, forkLatestVersion) < 0
 
 	assets := make([]Asset, len(release.Assets))
 	for i, a := range release.Assets {
@@ -345,9 +393,11 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 	}
 
 	info := &UpdateInfo{
-		CurrentVersion: s.currentVersion,
-		LatestVersion:  latestVersion,
-		HasUpdate:      compareVersions(s.currentVersion, latestVersion) < 0,
+		CurrentVersion:    s.currentVersion,
+		LatestVersion:     forkLatestVersion,
+		ForkLatestVersion: forkLatestVersion,
+		HasUpdate:         forkHasUpdate,
+		UpdateReady:       forkHasUpdate,
 		ReleaseInfo: &ReleaseInfo{
 			Name:        release.Name,
 			Body:        release.Body,
@@ -361,8 +411,21 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 
 	branchInfo, branchErr := s.fetchBranchInfo(ctx)
 	info.BranchInfo = branchInfo
-	if branchErr != nil {
-		info.Warning = "branch update check failed: " + branchErr.Error()
+	upstreamInfo, upstreamErr := s.fetchUpstreamInfo(ctx, release, branchInfo)
+	info.UpstreamInfo = upstreamInfo
+	if upstreamInfo != nil {
+		info.LatestVersion = displayLatestVersion(s.currentVersion, forkLatestVersion, upstreamInfo)
+		if upstreamInfo.HasUpdate {
+			info.HasUpdate = true
+		}
+		if upstreamInfo.HasUpdate && upstreamInfo.SyncRequired {
+			// 原仓库已经有更新但当前 fork 尚未同步/发布时，不允许一键更新，
+			// 避免用未合并上游变更的 fork Release 覆盖运行实例。
+			info.UpdateReady = false
+		}
+	}
+	if branchErr != nil || upstreamErr != nil {
+		info.Warning = appendWarnings(nil, branchErr, upstreamErr)
 	}
 
 	return info, nil
@@ -413,6 +476,109 @@ func (s *UpdateService) branchInfoForLatestCommit(latestCommit, currentCommit st
 	info.Status = "behind"
 	info.CompareURL = fmt.Sprintf("https://github.com/%s/compare/%s...%s", githubRepo, currentCommit, latestCommit)
 	return info
+}
+
+func (s *UpdateService) fetchUpstreamInfo(ctx context.Context, forkRelease *GitHubRelease, forkBranch *BranchInfo) (*UpstreamInfo, error) {
+	info := &UpstreamInfo{
+		Repo:       upstreamGithubRepo,
+		Branch:     githubBranch,
+		Status:     "unknown",
+		CanCompare: false,
+	}
+
+	var errs []error
+
+	if upstreamRelease, err := s.githubClient.FetchLatestRelease(ctx, upstreamGithubRepo); err != nil {
+		errs = append(errs, fmt.Errorf("upstream release: %w", err))
+	} else {
+		latestVersion := strings.TrimPrefix(upstreamRelease.TagName, "v")
+		info.LatestVersion = latestVersion
+		info.ReleaseInfo = releaseInfoFromGitHub(upstreamRelease)
+		if compareVersions(s.currentVersion, latestVersion) < 0 {
+			info.HasNewVersion = true
+		}
+		if forkRelease == nil || compareVersions(strings.TrimPrefix(forkRelease.TagName, "v"), latestVersion) < 0 {
+			info.SyncRequired = true
+		}
+	}
+
+	upstreamBranch, err := s.githubClient.FetchBranch(ctx, upstreamGithubRepo, githubBranch)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("upstream branch: %w", err))
+	} else {
+		latestCommit := normalizeCommitSHA(upstreamBranch.Commit.SHA)
+		info.LatestCommit = latestCommit
+		if latestCommit != "" {
+			info.CommitURL = fmt.Sprintf("https://github.com/%s/commit/%s", upstreamGithubRepo, latestCommit)
+		}
+
+		baseline := normalizeCommitSHA(s.upstreamCommit)
+		info.CurrentCommit = unknownIfEmpty(baseline)
+		info.CanCompare = baseline != "" && latestCommit != ""
+
+		if baseline == "" {
+			info.Status = "unknown_current"
+			info.CompareURL = fmt.Sprintf("https://github.com/%s/commits/%s", upstreamGithubRepo, githubBranch)
+		} else if commitMatches(baseline, latestCommit) {
+			info.Status = "current"
+		} else if compare, compareErr := s.githubClient.CompareCommits(ctx, upstreamGithubRepo, baseline, latestCommit); compareErr == nil {
+			info.Status = compare.Status
+			info.HasNewCommit = compare.AheadBy > 0 || compare.TotalCommits > 0 || compare.Status == "ahead" || compare.Status == "diverged"
+			info.CompareURL = firstNonEmpty(compare.HTMLURL, compare.Permalink, fmt.Sprintf("https://github.com/%s/compare/%s...%s", upstreamGithubRepo, baseline, latestCommit))
+		} else {
+			info.Status = "unknown_compare"
+			info.HasNewCommit = true
+			info.CompareURL = fmt.Sprintf("https://github.com/%s/compare/%s...%s", upstreamGithubRepo, baseline, latestCommit)
+			errs = append(errs, fmt.Errorf("upstream compare: %w", compareErr))
+		}
+
+		if info.HasNewCommit {
+			forkContainsUpstream, containsErr := s.forkContainsUpstreamCommit(ctx, latestCommit, forkBranch)
+			if containsErr != nil {
+				errs = append(errs, fmt.Errorf("fork upstream containment: %w", containsErr))
+			}
+			if !forkContainsUpstream {
+				info.SyncRequired = true
+			}
+		}
+	}
+
+	info.HasUpdate = info.HasNewVersion || info.HasNewCommit
+	if info.LatestVersion == "" {
+		info.LatestVersion = s.currentVersion
+	}
+
+	warnErr := joinUpdateWarnings(errs...)
+	if warnErr != nil {
+		info.Warning = warnErr.Error()
+	}
+	return info, warnErr
+}
+
+func (s *UpdateService) forkContainsUpstreamCommit(ctx context.Context, upstreamCommit string, forkBranch *BranchInfo) (bool, error) {
+	upstreamCommit = normalizeCommitSHA(upstreamCommit)
+	if upstreamCommit == "" || forkBranch == nil {
+		return false, nil
+	}
+
+	forkLatest := normalizeCommitSHA(forkBranch.LatestCommit)
+	if forkLatest == "" {
+		return false, nil
+	}
+	if commitMatches(forkLatest, upstreamCommit) {
+		return true, nil
+	}
+
+	compare, err := s.githubClient.CompareCommits(ctx, githubRepo, upstreamCommit, forkLatest)
+	if err != nil {
+		return false, err
+	}
+	switch compare.Status {
+	case "identical", "ahead":
+		return true, nil
+	default:
+		return false, nil
+	}
 }
 
 func (s *UpdateService) downloadFile(ctx context.Context, downloadURL, dest string) error {
@@ -583,11 +749,13 @@ func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
 	}
 
 	var cached struct {
-		Latest      string       `json:"latest"`
-		ReleaseInfo *ReleaseInfo `json:"release_info"`
-		BranchInfo  *BranchInfo  `json:"branch_info"`
-		Warning     string       `json:"warning"`
-		Timestamp   int64        `json:"timestamp"`
+		Latest       string        `json:"latest"`
+		ForkLatest   string        `json:"fork_latest"`
+		ReleaseInfo  *ReleaseInfo  `json:"release_info"`
+		BranchInfo   *BranchInfo   `json:"branch_info"`
+		UpstreamInfo *UpstreamInfo `json:"upstream_info"`
+		Warning      string        `json:"warning"`
+		Timestamp    int64         `json:"timestamp"`
 	}
 	if err := json.Unmarshal([]byte(data), &cached); err != nil {
 		return nil, err
@@ -597,31 +765,46 @@ func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
 		return nil, fmt.Errorf("cache expired")
 	}
 
+	forkLatest := cached.ForkLatest
+	if forkLatest == "" {
+		forkLatest = cached.Latest
+	}
+	latest := displayLatestVersion(s.currentVersion, forkLatest, cached.UpstreamInfo)
+	forkHasUpdate := compareVersions(s.currentVersion, forkLatest) < 0
+	upstreamHasUpdate := cached.UpstreamInfo != nil && cached.UpstreamInfo.HasUpdate
+	upstreamSyncRequired := cached.UpstreamInfo != nil && cached.UpstreamInfo.HasUpdate && cached.UpstreamInfo.SyncRequired
 	return &UpdateInfo{
-		CurrentVersion: s.currentVersion,
-		LatestVersion:  cached.Latest,
-		HasUpdate:      compareVersions(s.currentVersion, cached.Latest) < 0,
-		ReleaseInfo:    cached.ReleaseInfo,
-		BranchInfo:     cached.BranchInfo,
-		Cached:         true,
-		Warning:        cached.Warning,
-		BuildType:      s.buildType,
+		CurrentVersion:    s.currentVersion,
+		LatestVersion:     latest,
+		ForkLatestVersion: forkLatest,
+		HasUpdate:         forkHasUpdate || upstreamHasUpdate,
+		UpdateReady:       forkHasUpdate && !upstreamSyncRequired,
+		ReleaseInfo:       cached.ReleaseInfo,
+		BranchInfo:        cached.BranchInfo,
+		UpstreamInfo:      cached.UpstreamInfo,
+		Cached:            true,
+		Warning:           cached.Warning,
+		BuildType:         s.buildType,
 	}, nil
 }
 
 func (s *UpdateService) saveToCache(ctx context.Context, info *UpdateInfo) {
 	cacheData := struct {
-		Latest      string       `json:"latest"`
-		ReleaseInfo *ReleaseInfo `json:"release_info"`
-		BranchInfo  *BranchInfo  `json:"branch_info"`
-		Warning     string       `json:"warning"`
-		Timestamp   int64        `json:"timestamp"`
+		Latest       string        `json:"latest"`
+		ForkLatest   string        `json:"fork_latest"`
+		ReleaseInfo  *ReleaseInfo  `json:"release_info"`
+		BranchInfo   *BranchInfo   `json:"branch_info"`
+		UpstreamInfo *UpstreamInfo `json:"upstream_info"`
+		Warning      string        `json:"warning"`
+		Timestamp    int64         `json:"timestamp"`
 	}{
-		Latest:      info.LatestVersion,
-		ReleaseInfo: info.ReleaseInfo,
-		BranchInfo:  info.BranchInfo,
-		Warning:     info.Warning,
-		Timestamp:   time.Now().Unix(),
+		Latest:       info.LatestVersion,
+		ForkLatest:   info.ForkLatestVersion,
+		ReleaseInfo:  info.ReleaseInfo,
+		BranchInfo:   info.BranchInfo,
+		UpstreamInfo: info.UpstreamInfo,
+		Warning:      info.Warning,
+		Timestamp:    time.Now().Unix(),
 	}
 
 	data, _ := json.Marshal(cacheData)
@@ -654,6 +837,27 @@ func parseVersion(v string) [3]int {
 		}
 	}
 	return result
+}
+
+func releaseInfoFromGitHub(release *GitHubRelease) *ReleaseInfo {
+	if release == nil {
+		return nil
+	}
+	assets := make([]Asset, len(release.Assets))
+	for i, a := range release.Assets {
+		assets[i] = Asset{
+			Name:        a.Name,
+			DownloadURL: a.BrowserDownloadURL,
+			Size:        a.Size,
+		}
+	}
+	return &ReleaseInfo{
+		Name:        release.Name,
+		Body:        release.Body,
+		PublishedAt: release.PublishedAt,
+		HTMLURL:     release.HTMLURL,
+		Assets:      assets,
+	}
 }
 
 func normalizeCommitSHA(sha string) string {
@@ -698,6 +902,46 @@ func appendWarning(primary string, secondary error) string {
 		return secondaryMessage
 	}
 	return primary + "; branch update check failed: " + secondaryMessage
+}
+
+func appendWarnings(errs ...error) string {
+	messages := make([]string, 0, len(errs))
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		message := strings.TrimSpace(err.Error())
+		if message != "" {
+			messages = append(messages, message)
+		}
+	}
+	return strings.Join(messages, "; ")
+}
+
+func joinUpdateWarnings(errs ...error) error {
+	message := appendWarnings(errs...)
+	if message == "" {
+		return nil
+	}
+	return fmt.Errorf("%s", message)
+}
+
+func displayLatestVersion(current, forkLatest string, upstreamInfo *UpstreamInfo) string {
+	latest := strings.TrimSpace(forkLatest)
+	if latest == "" {
+		latest = current
+	}
+	if upstreamInfo != nil && strings.TrimSpace(upstreamInfo.LatestVersion) != "" && compareVersions(latest, upstreamInfo.LatestVersion) < 0 {
+		latest = upstreamInfo.LatestVersion
+	}
+	return latest
+}
+
+func upstreamLatestVersionOrCurrent(current string, upstreamInfo *UpstreamInfo) string {
+	if upstreamInfo != nil && upstreamInfo.LatestVersion != "" {
+		return upstreamInfo.LatestVersion
+	}
+	return current
 }
 
 func resolveBuildCommit() string {

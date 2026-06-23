@@ -4,11 +4,18 @@
 
 import { apiClient } from '../client'
 
+export interface ReleaseAsset {
+  name: string
+  download_url: string
+  size: number
+}
+
 export interface ReleaseInfo {
   name: string
   body: string
   published_at: string
   html_url: string
+  assets?: ReleaseAsset[]
 }
 
 export interface BranchInfo {
@@ -23,12 +30,33 @@ export interface BranchInfo {
   commit_url?: string
 }
 
+export interface UpstreamInfo {
+  repo: string
+  branch: string
+  latest_version: string
+  has_update: boolean
+  has_new_version: boolean
+  has_new_commit: boolean
+  sync_required: boolean
+  can_compare: boolean
+  status: string
+  release_info?: ReleaseInfo
+  current_commit: string
+  latest_commit: string
+  compare_url?: string
+  commit_url?: string
+  warning?: string
+}
+
 export interface VersionInfo {
   current_version: string
   latest_version: string
+  fork_latest_version: string
   has_update: boolean
+  update_ready: boolean
   release_info?: ReleaseInfo
   branch_info?: BranchInfo
+  upstream_info?: UpstreamInfo
   cached: boolean
   warning?: string
   build_type: string // "source" for manual builds, "release" for CI builds

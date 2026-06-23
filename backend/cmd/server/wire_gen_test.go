@@ -12,14 +12,16 @@ import (
 
 func TestProvideServiceBuildInfo(t *testing.T) {
 	in := handler.BuildInfo{
-		Version:   "v-test",
-		BuildType: "release",
-		Commit:    "abc123",
+		Version:        "v-test",
+		BuildType:      "release",
+		Commit:         "abc123",
+		UpstreamCommit: "def456",
 	}
 	out := provideServiceBuildInfo(in)
 	require.Equal(t, in.Version, out.Version)
 	require.Equal(t, in.BuildType, out.BuildType)
 	require.Equal(t, in.Commit, out.Commit)
+	require.Equal(t, in.UpstreamCommit, out.UpstreamCommit)
 }
 
 func TestProvideCleanup_WithMinimalDependencies_NoPanic(t *testing.T) {

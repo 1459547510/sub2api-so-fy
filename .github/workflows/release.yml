@@ -29,9 +29,14 @@ jobs:
   # Update VERSION file with tag version
   update-version:
     runs-on: ubuntu-latest
+    outputs:
+      upstream_commit: ${{ steps.upstream_marker.outputs.upstream_commit }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Update VERSION file
         run: |
@@ -44,11 +49,25 @@ jobs:
           echo "$VERSION" > backend/cmd/server/VERSION
           echo "Updated VERSION file to: $VERSION"
 
+      - name: Record synced upstream commit
+        id: upstream_marker
+        run: |
+          git remote add upstream https://github.com/Wei-Shaw/sub2api.git || true
+          git fetch upstream main:refs/remotes/upstream/main --tags --force
+          UPSTREAM_COMMIT=$(git merge-base HEAD refs/remotes/upstream/main || true)
+          if [ -z "$UPSTREAM_COMMIT" ]; then UPSTREAM_COMMIT=unknown; fi
+          echo "$UPSTREAM_COMMIT" > backend/cmd/server/UPSTREAM_COMMIT
+          echo "UPSTREAM_COMMIT=$UPSTREAM_COMMIT" >> $GITHUB_ENV
+          echo "upstream_commit=$UPSTREAM_COMMIT" >> $GITHUB_OUTPUT
+          echo "Recorded synced upstream commit: $UPSTREAM_COMMIT"
+
       - name: Upload VERSION artifact
         uses: actions/upload-artifact@v7
         with:
           name: version-file
-          path: backend/cmd/server/VERSION
+          path: |
+            backend/cmd/server/VERSION
+            backend/cmd/server/UPSTREAM_COMMIT
           retention-days: 1
 
   build-frontend:
@@ -105,6 +124,13 @@ jobs:
         with:
           name: frontend-dist
           path: backend/internal/web/dist/
+
+      - name: Export upstream marker
+        run: |
+          UPSTREAM_COMMIT=$(tr -d '\r\n' < backend/cmd/server/UPSTREAM_COMMIT || true)
+          if [ -z "$UPSTREAM_COMMIT" ]; then UPSTREAM_COMMIT=unknown; fi
+          echo "UPSTREAM_COMMIT=$UPSTREAM_COMMIT" >> $GITHUB_ENV
+          echo "Release upstream commit: $UPSTREAM_COMMIT"
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -183,6 +209,7 @@ jobs:
           GITHUB_REPO_OWNER: ${{ github.repository_owner }}
           GITHUB_REPO_OWNER_LOWER: ${{ steps.lowercase.outputs.owner }}
           GITHUB_REPO_NAME: ${{ github.event.repository.name }}
+          UPSTREAM_COMMIT: ${{ env.UPSTREAM_COMMIT }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || 'skip' }}
 
       # Update DockerHub description
@@ -273,7 +300,7 @@ jobs:
               }')"
 
   sync-version-file:
-    needs: [release]
+    needs: [update-version, release]
     if: ${{ needs.release.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
@@ -281,8 +308,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
 
-      - name: Sync VERSION file to released tag
+      - name: Sync VERSION and upstream marker to released tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION=${{ github.event.inputs.tag }}
@@ -291,16 +319,21 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
           fi
 
+          UPSTREAM_COMMIT="${{ needs.update-version.outputs.upstream_commit }}"
+          if [ -z "$UPSTREAM_COMMIT" ]; then UPSTREAM_COMMIT=unknown; fi
+
           CURRENT_VERSION=$(tr -d '\r\n' < backend/cmd/server/VERSION || true)
-          if [ "$CURRENT_VERSION" = "$VERSION" ]; then
-            echo "VERSION file already matches $VERSION"
+          CURRENT_UPSTREAM=$(tr -d '\r\n' < backend/cmd/server/UPSTREAM_COMMIT || true)
+          if [ "$CURRENT_VERSION" = "$VERSION" ] && [ "$CURRENT_UPSTREAM" = "$UPSTREAM_COMMIT" ]; then
+            echo "VERSION and UPSTREAM_COMMIT already match released state"
             exit 0
           fi
 
           echo "$VERSION" > backend/cmd/server/VERSION
+          echo "$UPSTREAM_COMMIT" > backend/cmd/server/UPSTREAM_COMMIT
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/cmd/server/VERSION
-          git commit -m "chore: sync VERSION to ${VERSION} [skip ci]"
+          git add backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT
+          git commit -m "chore: sync release markers to ${VERSION} [skip ci]"
           git push origin HEAD:${{ github.event.repository.default_branch }}
