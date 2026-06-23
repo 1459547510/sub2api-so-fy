@@ -42,7 +42,8 @@ jobs:
         run: |
           TAG_NAME="${{ steps.ref.outputs.tag }}"
           VERSION="${TAG_NAME#v}"
-          echo "$VERSION" > backend/cmd/server/VERSION
+          BASE_VERSION="${VERSION%%-*}"
+          echo "$BASE_VERSION" > backend/cmd/server/VERSION
 
           git remote add upstream https://github.com/Wei-Shaw/sub2api.git || true
           git fetch upstream main:refs/remotes/upstream/main --tags --force || true
@@ -52,9 +53,11 @@ jobs:
 
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "upstream_commit=$UPSTREAM_COMMIT" >> "$GITHUB_OUTPUT"
           echo "build_date=$BUILD_DATE" >> "$GITHUB_OUTPUT"
-          echo "Version: $VERSION"
+          echo "Release version: $VERSION"
+          echo "Program version: $BASE_VERSION"
           echo "Upstream commit: $UPSTREAM_COMMIT"
           echo "Build date: $BUILD_DATE"
 
@@ -121,10 +124,11 @@ jobs:
           draft: false
           prerelease: false
           fail_on_unmatched_files: true
+          overwrite_files: true
           body: |
             ## Sub2API ${{ steps.meta.outputs.version }}
 
-            Linux x86_64 binary release for sub2api-so-fy.
+            Linux x86_64 binary release for sub2api-so-fy. Program internal version: `${{ steps.meta.outputs.base_version }}`.
 
             ### Server upgrade
 
@@ -143,3 +147,4 @@ jobs:
           files: |
             dist/sub2api_${{ steps.meta.outputs.version }}_linux_amd64.tar.gz
             dist/checksums.txt
+
