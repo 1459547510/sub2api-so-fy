@@ -238,67 +238,7 @@
                 </button>
               </div>
 
-              <!-- Priority 3: Fork Release ready for source build - show git pull hint -->
-              <div v-else-if="updateReady && !isReleaseBuild" class="space-y-2">
-                <a
-                  v-if="releaseInfo?.html_url && releaseInfo.html_url !== '#'"
-                  :href="releaseInfo.html_url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="group flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 transition-colors hover:bg-amber-100 dark:border-amber-800/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
-                >
-                  <div
-                    class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50"
-                  >
-                    <Icon
-                      name="download"
-                      size="sm"
-                      :stroke-width="2"
-                      class="text-amber-600 dark:text-amber-400"
-                    />
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-amber-700 dark:text-amber-300">
-                      {{ t('version.forkReleaseReady') }}
-                    </p>
-                    <p class="text-xs text-amber-600/70 dark:text-amber-400/70">
-                      v{{ forkLatestVersion }}
-                    </p>
-                  </div>
-                  <svg
-                    class="h-4 w-4 text-amber-500 transition-transform group-hover:translate-x-0.5 dark:text-amber-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
-                <!-- Source build hint -->
-                <div
-                  class="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800/50 dark:bg-blue-900/20"
-                >
-                  <svg
-                    class="h-3.5 w-3.5 flex-shrink-0 text-blue-500 dark:text-blue-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <p class="text-xs text-blue-600 dark:text-blue-400">
-                    {{ t('version.sourceModeHint') }}
-                  </p>
-                </div>
-              </div>
-
-              <!-- Priority 4: Fork Release ready for release build - show update button -->
+              <!-- Priority 3: Fork Release ready - keep original in-app update + restart flow -->
               <div v-else-if="canPerformUpdate" class="space-y-2">
                 <!-- Update info card -->
                 <div
@@ -438,7 +378,6 @@
                 </div>
 
                 <div
-                  v-if="isReleaseBuild"
                   class="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-dark-700 dark:bg-dark-700/40"
                 >
                   <Icon
@@ -453,7 +392,7 @@
                 </div>
               </div>
 
-              <!-- Priority 6: Branch has newer commits but release tag is unchanged -->
+              <!-- Priority 5: Branch has newer commits but release tag is unchanged -->
               <div v-else-if="hasBranchUpdate" class="space-y-2">
                 <a
                   v-if="branchLink"
@@ -510,7 +449,7 @@
                 </div>
               </div>
 
-              <!-- Priority 7: Up to date - show GitHub link -->
+              <!-- Priority 6: Up to date - show GitHub link -->
               <a
                 v-else-if="releaseInfo?.html_url && releaseInfo.html_url !== '#'"
                 :href="releaseInfo.html_url"
@@ -570,7 +509,6 @@ const updateReady = computed(() => appStore.updateReady)
 const releaseInfo = computed(() => appStore.releaseInfo)
 const branchInfo = computed(() => appStore.branchInfo)
 const upstreamInfo = computed(() => appStore.upstreamInfo)
-const buildType = computed(() => appStore.buildType)
 const hasBranchUpdate = computed(() => Boolean(branchInfo.value?.has_new_commit))
 const hasUpstreamUpdate = computed(() => Boolean(upstreamInfo.value?.has_update))
 const upstreamLatestVersion = computed(() => upstreamInfo.value?.latest_version || latestVersion.value)
@@ -623,9 +561,11 @@ const updateError = ref('')
 const updateSuccess = ref(false)
 const restartCountdown = ref(0)
 
-// Only show update check for release builds (binary/docker deployment)
-const isReleaseBuild = computed(() => buildType.value === 'release')
-const canPerformUpdate = computed(() => updateReady.value && isReleaseBuild.value)
+// Keep the original in-app update/restart flow whenever the backend reports
+// that a current-repository Release is ready. Some production deployments are
+// manually compiled and therefore report build_type=source even though binary
+// replacement and systemd restart are still valid.
+const canPerformUpdate = computed(() => updateReady.value)
 
 function shortCommit(commit?: string): string {
   if (!commit || commit === 'unknown') return ''
