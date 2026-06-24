@@ -1,5 +1,14 @@
 # Sub2API
 
+> [!IMPORTANT]
+> **二次开发版本 / Fork Build**
+>
+> - 原仓库（Upstream）：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
+> - 当前仓库（Fork）：[1459547510/sub2api-so-fy](https://github.com/1459547510/sub2api-so-fy)
+> - 本仓库为基于原仓库的二次开发版本，保留原项目功能并增加自定义改动。
+> - 版本标识采用 `原版版本号-fy.N`，例如 `v0.1.138-fy.2`；程序内部基线版本仍对应原仓库版本。
+
+
 <div align="center">
 
 [![Go](https://img.shields.io/badge/Go-1.25.7-00ADD8.svg)](https://golang.org/)
