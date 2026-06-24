@@ -91,6 +91,10 @@ RETURNING balance::double precision`, rewardAmount, userID).Scan(&balanceAfter);
 		return nil, 0, fmt.Errorf("credit token incentive reward: %w", err)
 	}
 
+	if err := insertTokenIncentiveRedeemHistory(ctx, tx, claim); err != nil {
+		return nil, 0, err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, 0, fmt.Errorf("commit token incentive claim tx: %w", err)
 	}
@@ -126,8 +130,45 @@ SELECT id, user_id, week_start, week_end, tokens, reward_amount::double precisio
 FROM token_incentive_claims
 `
 
+const tokenIncentiveRedeemInsertSQL = `
+INSERT INTO redeem_codes (code, type, value, status, used_by, used_at, notes, created_at)
+VALUES ($1, $2, $3, 'used', $4, $5, $6, $5)`
+
 type tokenIncentiveClaimScanner interface {
 	Scan(dest ...any) error
+}
+
+func insertTokenIncentiveRedeemHistory(ctx context.Context, tx *sql.Tx, claim *service.TokenIncentiveClaim) error {
+	if claim == nil {
+		return fmt.Errorf("record token incentive balance history: claim is nil")
+	}
+	_, err := tx.ExecContext(ctx, tokenIncentiveRedeemInsertSQL,
+		tokenIncentiveRedeemCode(claim.ID),
+		service.RedeemTypeTokenIncentive,
+		claim.RewardAmount,
+		claim.UserID,
+		claim.ClaimedAt,
+		tokenIncentiveRedeemNotes(claim),
+	)
+	if err != nil {
+		return fmt.Errorf("record token incentive balance history: %w", err)
+	}
+	return nil
+}
+
+func tokenIncentiveRedeemCode(claimID int64) string {
+	return fmt.Sprintf("TI-CLAIM-%d", claimID)
+}
+
+func tokenIncentiveRedeemNotes(claim *service.TokenIncentiveClaim) string {
+	if claim == nil {
+		return ""
+	}
+	return fmt.Sprintf("Token incentive reward: week %s ~ %s, tokens=%d",
+		claim.WeekStart.Format("2006-01-02"),
+		claim.WeekEnd.Format("2006-01-02"),
+		claim.Tokens,
+	)
 }
 
 func scanTokenIncentiveClaim(row tokenIncentiveClaimScanner) (*service.TokenIncentiveClaim, error) {

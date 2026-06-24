@@ -46,6 +46,9 @@ func TestTokenIncentiveRepositoryClaimReward_PassesConfiguredTierAndCreditsBalan
 	mock.ExpectQuery(regexp.QuoteMeta("UPDATE users")).
 		WithArgs(5.0, int64(42)).
 		WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(17.0))
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO redeem_codes")).
+		WithArgs("TI-CLAIM-9", service.RedeemTypeTokenIncentive, 5.0, int64(42), claimedAt, "Token incentive reward: week 2026-06-22 ~ 2026-06-29, tokens=120000000").
+		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
 	claim, balanceAfter, err := repo.ClaimReward(ctx, 42, weekStart, weekEnd, 120_000_000, 100_000_000, 5)
@@ -117,4 +120,20 @@ func TestTokenIncentiveClaimInsertSQL_RechecksThresholdInDatabase(t *testing.T) 
 	require.Contains(t, compact, "WHERE tokens >= $5")
 	require.Contains(t, compact, "ON CONFLICT (user_id, week_start) DO NOTHING")
 	require.NotContains(t, compact, "1000000000")
+}
+
+func TestTokenIncentiveRedeemHistoryHelpers(t *testing.T) {
+	claim := &service.TokenIncentiveClaim{
+		ID:           123,
+		Tokens:       50000000,
+		RewardAmount: 2,
+		WeekStart:    time.Date(2026, 6, 22, 0, 0, 0, 0, time.UTC),
+		WeekEnd:      time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC),
+	}
+
+	require.Equal(t, "TI-CLAIM-123", tokenIncentiveRedeemCode(claim.ID))
+	require.Len(t, tokenIncentiveRedeemCode(claim.ID), 12)
+	require.Equal(t, "Token incentive reward: week 2026-06-22 ~ 2026-06-29, tokens=50000000", tokenIncentiveRedeemNotes(claim))
+	require.Equal(t, "token_incentive", service.RedeemTypeTokenIncentive)
+	require.LessOrEqual(t, len(service.RedeemTypeTokenIncentive), 20)
 }

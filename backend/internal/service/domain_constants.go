@@ -80,6 +80,7 @@ const (
 	RedeemTypeSubscription     = domain.RedeemTypeSubscription
 	RedeemTypeInvitation       = domain.RedeemTypeInvitation
 	RedeemTypeAffiliateBalance = "affiliate_balance"
+	RedeemTypeTokenIncentive   = "token_incentive"
 )
 
 // PromoCode status constants
