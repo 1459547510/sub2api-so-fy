@@ -105,62 +105,91 @@
           v-if="tokenIncentive?.enabled"
           class="card overflow-hidden border border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 p-5 dark:border-amber-900/40 dark:from-amber-950/30 dark:to-orange-950/20"
         >
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-3">
+              <div class="flex items-start gap-3">
                 <div class="rounded-xl bg-amber-100 p-2 dark:bg-amber-900/40">
                   <Icon name="gift" size="md" class="text-amber-600 dark:text-amber-300" />
                 </div>
-                <div>
-                  <h3 class="text-base font-semibold text-gray-900 dark:text-white">
-                    {{ t('usage.tokenIncentive.title') }}
-                  </h3>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                      {{ t('usage.tokenIncentive.title') }}
+                    </h3>
+                    <span
+                      class="rounded-full px-2 py-0.5 text-xs font-medium"
+                      :class="tokenIncentiveBadgeClass"
+                    >
+                      {{ tokenIncentiveStatusLabel }}
+                    </span>
+                  </div>
                   <p class="mt-0.5 text-sm text-gray-600 dark:text-gray-300">
                     {{ t('usage.tokenIncentive.description') }}
+                  </p>
+                  <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                    {{ t('usage.tokenIncentive.expireHint') }}
                   </p>
                 </div>
               </div>
 
-              <div class="mt-4 grid gap-3 md:grid-cols-3">
-                <div>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.tokenIncentive.progress') }}</p>
-                  <p class="mt-1 font-semibold text-gray-900 dark:text-white">{{ tokenIncentiveProgressText }}</p>
+              <div class="mt-4 grid gap-3 md:grid-cols-4">
+                <div class="rounded-xl bg-white/70 p-3 dark:bg-gray-900/30">
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.tokenIncentive.used') }}</p>
+                  <p class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{{ formatTokens(tokenIncentive.tokens) }}</p>
                 </div>
-                <div>
+                <div class="rounded-xl bg-white/70 p-3 dark:bg-gray-900/30">
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.tokenIncentive.target') }}</p>
+                  <p class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{{ formatTokens(tokenIncentive.threshold_tokens) }}</p>
+                </div>
+                <div class="rounded-xl bg-white/70 p-3 dark:bg-gray-900/30">
                   <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.tokenIncentive.reward') }}</p>
-                  <p class="mt-1 font-semibold text-amber-700 dark:text-amber-300">{{ formatTokenIncentiveReward(tokenIncentive.reward_amount) }}</p>
+                  <p class="mt-1 text-lg font-semibold text-amber-700 dark:text-amber-300">{{ formatTokenIncentiveReward(tokenIncentive.reward_amount) }}</p>
                 </div>
-                <div>
+                <div class="rounded-xl bg-white/70 p-3 dark:bg-gray-900/30">
                   <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('usage.tokenIncentive.week') }}</p>
-                  <p class="mt-1 font-semibold text-gray-900 dark:text-white">{{ tokenIncentiveWeekLabel }}</p>
+                  <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ tokenIncentiveWeekLabel }}</p>
                 </div>
               </div>
 
-              <div class="mt-4">
-                <div class="h-2 overflow-hidden rounded-full bg-amber-100 dark:bg-amber-950">
+              <div class="mt-5 rounded-2xl border border-amber-100 bg-white/70 p-4 dark:border-amber-900/40 dark:bg-gray-950/20">
+                <div class="flex items-center justify-between gap-3 text-sm">
+                  <span class="font-medium text-gray-900 dark:text-white">{{ t('usage.tokenIncentive.progress') }}</span>
+                  <span class="font-semibold text-amber-700 dark:text-amber-300">{{ tokenIncentiveProgressPercent }}%</span>
+                </div>
+                <div class="relative mt-3 pb-8 pt-4">
+                  <div class="h-3 overflow-hidden rounded-full bg-amber-100 dark:bg-amber-950">
+                    <div
+                      class="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500 dark:from-amber-300 dark:to-orange-400"
+                      :style="{ width: `${tokenIncentiveProgressPercent}%` }"
+                    ></div>
+                  </div>
                   <div
-                    class="h-full rounded-full bg-amber-500 transition-all duration-300 dark:bg-amber-400"
-                    :style="{ width: `${tokenIncentiveProgressPercent}%` }"
-                  ></div>
+                    v-for="marker in tokenIncentiveRuleMarkers"
+                    :key="marker.threshold_tokens"
+                    class="absolute top-1 flex -translate-x-1/2 flex-col items-center"
+                    :style="{ left: `${marker.position}%` }"
+                  >
+                    <div
+                      class="h-5 w-5 rounded-full border-2 shadow-sm"
+                      :class="marker.reached
+                        ? 'border-amber-500 bg-amber-500 dark:border-amber-300 dark:bg-amber-300'
+                        : 'border-amber-300 bg-white dark:border-amber-700 dark:bg-gray-900'"
+                    ></div>
+                    <div class="mt-1 whitespace-nowrap text-center text-[11px] leading-tight text-gray-600 dark:text-gray-300">
+                      <div>{{ formatTokens(marker.threshold_tokens) }}</div>
+                      <div class="font-medium text-amber-700 dark:text-amber-300">{{ formatTokenIncentiveReward(marker.reward_amount) }}</div>
+                    </div>
+                  </div>
                 </div>
-                <p class="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                  {{ tokenIncentiveStatusLabel }}
-                </p>
-              </div>
-
-              <div v-if="tokenIncentiveRules.length" class="mt-3 flex flex-wrap gap-2">
-                <span
-                  v-for="rule in tokenIncentiveRules"
-                  :key="rule.threshold_tokens"
-                  class="rounded-full border border-amber-200 bg-white/70 px-2.5 py-1 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
-                >
-                  {{ formatTokens(rule.threshold_tokens) }} → {{ formatTokenIncentiveReward(rule.reward_amount) }}
-                </span>
+                <div class="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
+                  <span>{{ tokenIncentiveProgressText }}</span>
+                  <span>{{ tokenIncentiveNextTierLabel }}</span>
+                </div>
               </div>
             </div>
 
             <button
-              class="btn btn-primary shrink-0"
+              class="btn btn-primary shrink-0 lg:mt-1"
               :disabled="tokenIncentiveClaiming || tokenIncentive.claimed || !tokenIncentive.eligible"
               @click="claimTokenIncentiveReward"
             >
@@ -891,8 +920,9 @@ const formatTokens = (value: number): string => {
 
 const tokenIncentiveProgressPercent = computed(() => {
   const status = tokenIncentive.value
-  if (!status || status.threshold_tokens <= 0) return 0
-  return Math.min(100, Math.floor((status.tokens / status.threshold_tokens) * 100))
+  const max = tokenIncentiveMaxThreshold.value
+  if (!status || max <= 0) return 0
+  return Math.min(100, Math.floor((status.tokens / max) * 100))
 })
 
 const tokenIncentiveProgressText = computed(() => {
@@ -913,12 +943,42 @@ const tokenIncentiveRules = computed(() => {
   return [...rules].sort((a, b) => a.threshold_tokens - b.threshold_tokens)
 })
 
+const tokenIncentiveMaxThreshold = computed(() => {
+  const maxRule = tokenIncentiveRules.value[tokenIncentiveRules.value.length - 1]
+  return Math.max(maxRule?.threshold_tokens ?? 0, tokenIncentive.value?.threshold_tokens ?? 0, tokenIncentive.value?.tokens ?? 0)
+})
+
+const tokenIncentiveRuleMarkers = computed(() => {
+  const max = tokenIncentiveMaxThreshold.value || 1
+  const tokens = tokenIncentive.value?.tokens ?? 0
+  return tokenIncentiveRules.value.map((rule) => ({
+    ...rule,
+    reached: tokens >= rule.threshold_tokens,
+    position: Math.min(100, Math.max(0, (rule.threshold_tokens / max) * 100)),
+  }))
+})
+
+const tokenIncentiveNextTierLabel = computed(() => {
+  const status = tokenIncentive.value
+  if (!status) return ''
+  if (status.claimed) return t('usage.tokenIncentive.claimedAt', { time: formatTokenIncentiveDate(status.claimed_at) })
+  if (status.eligible) return t('usage.tokenIncentive.currentTier', { reward: formatTokenIncentiveReward(status.reward_amount) })
+  return t('usage.tokenIncentive.remaining', { tokens: formatTokens(tokenIncentiveRemainingTokens.value) })
+})
+
 const tokenIncentiveStatusLabel = computed(() => {
   const status = tokenIncentive.value
   if (!status) return ''
   if (status.claimed) return t('usage.tokenIncentive.claimed')
   if (status.eligible) return t('usage.tokenIncentive.eligible')
-  return t('usage.tokenIncentive.remaining', { tokens: formatTokens(tokenIncentiveRemainingTokens.value) })
+  return t('usage.tokenIncentive.inProgress')
+})
+
+const tokenIncentiveBadgeClass = computed(() => {
+  const status = tokenIncentive.value
+  if (status?.claimed) return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+  if (status?.eligible) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
+  return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
 })
 
 const tokenIncentiveClaimButtonLabel = computed(() => {
