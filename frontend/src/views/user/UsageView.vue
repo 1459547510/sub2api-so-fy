@@ -151,39 +151,77 @@
                 </div>
               </div>
 
-              <div class="mt-5 rounded-2xl border border-amber-100 bg-white/70 p-4 dark:border-amber-900/40 dark:bg-gray-950/20">
-                <div class="flex items-center justify-between gap-3 text-sm">
-                  <span class="font-medium text-gray-900 dark:text-white">{{ t('usage.tokenIncentive.progress') }}</span>
-                  <span class="font-semibold text-amber-700 dark:text-amber-300">{{ tokenIncentiveProgressPercent }}%</span>
+              <div class="mt-5 rounded-2xl border border-amber-100 bg-white/75 p-4 shadow-sm dark:border-amber-900/35 dark:bg-gray-950/25">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                      {{ t('usage.tokenIncentive.progress') }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      {{ tokenIncentiveProgressText }}
+                    </p>
+                  </div>
+                  <div class="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700 dark:bg-amber-900/35 dark:text-amber-200">
+                    {{ tokenIncentiveProgressPercent }}%
+                  </div>
                 </div>
-                <div class="relative mt-3 pb-8 pt-4">
-                  <div class="h-3 overflow-hidden rounded-full bg-amber-100 dark:bg-amber-950">
+
+                <div class="relative mt-5 px-2 py-3">
+                  <div class="h-2 overflow-hidden rounded-full bg-gray-200/80 shadow-inner dark:bg-gray-800">
                     <div
-                      class="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500 dark:from-amber-300 dark:to-orange-400"
+                      class="h-full rounded-full bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 shadow-[0_0_18px_rgba(251,191,36,0.35)] transition-all duration-500 dark:from-amber-300 dark:via-yellow-300 dark:to-orange-300"
                       :style="{ width: `${tokenIncentiveProgressPercent}%` }"
                     ></div>
                   </div>
                   <div
                     v-for="marker in tokenIncentiveRuleMarkers"
                     :key="marker.threshold_tokens"
-                    class="absolute top-1 flex -translate-x-1/2 flex-col items-center"
+                    class="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
                     :style="{ left: `${marker.position}%` }"
                   >
                     <div
-                      class="h-5 w-5 rounded-full border-2 shadow-sm"
+                      class="flex h-4 w-4 items-center justify-center rounded-full border-2 bg-white ring-4 ring-white transition-all dark:bg-gray-950 dark:ring-gray-950"
                       :class="marker.reached
-                        ? 'border-amber-500 bg-amber-500 dark:border-amber-300 dark:bg-amber-300'
-                        : 'border-amber-300 bg-white dark:border-amber-700 dark:bg-gray-900'"
-                    ></div>
-                    <div class="mt-1 whitespace-nowrap text-center text-[11px] leading-tight text-gray-600 dark:text-gray-300">
-                      <div>{{ formatTokens(marker.threshold_tokens) }}</div>
-                      <div class="font-medium text-amber-700 dark:text-amber-300">{{ formatTokenIncentiveReward(marker.reward_amount) }}</div>
+                        ? 'border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.22)]'
+                        : 'border-gray-300 dark:border-gray-600'"
+                    >
+                      <div
+                        v-if="marker.reached"
+                        class="h-1.5 w-1.5 rounded-full bg-amber-400"
+                      ></div>
                     </div>
                   </div>
                 </div>
-                <div class="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
-                  <span>{{ tokenIncentiveProgressText }}</span>
+
+                <div class="mt-4 grid gap-2 md:grid-cols-3">
+                  <div
+                    v-for="marker in tokenIncentiveRuleMarkers"
+                    :key="`tier-${marker.threshold_tokens}`"
+                    class="rounded-xl border p-3 transition-colors"
+                    :class="tokenIncentiveTierClass(marker)"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                        {{ formatTokens(marker.threshold_tokens) }}
+                      </span>
+                      <span
+                        class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                        :class="marker.reached
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
+                          : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'"
+                      >
+                        {{ marker.reached ? tokenIncentiveReachedLabel : tokenIncentivePendingLabel(marker) }}
+                      </span>
+                    </div>
+                    <p class="mt-2 text-lg font-bold text-gray-900 dark:text-white">
+                      {{ formatTokenIncentiveReward(marker.reward_amount) }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
                   <span>{{ tokenIncentiveNextTierLabel }}</span>
+                  <span class="text-gray-500 dark:text-gray-400">{{ tokenIncentiveWeekLabel }}</span>
                 </div>
               </div>
             </div>
@@ -720,7 +758,7 @@ import Select from '@/components/common/Select.vue'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import Icon from '@/components/icons/Icon.vue'
 import UserErrorRequestsTable from '@/components/user/UserErrorRequestsTable.vue'
-import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse, UserErrorRequest, TokenIncentiveStatus } from '@/types'
+import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse, UserErrorRequest, TokenIncentiveStatus, TokenIncentiveRule } from '@/types'
 import type { Column } from '@/components/common/types'
 import { formatDateTime, formatReasoningEffort } from '@/utils/format'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
@@ -957,6 +995,27 @@ const tokenIncentiveRuleMarkers = computed(() => {
     position: Math.min(100, Math.max(0, (rule.threshold_tokens / max) * 100)),
   }))
 })
+
+type TokenIncentiveMarker = TokenIncentiveRule & {
+  reached: boolean
+  position: number
+}
+
+const tokenIncentiveReachedLabel = computed(() => t('usage.tokenIncentive.eligible'))
+
+const tokenIncentivePendingLabel = (marker: TokenIncentiveMarker): string => {
+  const tokens = tokenIncentive.value?.tokens ?? 0
+  return t('usage.tokenIncentive.remaining', {
+    tokens: formatTokens(Math.max(marker.threshold_tokens - tokens, 0)),
+  })
+}
+
+const tokenIncentiveTierClass = (marker: TokenIncentiveMarker): string => {
+  if (marker.reached) {
+    return 'border-amber-200 bg-amber-50/90 dark:border-amber-800/50 dark:bg-amber-950/25'
+  }
+  return 'border-gray-200 bg-white/70 dark:border-gray-800 dark:bg-gray-950/20'
+}
 
 const tokenIncentiveNextTierLabel = computed(() => {
   const status = tokenIncentive.value
