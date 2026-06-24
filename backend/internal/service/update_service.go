@@ -381,7 +381,7 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 	}
 
 	forkLatestVersion := strings.TrimPrefix(release.TagName, "v")
-	forkHasUpdate := compareVersions(s.currentVersion, forkLatestVersion) < 0
+	forkHasUpdate, forkCompareErr := s.forkReleaseHasUpdate(ctx, release, forkLatestVersion)
 
 	assets := make([]Asset, len(release.Assets))
 	for i, a := range release.Assets {
@@ -424,11 +424,43 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 			info.UpdateReady = false
 		}
 	}
-	if branchErr != nil || upstreamErr != nil {
-		info.Warning = appendWarnings(nil, branchErr, upstreamErr)
+	if branchErr != nil || upstreamErr != nil || forkCompareErr != nil {
+		info.Warning = appendWarnings(nil, forkCompareErr, branchErr, upstreamErr)
 	}
 
 	return info, nil
+}
+
+func (s *UpdateService) forkReleaseHasUpdate(ctx context.Context, release *GitHubRelease, forkLatestVersion string) (bool, error) {
+	if release == nil || compareVersions(s.currentVersion, forkLatestVersion) >= 0 {
+		return false, nil
+	}
+
+	currentCommit := normalizeCommitSHA(s.currentCommit)
+	tagRef := strings.TrimSpace(release.TagName)
+	if currentCommit == "" || tagRef == "" {
+		return true, nil
+	}
+
+	compare, err := s.githubClient.CompareCommits(ctx, githubRepo, currentCommit, tagRef)
+	if err != nil {
+		// Do not hide a version-tag update just because the optional commit
+		// comparison failed (for example when GitHub rate-limits comparisons).
+		return true, fmt.Errorf("fork release compare: %w", err)
+	}
+	switch strings.ToLower(strings.TrimSpace(compare.Status)) {
+	case "identical", "behind":
+		// base=current, head=release tag. "behind" means the release tag is
+		// behind the running commit, so applying it would not be an upgrade.
+		return false, nil
+	case "ahead", "diverged":
+		return true, nil
+	default:
+		if compare.AheadBy > 0 || compare.TotalCommits > 0 {
+			return true, nil
+		}
+		return true, nil
+	}
 }
 
 func (s *UpdateService) fetchBranchInfo(ctx context.Context) (*BranchInfo, error) {
@@ -749,13 +781,17 @@ func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
 	}
 
 	var cached struct {
-		Latest       string        `json:"latest"`
-		ForkLatest   string        `json:"fork_latest"`
-		ReleaseInfo  *ReleaseInfo  `json:"release_info"`
-		BranchInfo   *BranchInfo   `json:"branch_info"`
-		UpstreamInfo *UpstreamInfo `json:"upstream_info"`
-		Warning      string        `json:"warning"`
-		Timestamp    int64         `json:"timestamp"`
+		CurrentVersion string        `json:"current_version"`
+		CurrentCommit  string        `json:"current_commit"`
+		Latest         string        `json:"latest"`
+		ForkLatest     string        `json:"fork_latest"`
+		HasUpdate      *bool         `json:"has_update"`
+		UpdateReady    *bool         `json:"update_ready"`
+		ReleaseInfo    *ReleaseInfo  `json:"release_info"`
+		BranchInfo     *BranchInfo   `json:"branch_info"`
+		UpstreamInfo   *UpstreamInfo `json:"upstream_info"`
+		Warning        string        `json:"warning"`
+		Timestamp      int64         `json:"timestamp"`
 	}
 	if err := json.Unmarshal([]byte(data), &cached); err != nil {
 		return nil, err
@@ -763,6 +799,12 @@ func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
 
 	if time.Now().Unix()-cached.Timestamp > updateCacheTTL {
 		return nil, fmt.Errorf("cache expired")
+	}
+	if cached.CurrentVersion != "" && cached.CurrentVersion != s.currentVersion {
+		return nil, fmt.Errorf("cache version mismatch")
+	}
+	if cached.CurrentCommit != "" && !commitMatches(normalizeCommitSHA(cached.CurrentCommit), normalizeCommitSHA(s.currentCommit)) {
+		return nil, fmt.Errorf("cache commit mismatch")
 	}
 
 	forkLatest := cached.ForkLatest
@@ -773,12 +815,20 @@ func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
 	forkHasUpdate := compareVersions(s.currentVersion, forkLatest) < 0
 	upstreamHasUpdate := cached.UpstreamInfo != nil && cached.UpstreamInfo.HasUpdate
 	upstreamSyncRequired := cached.UpstreamInfo != nil && cached.UpstreamInfo.HasUpdate && cached.UpstreamInfo.SyncRequired
+	hasUpdate := forkHasUpdate || upstreamHasUpdate
+	updateReady := forkHasUpdate && !upstreamSyncRequired
+	if cached.HasUpdate != nil {
+		hasUpdate = *cached.HasUpdate
+	}
+	if cached.UpdateReady != nil {
+		updateReady = *cached.UpdateReady
+	}
 	return &UpdateInfo{
 		CurrentVersion:    s.currentVersion,
 		LatestVersion:     latest,
 		ForkLatestVersion: forkLatest,
-		HasUpdate:         forkHasUpdate || upstreamHasUpdate,
-		UpdateReady:       forkHasUpdate && !upstreamSyncRequired,
+		HasUpdate:         hasUpdate,
+		UpdateReady:       updateReady,
 		ReleaseInfo:       cached.ReleaseInfo,
 		BranchInfo:        cached.BranchInfo,
 		UpstreamInfo:      cached.UpstreamInfo,
@@ -790,53 +840,131 @@ func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
 
 func (s *UpdateService) saveToCache(ctx context.Context, info *UpdateInfo) {
 	cacheData := struct {
-		Latest       string        `json:"latest"`
-		ForkLatest   string        `json:"fork_latest"`
-		ReleaseInfo  *ReleaseInfo  `json:"release_info"`
-		BranchInfo   *BranchInfo   `json:"branch_info"`
-		UpstreamInfo *UpstreamInfo `json:"upstream_info"`
-		Warning      string        `json:"warning"`
-		Timestamp    int64         `json:"timestamp"`
+		CurrentVersion string        `json:"current_version"`
+		CurrentCommit  string        `json:"current_commit"`
+		Latest         string        `json:"latest"`
+		ForkLatest     string        `json:"fork_latest"`
+		HasUpdate      bool          `json:"has_update"`
+		UpdateReady    bool          `json:"update_ready"`
+		ReleaseInfo    *ReleaseInfo  `json:"release_info"`
+		BranchInfo     *BranchInfo   `json:"branch_info"`
+		UpstreamInfo   *UpstreamInfo `json:"upstream_info"`
+		Warning        string        `json:"warning"`
+		Timestamp      int64         `json:"timestamp"`
 	}{
-		Latest:       info.LatestVersion,
-		ForkLatest:   info.ForkLatestVersion,
-		ReleaseInfo:  info.ReleaseInfo,
-		BranchInfo:   info.BranchInfo,
-		UpstreamInfo: info.UpstreamInfo,
-		Warning:      info.Warning,
-		Timestamp:    time.Now().Unix(),
+		CurrentVersion: s.currentVersion,
+		CurrentCommit:  normalizeCommitSHA(s.currentCommit),
+		Latest:         info.LatestVersion,
+		ForkLatest:     info.ForkLatestVersion,
+		HasUpdate:      info.HasUpdate,
+		UpdateReady:    info.UpdateReady,
+		ReleaseInfo:    info.ReleaseInfo,
+		BranchInfo:     info.BranchInfo,
+		UpstreamInfo:   info.UpstreamInfo,
+		Warning:        info.Warning,
+		Timestamp:      time.Now().Unix(),
 	}
 
 	data, _ := json.Marshal(cacheData)
 	_ = s.cache.SetUpdateInfo(ctx, string(data), time.Duration(updateCacheTTL)*time.Second)
 }
 
-// compareVersions compares two semantic versions
+// compareVersions compares upstream semantic versions plus fork release suffixes.
+//
+// Fork releases use tags like v0.1.138-fy.2 while the embedded upstream base
+// version may still be 0.1.138. For the fork update channel, suffix builds are
+// intentionally treated as newer than their base upstream version:
+// 0.1.138 < 0.1.138-fy.1 < 0.1.138-fy.2 < 0.1.139.
 func compareVersions(current, latest string) int {
 	currentParts := parseVersion(current)
 	latestParts := parseVersion(latest)
 
 	for i := 0; i < 3; i++ {
-		if currentParts[i] < latestParts[i] {
+		if currentParts.core[i] < latestParts.core[i] {
 			return -1
 		}
-		if currentParts[i] > latestParts[i] {
+		if currentParts.core[i] > latestParts.core[i] {
 			return 1
+		}
+	}
+
+	if currentParts.hasSuffix != latestParts.hasSuffix {
+		if currentParts.hasSuffix {
+			return 1
+		}
+		return -1
+	}
+	if currentParts.hasSuffix {
+		if cmp := strings.Compare(currentParts.suffixLabel, latestParts.suffixLabel); cmp != 0 {
+			return cmp
+		}
+		if currentParts.suffixNumber != latestParts.suffixNumber {
+			if currentParts.suffixNumber < latestParts.suffixNumber {
+				return -1
+			}
+			return 1
+		}
+		if cmp := strings.Compare(currentParts.suffix, latestParts.suffix); cmp != 0 {
+			return cmp
 		}
 	}
 	return 0
 }
 
-func parseVersion(v string) [3]int {
-	v = strings.TrimPrefix(v, "v")
+type parsedVersion struct {
+	core         [3]int
+	suffix       string
+	suffixLabel  string
+	suffixNumber int
+	hasSuffix    bool
+}
+
+func parseVersion(v string) parsedVersion {
+	v = strings.TrimSpace(strings.TrimPrefix(v, "v"))
+	if plus := strings.Index(v, "+"); plus >= 0 {
+		v = v[:plus]
+	}
+
+	result := parsedVersion{core: [3]int{0, 0, 0}, suffixNumber: -1}
+	if dash := strings.Index(v, "-"); dash >= 0 {
+		result.suffix = strings.ToLower(strings.TrimSpace(v[dash+1:]))
+		result.hasSuffix = result.suffix != ""
+		v = v[:dash]
+	}
+
 	parts := strings.Split(v, ".")
-	result := [3]int{0, 0, 0}
 	for i := 0; i < len(parts) && i < 3; i++ {
-		if parsed, err := strconv.Atoi(parts[i]); err == nil {
-			result[i] = parsed
+		part := leadingDigits(parts[i])
+		if parsed, err := strconv.Atoi(part); err == nil {
+			result.core[i] = parsed
+		}
+	}
+
+	if result.hasSuffix {
+		suffixParts := strings.FieldsFunc(result.suffix, func(r rune) bool {
+			return r == '.' || r == '-' || r == '_'
+		})
+		if len(suffixParts) > 0 {
+			result.suffixLabel = suffixParts[0]
+		}
+		for i := len(suffixParts) - 1; i >= 0; i-- {
+			if parsed, err := strconv.Atoi(suffixParts[i]); err == nil {
+				result.suffixNumber = parsed
+				break
+			}
 		}
 	}
 	return result
+}
+
+func leadingDigits(value string) string {
+	value = strings.TrimSpace(value)
+	for i, r := range value {
+		if r < '0' || r > '9' {
+			return value[:i]
+		}
+	}
+	return value
 }
 
 func releaseInfoFromGitHub(release *GitHubRelease) *ReleaseInfo {

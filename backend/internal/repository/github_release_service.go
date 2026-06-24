@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 type githubReleaseClient struct {
 	httpClient         *http.Client
 	downloadHTTPClient *http.Client
+	token              string
 }
 
 type githubReleaseClientError struct {
@@ -29,7 +31,8 @@ type githubReleaseClientError struct {
 // 代理配置失败时行为由 allowDirectOnProxyError 控制：
 //   - false（默认）：返回错误占位客户端，禁止回退到直连
 //   - true：回退到直连（仅限管理员显式开启）
-func NewGitHubReleaseClient(proxyURL string, allowDirectOnProxyError bool) service.GitHubReleaseClient {
+func NewGitHubReleaseClient(proxyURL string, allowDirectOnProxyError bool, githubToken ...string) service.GitHubReleaseClient {
+	token := firstNonEmptyString(githubToken...)
 	// 安全说明：httpclient.GetClient 的错误链（url.Parse / proxyutil）不含明文代理凭据，
 	// 但仍通过 slog 仅在服务端日志记录，不会暴露给 HTTP 响应。
 	sharedClient, err := httpclient.GetClient(httpclient.Options{
@@ -60,6 +63,7 @@ func NewGitHubReleaseClient(proxyURL string, allowDirectOnProxyError bool) servi
 	return &githubReleaseClient{
 		httpClient:         sharedClient,
 		downloadHTTPClient: downloadClient,
+		token:              token,
 	}
 }
 
@@ -92,6 +96,7 @@ func (c *githubReleaseClient) FetchLatestRelease(ctx context.Context, repo strin
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "Sub2API-Updater")
+	c.authorizeGitHubRequest(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -120,6 +125,7 @@ func (c *githubReleaseClient) FetchBranch(ctx context.Context, repo, branch stri
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "Sub2API-Updater")
+	c.authorizeGitHubRequest(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -148,6 +154,7 @@ func (c *githubReleaseClient) CompareCommits(ctx context.Context, repo, base, he
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "Sub2API-Updater")
+	c.authorizeGitHubRequest(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -172,6 +179,7 @@ func (c *githubReleaseClient) DownloadFile(ctx context.Context, url, dest string
 	if err != nil {
 		return err
 	}
+	c.authorizeGitHubRequest(req)
 
 	// 使用预配置的下载客户端（已包含代理配置）
 	resp, err := c.downloadHTTPClient.Do(req)
@@ -220,6 +228,7 @@ func (c *githubReleaseClient) FetchChecksumFile(ctx context.Context, url string)
 	if err != nil {
 		return nil, err
 	}
+	c.authorizeGitHubRequest(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -232,4 +241,33 @@ func (c *githubReleaseClient) FetchChecksumFile(ctx context.Context, url string)
 	}
 
 	return io.ReadAll(resp.Body)
+}
+
+func (c *githubReleaseClient) authorizeGitHubRequest(req *http.Request) {
+	if req == nil || c == nil || strings.TrimSpace(c.token) == "" || !isGitHubRequest(req.URL) {
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(c.token))
+}
+
+func isGitHubRequest(u *url.URL) bool {
+	if u == nil || u.Scheme != "https" {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	switch host {
+	case "api.github.com", "github.com", "objects.githubusercontent.com":
+		return true
+	default:
+		return strings.HasSuffix(host, ".github.com") || strings.HasSuffix(host, ".objects.githubusercontent.com")
+	}
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }

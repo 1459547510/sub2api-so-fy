@@ -101,7 +101,7 @@ jobs:
         run: |
           mkdir -p ../dist/linux-amd64
           go build -tags embed -trimpath \
-            -ldflags "-s -w -X main.Commit=${GITHUB_SHA} -X main.UpstreamCommit=${{ steps.meta.outputs.upstream_commit }} -X main.Date=${{ steps.meta.outputs.build_date }} -X main.BuildType=release" \
+            -ldflags "-s -w -X main.Version=${{ steps.meta.outputs.version }} -X main.Commit=${GITHUB_SHA} -X main.UpstreamCommit=${{ steps.meta.outputs.upstream_commit }} -X main.Date=${{ steps.meta.outputs.build_date }} -X main.BuildType=release" \
             -o ../dist/linux-amd64/sub2api ./cmd/server
 
       - name: Package artifact
@@ -128,7 +128,7 @@ jobs:
           body: |
             ## Sub2API ${{ steps.meta.outputs.version }}
 
-            Linux x86_64 binary release for sub2api-so-fy. Program internal version: `${{ steps.meta.outputs.base_version }}`.
+            Linux x86_64 binary release for sub2api-so-fy. Program version: `${{ steps.meta.outputs.version }}` (upstream base `${{ steps.meta.outputs.base_version }}`).
 
             ### Server upgrade
 
@@ -147,4 +147,3 @@ jobs:
           files: |
             dist/sub2api_${{ steps.meta.outputs.version }}_linux_amd64.tar.gz
             dist/checksums.txt
-

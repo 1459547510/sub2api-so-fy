@@ -132,6 +132,130 @@ func TestUpdateServiceUsesForkReleaseRepository(t *testing.T) {
 	require.Contains(t, client.branchRequests, upstreamGithubRepo+":"+githubBranch)
 }
 
+func TestCompareVersionsSupportsForkSuffix(t *testing.T) {
+	require.Less(t, compareVersions("0.1.138", "0.1.138-fy.1"), 0)
+	require.Less(t, compareVersions("0.1.138-fy.1", "0.1.138-fy.2"), 0)
+	require.Less(t, compareVersions("v0.1.138-fy.2", "0.1.139"), 0)
+	require.Greater(t, compareVersions("0.1.139", "0.1.138-fy.99"), 0)
+	require.Equal(t, 0, compareVersions("v0.1.138-fy.2", "0.1.138-fy.2"))
+}
+
+func TestUpdateServiceDetectsForkSuffixReleaseUpdate(t *testing.T) {
+	currentCommit := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	client := &updateServiceGitHubClientStub{
+		releases: map[string]*GitHubRelease{
+			githubRepo: {
+				TagName: "v0.1.138-fy.2",
+				Name:    "v0.1.138-fy.2",
+				Assets: []GitHubAsset{
+					{Name: "sub2api_0.1.138-fy.2_linux_amd64.tar.gz", BrowserDownloadURL: "https://github.com/1459547510/sub2api-so-fy/releases/download/v0.1.138-fy.2/sub2api_0.1.138-fy.2_linux_amd64.tar.gz"},
+				},
+			},
+			upstreamGithubRepo: {
+				TagName: "v0.1.138",
+				Name:    "v0.1.138",
+			},
+		},
+		branches: map[string]*GitHubBranch{
+			githubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+				},
+			},
+			upstreamGithubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: currentCommit,
+				},
+			},
+		},
+		compares: map[string]*GitHubCompare{
+			githubRepo + ":" + currentCommit + ":" + "v0.1.138-fy.2": {
+				Status:       "ahead",
+				AheadBy:      1,
+				TotalCommits: 1,
+			},
+		},
+	}
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		client,
+		"0.1.138",
+		"release",
+		currentCommit,
+		currentCommit,
+	)
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+
+	require.NoError(t, err)
+	require.True(t, info.HasUpdate)
+	require.True(t, info.UpdateReady)
+	require.Equal(t, "0.1.138-fy.2", info.ForkLatestVersion)
+	require.Equal(t, "0.1.138-fy.2", info.LatestVersion)
+}
+
+func TestUpdateServiceSuppressesForkSuffixReleaseWhenCurrentCommitMatchesTag(t *testing.T) {
+	currentCommit := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	upstreamCommit := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	cache := &updateServiceCacheStub{}
+	client := &updateServiceGitHubClientStub{
+		releases: map[string]*GitHubRelease{
+			githubRepo: {
+				TagName: "v0.1.138-fy.2",
+				Name:    "v0.1.138-fy.2",
+			},
+			upstreamGithubRepo: {
+				TagName: "v0.1.138",
+				Name:    "v0.1.138",
+			},
+		},
+		branches: map[string]*GitHubBranch{
+			githubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: currentCommit,
+				},
+			},
+			upstreamGithubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: upstreamCommit,
+				},
+			},
+		},
+		compares: map[string]*GitHubCompare{
+			githubRepo + ":" + currentCommit + ":" + "v0.1.138-fy.2": {
+				Status: "identical",
+			},
+			upstreamGithubRepo + ":" + upstreamCommit + ":" + upstreamCommit: {
+				Status: "identical",
+			},
+		},
+	}
+	svc := NewUpdateService(
+		cache,
+		client,
+		"0.1.138",
+		"release",
+		currentCommit,
+		upstreamCommit,
+	)
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+	require.NoError(t, err)
+	require.False(t, info.HasUpdate)
+	require.False(t, info.UpdateReady)
+	require.Equal(t, "0.1.138-fy.2", info.ForkLatestVersion)
+
+	cached, err := svc.CheckUpdate(context.Background(), false)
+	require.NoError(t, err)
+	require.True(t, cached.Cached)
+	require.False(t, cached.HasUpdate)
+	require.False(t, cached.UpdateReady)
+}
+
 func TestUpdateServiceDetectsForkBranchCommitUpdate(t *testing.T) {
 	client := &updateServiceGitHubClientStub{
 		release: &GitHubRelease{

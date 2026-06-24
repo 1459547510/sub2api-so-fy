@@ -154,6 +154,9 @@ type UpdateConfig struct {
 	// 支持 http/https/socks5/socks5h 协议
 	// 例如: "http://127.0.0.1:7890", "socks5://127.0.0.1:1080"
 	ProxyURL string `mapstructure:"proxy_url"`
+	// GitHubToken is used for private fork repository Release checks/downloads.
+	// It can also be provided by UPDATE_GITHUB_TOKEN or GITHUB_TOKEN.
+	GitHubToken string `mapstructure:"github_token"`
 }
 
 type IdempotencyConfig struct {
@@ -1390,6 +1393,7 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	// 环境变量支持
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	_ = viper.BindEnv("update.github_token", "UPDATE_GITHUB_TOKEN", "GITHUB_TOKEN")
 
 	// 默认值
 	setDefaults()
@@ -2879,6 +2883,7 @@ func GetServerAddress() string {
 	// Support SERVER_HOST and SERVER_PORT environment variables
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	_ = v.BindEnv("update.github_token", "UPDATE_GITHUB_TOKEN", "GITHUB_TOKEN")
 	v.SetDefault("server.host", "0.0.0.0")
 	v.SetDefault("server.port", 8080)
 
