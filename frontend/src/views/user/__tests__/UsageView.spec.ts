@@ -4,10 +4,12 @@ import { nextTick } from 'vue'
 
 import UsageView from '../UsageView.vue'
 
-const { query, getStatsByDateRange, list, showError, showWarning, showSuccess, showInfo } = vi.hoisted(() => ({
+const { query, getStatsByDateRange, list, getTokenIncentiveStatus, claimTokenIncentive, showError, showWarning, showSuccess, showInfo } = vi.hoisted(() => ({
   query: vi.fn(),
   getStatsByDateRange: vi.fn(),
   list: vi.fn(),
+  getTokenIncentiveStatus: vi.fn(),
+  claimTokenIncentive: vi.fn(),
   showError: vi.fn(),
   showWarning: vi.fn(),
   showSuccess: vi.fn(),
@@ -71,10 +73,20 @@ vi.mock('@/api', () => ({
   keysAPI: {
     list,
   },
+  userAPI: {
+    getTokenIncentiveStatus,
+    claimTokenIncentive,
+  },
 }))
 
 vi.mock('@/stores/app', () => ({
   useAppStore: () => ({ showError, showWarning, showSuccess, showInfo }),
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    refreshUser: vi.fn().mockResolvedValue(undefined),
+  }),
 }))
 
 vi.mock('vue-i18n', async () => {
@@ -109,10 +121,14 @@ describe('user UsageView tooltip', () => {
     query.mockReset()
     getStatsByDateRange.mockReset()
     list.mockReset()
+    getTokenIncentiveStatus.mockReset()
+    claimTokenIncentive.mockReset()
     showError.mockReset()
     showWarning.mockReset()
     showSuccess.mockReset()
     showInfo.mockReset()
+
+    getTokenIncentiveStatus.mockResolvedValue({ enabled: false })
 
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       x: 0,

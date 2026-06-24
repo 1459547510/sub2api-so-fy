@@ -1,5 +1,5 @@
 <template>
-  <div class="table-page-layout" :class="{ 'mobile-mode': isMobile }">
+  <div class="table-page-layout" :class="{ 'mobile-mode': isMobile, 'page-scrollable': props.pageScrollable }">
     <!-- 固定区域：操作按钮 -->
     <div v-if="$slots.actions" class="layout-section-fixed">
       <slot name="actions" />
@@ -26,6 +26,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+
+const props = withDefaults(defineProps<{
+  pageScrollable?: boolean
+}>(), {
+  pageScrollable: false
+})
 
 const isMobile = ref(false)
 
@@ -56,6 +62,20 @@ onUnmounted(() => {
 
 .layout-section-scrollable {
   @apply flex-1 min-h-0 flex flex-col;
+}
+
+/* 页面内容很高时允许整页滚动，同时保留表格自身的虚拟滚动容器 */
+.table-page-layout.page-scrollable {
+  height: auto;
+  min-height: calc(100vh - 64px - 4rem);
+}
+
+.table-page-layout.page-scrollable .layout-section-scrollable {
+  @apply flex-none min-h-fit;
+}
+
+.table-page-layout.page-scrollable .table-scroll-container {
+  height: clamp(360px, 58vh, 720px);
 }
 
 /* 表格滚动容器 - 增强版表体滚动方案 */
