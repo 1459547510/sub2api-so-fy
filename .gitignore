@@ -131,6 +131,8 @@ docs/*
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
+!docs/FRONTEND_PUBLIC_PAGES.md
+!docs/TOKEN_INCENTIVE.md
 !docs/legal/
 !docs/legal/*.md
 .serena/
