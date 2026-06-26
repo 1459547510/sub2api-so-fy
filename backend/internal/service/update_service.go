@@ -31,9 +31,9 @@ const (
 	updateCacheTTL = 1200 // 20 minutes
 
 	// Update releases must be resolved from this fork instead of the original
-	// upstream repository. This keeps the online updater on the branch-specific
-	// release channel so fork-only additions/fixes are not overwritten by
-	// Wei-Shaw/sub2api release artifacts.
+	// upstream repository. The original repository is checked only for released
+	// upstream versions, not for raw branch commits, so every upstream commit
+	// does not become an application update prompt.
 	githubRepo         = "1459547510/sub2api-so-fy"
 	upstreamGithubRepo = "Wei-Shaw/sub2api"
 	githubBranch       = "main"
@@ -208,7 +208,7 @@ func (s *UpdateService) CheckUpdate(ctx context.Context, force bool) (*UpdateInf
 	info, err := s.fetchLatestRelease(ctx)
 	if err != nil {
 		branchInfo, branchErr := s.fetchBranchInfo(ctx)
-		upstreamInfo, upstreamErr := s.fetchUpstreamInfo(ctx, nil, branchInfo)
+		upstreamInfo, upstreamErr := s.fetchUpstreamInfo(ctx, nil)
 		// Return cached on error
 		if cached, cacheErr := s.getFromCache(ctx); cacheErr == nil && cached != nil {
 			cached.Warning = "Using cached data: " + appendWarnings(err, branchErr, upstreamErr)
@@ -411,7 +411,7 @@ func (s *UpdateService) fetchLatestRelease(ctx context.Context) (*UpdateInfo, er
 
 	branchInfo, branchErr := s.fetchBranchInfo(ctx)
 	info.BranchInfo = branchInfo
-	upstreamInfo, upstreamErr := s.fetchUpstreamInfo(ctx, release, branchInfo)
+	upstreamInfo, upstreamErr := s.fetchUpstreamInfo(ctx, release)
 	info.UpstreamInfo = upstreamInfo
 	if upstreamInfo != nil {
 		info.LatestVersion = displayLatestVersion(s.currentVersion, forkLatestVersion, upstreamInfo)
@@ -510,107 +510,36 @@ func (s *UpdateService) branchInfoForLatestCommit(latestCommit, currentCommit st
 	return info
 }
 
-func (s *UpdateService) fetchUpstreamInfo(ctx context.Context, forkRelease *GitHubRelease, forkBranch *BranchInfo) (*UpstreamInfo, error) {
+func (s *UpdateService) fetchUpstreamInfo(ctx context.Context, forkRelease *GitHubRelease) (*UpstreamInfo, error) {
 	info := &UpstreamInfo{
 		Repo:       upstreamGithubRepo,
 		Branch:     githubBranch,
-		Status:     "unknown",
+		Status:     "release_checked",
 		CanCompare: false,
 	}
 
 	var errs []error
+	forkLatestVersion := ""
+	if forkRelease != nil {
+		forkLatestVersion = strings.TrimPrefix(forkRelease.TagName, "v")
+	}
 
 	if upstreamRelease, err := s.githubClient.FetchLatestRelease(ctx, upstreamGithubRepo); err != nil {
 		errs = append(errs, fmt.Errorf("upstream release: %w", err))
+		info.Status = "release_unavailable"
 	} else {
 		latestVersion := strings.TrimPrefix(upstreamRelease.TagName, "v")
 		info.LatestVersion = latestVersion
 		info.ReleaseInfo = releaseInfoFromGitHub(upstreamRelease)
-		if compareVersions(s.currentVersion, latestVersion) < 0 {
-			info.HasNewVersion = true
-		}
-		if forkRelease == nil || compareVersions(strings.TrimPrefix(forkRelease.TagName, "v"), latestVersion) < 0 {
-			info.SyncRequired = true
-		}
 	}
 
-	upstreamBranch, err := s.githubClient.FetchBranch(ctx, upstreamGithubRepo, githubBranch)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("upstream branch: %w", err))
-	} else {
-		latestCommit := normalizeCommitSHA(upstreamBranch.Commit.SHA)
-		info.LatestCommit = latestCommit
-		if latestCommit != "" {
-			info.CommitURL = fmt.Sprintf("https://github.com/%s/commit/%s", upstreamGithubRepo, latestCommit)
-		}
-
-		baseline := normalizeCommitSHA(s.upstreamCommit)
-		info.CurrentCommit = unknownIfEmpty(baseline)
-		info.CanCompare = baseline != "" && latestCommit != ""
-
-		if baseline == "" {
-			info.Status = "unknown_current"
-			info.CompareURL = fmt.Sprintf("https://github.com/%s/commits/%s", upstreamGithubRepo, githubBranch)
-		} else if commitMatches(baseline, latestCommit) {
-			info.Status = "current"
-		} else if compare, compareErr := s.githubClient.CompareCommits(ctx, upstreamGithubRepo, baseline, latestCommit); compareErr == nil {
-			info.Status = compare.Status
-			info.HasNewCommit = compare.AheadBy > 0 || compare.TotalCommits > 0 || compare.Status == "ahead" || compare.Status == "diverged"
-			info.CompareURL = firstNonEmpty(compare.HTMLURL, compare.Permalink, fmt.Sprintf("https://github.com/%s/compare/%s...%s", upstreamGithubRepo, baseline, latestCommit))
-		} else {
-			info.Status = "unknown_compare"
-			info.HasNewCommit = true
-			info.CompareURL = fmt.Sprintf("https://github.com/%s/compare/%s...%s", upstreamGithubRepo, baseline, latestCommit)
-			errs = append(errs, fmt.Errorf("upstream compare: %w", compareErr))
-		}
-
-		if info.HasNewCommit {
-			forkContainsUpstream, containsErr := s.forkContainsUpstreamCommit(ctx, latestCommit, forkBranch)
-			if containsErr != nil {
-				errs = append(errs, fmt.Errorf("fork upstream containment: %w", containsErr))
-			}
-			if !forkContainsUpstream {
-				info.SyncRequired = true
-			}
-		}
-	}
-
-	info.HasUpdate = info.HasNewVersion || info.HasNewCommit
-	if info.LatestVersion == "" {
-		info.LatestVersion = s.currentVersion
-	}
+	normalizeUpstreamInfoForReleaseOnly(info, s.currentVersion, forkLatestVersion)
 
 	warnErr := joinUpdateWarnings(errs...)
 	if warnErr != nil {
 		info.Warning = warnErr.Error()
 	}
 	return info, warnErr
-}
-
-func (s *UpdateService) forkContainsUpstreamCommit(ctx context.Context, upstreamCommit string, forkBranch *BranchInfo) (bool, error) {
-	upstreamCommit = normalizeCommitSHA(upstreamCommit)
-	if upstreamCommit == "" || forkBranch == nil {
-		return false, nil
-	}
-
-	forkLatest := normalizeCommitSHA(forkBranch.LatestCommit)
-	if forkLatest == "" {
-		return false, nil
-	}
-	if commitMatches(forkLatest, upstreamCommit) {
-		return true, nil
-	}
-
-	compare, err := s.githubClient.CompareCommits(ctx, githubRepo, upstreamCommit, forkLatest)
-	if err != nil {
-		return false, err
-	}
-	switch compare.Status {
-	case "identical", "ahead":
-		return true, nil
-	default:
-		return false, nil
-	}
 }
 
 func (s *UpdateService) downloadFile(ctx context.Context, downloadURL, dest string) error {
@@ -811,6 +740,7 @@ func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
 	if forkLatest == "" {
 		forkLatest = cached.Latest
 	}
+	normalizeUpstreamInfoForReleaseOnly(cached.UpstreamInfo, s.currentVersion, forkLatest)
 	latest := displayLatestVersion(s.currentVersion, forkLatest, cached.UpstreamInfo)
 	forkHasUpdate := compareVersions(s.currentVersion, forkLatest) < 0
 	upstreamHasUpdate := cached.UpstreamInfo != nil && cached.UpstreamInfo.HasUpdate
@@ -986,6 +916,35 @@ func releaseInfoFromGitHub(release *GitHubRelease) *ReleaseInfo {
 		HTMLURL:     release.HTMLURL,
 		Assets:      assets,
 	}
+}
+
+func normalizeUpstreamInfoForReleaseOnly(info *UpstreamInfo, currentVersion, forkLatestVersion string) {
+	if info == nil {
+		return
+	}
+	if info.LatestVersion == "" {
+		info.LatestVersion = currentVersion
+	}
+	info.HasNewVersion = compareVersions(currentVersion, info.LatestVersion) < 0
+	info.HasUpdate = info.HasNewVersion
+	info.HasNewCommit = false
+	info.CurrentCommit = ""
+	info.LatestCommit = ""
+	info.CompareURL = ""
+	info.CommitURL = ""
+	info.CanCompare = false
+	if info.Status == "" || info.Status == "unknown" || info.Status == "unknown_current" || info.Status == "unknown_compare" || info.Status == "ahead" || info.Status == "diverged" || info.Status == "behind" || info.Status == "current" {
+		info.Status = "release_checked"
+	}
+	if !info.HasNewVersion {
+		info.SyncRequired = false
+		return
+	}
+	if strings.TrimSpace(forkLatestVersion) == "" {
+		info.SyncRequired = true
+		return
+	}
+	info.SyncRequired = compareVersions(forkLatestVersion, info.LatestVersion) < 0
 }
 
 func normalizeCommitSHA(sha string) string {

@@ -129,7 +129,7 @@ func TestUpdateServiceUsesForkReleaseRepository(t *testing.T) {
 	require.Contains(t, client.releaseRepos, upstreamGithubRepo)
 	require.Equal(t, "1459547510/sub2api-so-fy", githubRepo)
 	require.Contains(t, client.branchRequests, githubRepo+":"+githubBranch)
-	require.Contains(t, client.branchRequests, upstreamGithubRepo+":"+githubBranch)
+	require.NotContains(t, client.branchRequests, upstreamGithubRepo+":"+githubBranch)
 }
 
 func TestCompareVersionsSupportsForkSuffix(t *testing.T) {
@@ -298,9 +298,8 @@ func TestUpdateServiceDetectsForkBranchCommitUpdate(t *testing.T) {
 	require.Contains(t, info.BranchInfo.CompareURL, "/compare/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
 }
 
-func TestUpdateServiceDetectsUpstreamUpdateButBlocksOneClickUntilForkRelease(t *testing.T) {
+func TestUpdateServiceDetectsUpstreamReleaseVersionButBlocksOneClickUntilForkRelease(t *testing.T) {
 	forkHead := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-	upstreamHead := "cccccccccccccccccccccccccccccccccccccccc"
 	client := &updateServiceGitHubClientStub{
 		releases: map[string]*GitHubRelease{
 			githubRepo: {
@@ -318,24 +317,6 @@ func TestUpdateServiceDetectsUpstreamUpdateButBlocksOneClickUntilForkRelease(t *
 				Commit: GitHubCommitRef{
 					SHA: forkHead,
 				},
-			},
-			upstreamGithubRepo + ":" + githubBranch: {
-				Name: githubBranch,
-				Commit: GitHubCommitRef{
-					SHA: upstreamHead,
-				},
-			},
-		},
-		compares: map[string]*GitHubCompare{
-			upstreamGithubRepo + ":" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + ":" + upstreamHead: {
-				Status:       "ahead",
-				AheadBy:      1,
-				TotalCommits: 1,
-				HTMLURL:      "https://github.com/Wei-Shaw/sub2api/compare/base...head",
-			},
-			githubRepo + ":" + upstreamHead + ":" + forkHead: {
-				Status:   "behind",
-				BehindBy: 1,
 			},
 		},
 	}
@@ -358,11 +339,58 @@ func TestUpdateServiceDetectsUpstreamUpdateButBlocksOneClickUntilForkRelease(t *
 	require.NotNil(t, info.UpstreamInfo)
 	require.True(t, info.UpstreamInfo.HasUpdate)
 	require.True(t, info.UpstreamInfo.HasNewVersion)
+	require.False(t, info.UpstreamInfo.HasNewCommit)
 	require.True(t, info.UpstreamInfo.SyncRequired)
+	require.Equal(t, "release_checked", info.UpstreamInfo.Status)
+	require.Empty(t, info.UpstreamInfo.CompareURL)
 }
 
-func TestUpdateServiceAllowsForkReleaseWhenItContainsUpstreamHead(t *testing.T) {
-	upstreamHead := "cccccccccccccccccccccccccccccccccccccccc"
+func TestUpdateServiceIgnoresUpstreamBranchCommitWhenReleaseVersionIsCurrent(t *testing.T) {
+	forkHead := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	client := &updateServiceGitHubClientStub{
+		releases: map[string]*GitHubRelease{
+			githubRepo: {
+				TagName: "v0.1.138",
+				Name:    "v0.1.138",
+			},
+			upstreamGithubRepo: {
+				TagName: "v0.1.138",
+				Name:    "v0.1.138",
+			},
+		},
+		branches: map[string]*GitHubBranch{
+			githubRepo + ":" + githubBranch: {
+				Name: githubBranch,
+				Commit: GitHubCommitRef{
+					SHA: forkHead,
+				},
+			},
+		},
+	}
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		client,
+		"0.1.138",
+		"release",
+		forkHead,
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	)
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+
+	require.NoError(t, err)
+	require.False(t, info.HasUpdate)
+	require.False(t, info.UpdateReady)
+	require.NotNil(t, info.UpstreamInfo)
+	require.False(t, info.UpstreamInfo.HasUpdate)
+	require.False(t, info.UpstreamInfo.HasNewVersion)
+	require.False(t, info.UpstreamInfo.HasNewCommit)
+	require.False(t, info.UpstreamInfo.SyncRequired)
+	require.Equal(t, "release_checked", info.UpstreamInfo.Status)
+	require.NotContains(t, client.branchRequests, upstreamGithubRepo+":"+githubBranch)
+}
+
+func TestUpdateServiceAllowsForkReleaseWhenForkVersionCatchesUpWithUpstreamRelease(t *testing.T) {
 	forkHead := "dddddddddddddddddddddddddddddddddddddddd"
 	client := &updateServiceGitHubClientStub{
 		releases: map[string]*GitHubRelease{
@@ -382,23 +410,6 @@ func TestUpdateServiceAllowsForkReleaseWhenItContainsUpstreamHead(t *testing.T) 
 					SHA: forkHead,
 				},
 			},
-			upstreamGithubRepo + ":" + githubBranch: {
-				Name: githubBranch,
-				Commit: GitHubCommitRef{
-					SHA: upstreamHead,
-				},
-			},
-		},
-		compares: map[string]*GitHubCompare{
-			upstreamGithubRepo + ":" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + ":" + upstreamHead: {
-				Status:       "ahead",
-				AheadBy:      1,
-				TotalCommits: 1,
-			},
-			githubRepo + ":" + upstreamHead + ":" + forkHead: {
-				Status:  "ahead",
-				AheadBy: 2,
-			},
 		},
 	}
 	svc := NewUpdateService(
@@ -417,6 +428,7 @@ func TestUpdateServiceAllowsForkReleaseWhenItContainsUpstreamHead(t *testing.T) 
 	require.True(t, info.UpdateReady)
 	require.NotNil(t, info.UpstreamInfo)
 	require.False(t, info.UpstreamInfo.SyncRequired)
+	require.False(t, info.UpstreamInfo.HasNewCommit)
 }
 
 func TestUpdateServiceDoesNotFlagSameCommitPrefix(t *testing.T) {

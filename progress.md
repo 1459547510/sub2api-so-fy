@@ -264,3 +264,19 @@
 ### Notes
 - `progress.md`：追加当前后台站点设置动态信息未完整生效的问题记录和验证证据。
 - 回滚方式：从 `progress.md` 末尾删除本条 `2026-06-26 - Task: 记录后台站点设置动态信息生效问题` 记录；或回退包含本次日志追加的提交。
+
+## 2026-06-26 - Task: 调整原仓库更新检测为 Release-only
+### What was done
+- 将原仓库更新检测从分支 commit 比较改为仅检测原仓库最新 Release 版本号，避免原仓库普通提交触发“有新版本”提示。
+- 保留当前二开仓库 Release 作为应用内一键更新的唯一安装来源；原仓库 Release 高于当前仓库时只提示需要先同步、合并并发布当前仓库 Release。
+- 对旧缓存中的原仓库 commit 更新字段做兼容归一化，避免旧缓存继续显示上游 commit 更新提示。
+- 补充更新检测策略文档，明确当前仓库优先和原仓库 Release-only 的边界。
+### Testing
+- `go test -tags unit ./internal/service -run UpdateService`（在 `backend` 目录）通过。
+### Notes
+- `backend/internal/service/update_service.go`：原仓库检测只调用最新 Release，不再拉取或比较原仓库分支提交；缓存读取时归一化原仓库更新字段。
+- `backend/internal/service/update_service_test.go`：更新测试，覆盖“原仓库只有新 commit 不提示”和“原仓库有新 Release 才提示同步”。
+- `docs/UPDATE_POLICY.md`：新增当前仓库与原仓库的更新检测/安装策略说明。
+- `.gitignore`：放行 `docs/UPDATE_POLICY.md`，确保策略文档可提交。
+- `progress.md`：追加本轮修复记录。
+- 回滚方式：执行 `git checkout -- backend/internal/service/update_service.go backend/internal/service/update_service_test.go .gitignore docs/UPDATE_POLICY.md progress.md`，或回退包含本轮改动的提交。
