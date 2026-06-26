@@ -223,7 +223,7 @@ func TestTokenIncentiveServiceClaim_DisabledDoesNotReadUsage(t *testing.T) {
 	require.False(t, repo.capturedClaim.called)
 }
 
-func TestTokenIncentiveStatus_ClaimedUsesClaimedAmount(t *testing.T) {
+func TestTokenIncentiveStatus_ClaimedKeepsLiveTokensAndClaimedAmount(t *testing.T) {
 	claimedAt := time.Now()
 	status := buildTokenIncentiveStatus(
 		true,
@@ -243,7 +243,7 @@ func TestTokenIncentiveStatus_ClaimedUsesClaimedAmount(t *testing.T) {
 
 	require.True(t, status.Eligible)
 	require.True(t, status.Claimed)
-	require.EqualValues(t, 100_000_000, status.Tokens)
+	require.EqualValues(t, 600_000_000, status.Tokens)
 	require.Equal(t, 5.0, status.RewardAmount)
 	require.NotNil(t, status.ClaimedAt)
 	require.Equal(t, claimedAt, *status.ClaimedAt)

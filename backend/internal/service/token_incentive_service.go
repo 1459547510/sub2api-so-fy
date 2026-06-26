@@ -200,11 +200,7 @@ func buildTokenIncentiveStatus(enabled bool, weekStart, weekEnd time.Time, token
 	if err != nil {
 		rules = DefaultTokenIncentiveRules()
 	}
-	displayTokens := tokens
-	if claim != nil {
-		displayTokens = claim.Tokens
-	}
-	selected, next := selectTokenIncentiveRule(displayTokens, rules)
+	selected, next := selectTokenIncentiveRule(tokens, rules)
 	displayRule := tokenIncentiveDisplayRule(selected, next, rules)
 
 	status := &TokenIncentiveStatus{
@@ -213,7 +209,7 @@ func buildTokenIncentiveStatus(enabled bool, weekStart, weekEnd time.Time, token
 		Claimed:         claim != nil,
 		WeekStart:       weekStart,
 		WeekEnd:         weekEnd,
-		Tokens:          displayTokens,
+		Tokens:          tokens,
 		ThresholdTokens: displayRule.ThresholdTokens,
 		RewardAmount:    displayRule.RewardAmount,
 		Rules:           rules,
