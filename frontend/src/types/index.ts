@@ -1474,12 +1474,15 @@ export interface UsageStatsResponse {
 export interface TokenIncentiveStatus {
   enabled: boolean
   eligible: boolean
+  claimable: boolean
   claimed: boolean
   week_start: string
   week_end: string
   tokens: number
   threshold_tokens: number
   reward_amount: number
+  claimed_reward_amount: number
+  claimed_threshold_tokens?: number[]
   rules: TokenIncentiveRule[]
   next_threshold_tokens?: number
   next_reward_amount?: number

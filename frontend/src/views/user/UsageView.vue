@@ -210,7 +210,7 @@
                           ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
                           : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'"
                       >
-                        {{ marker.reached ? tokenIncentiveReachedLabel : tokenIncentivePendingLabel(marker) }}
+                        {{ marker.claimed ? tokenIncentiveClaimedLabel : marker.reached ? tokenIncentiveReachedLabel : tokenIncentivePendingLabel(marker) }}
                       </span>
                     </div>
                     <p class="mt-2 text-lg font-bold text-gray-900 dark:text-white">
@@ -228,7 +228,7 @@
 
             <button
               class="btn btn-primary shrink-0 lg:mt-1"
-              :disabled="tokenIncentiveClaiming || tokenIncentive.claimed || !tokenIncentive.eligible"
+              :disabled="tokenIncentiveClaiming || !tokenIncentive.claimable"
               @click="claimTokenIncentiveReward"
             >
               {{ tokenIncentiveClaimButtonLabel }}
@@ -989,19 +989,23 @@ const tokenIncentiveMaxThreshold = computed(() => {
 const tokenIncentiveRuleMarkers = computed(() => {
   const max = tokenIncentiveMaxThreshold.value || 1
   const tokens = tokenIncentive.value?.tokens ?? 0
+  const claimed = new Set(tokenIncentive.value?.claimed_threshold_tokens ?? [])
   return tokenIncentiveRules.value.map((rule) => ({
     ...rule,
     reached: tokens >= rule.threshold_tokens,
+    claimed: claimed.has(rule.threshold_tokens),
     position: Math.min(100, Math.max(0, (rule.threshold_tokens / max) * 100)),
   }))
 })
 
 type TokenIncentiveMarker = TokenIncentiveRule & {
   reached: boolean
+  claimed: boolean
   position: number
 }
 
 const tokenIncentiveReachedLabel = computed(() => t('usage.tokenIncentive.eligible'))
+const tokenIncentiveClaimedLabel = computed(() => t('usage.tokenIncentive.claimed'))
 
 const tokenIncentivePendingLabel = (marker: TokenIncentiveMarker): string => {
   const tokens = tokenIncentive.value?.tokens ?? 0
@@ -1020,29 +1024,30 @@ const tokenIncentiveTierClass = (marker: TokenIncentiveMarker): string => {
 const tokenIncentiveNextTierLabel = computed(() => {
   const status = tokenIncentive.value
   if (!status) return ''
+  if (status.claimable) return t('usage.tokenIncentive.currentTier', { reward: formatTokenIncentiveReward(status.reward_amount) })
   if (status.claimed) return t('usage.tokenIncentive.claimedAt', { time: formatTokenIncentiveDate(status.claimed_at) })
-  if (status.eligible) return t('usage.tokenIncentive.currentTier', { reward: formatTokenIncentiveReward(status.reward_amount) })
   return t('usage.tokenIncentive.remaining', { tokens: formatTokens(tokenIncentiveRemainingTokens.value) })
 })
 
 const tokenIncentiveStatusLabel = computed(() => {
   const status = tokenIncentive.value
   if (!status) return ''
+  if (status.claimable) return t('usage.tokenIncentive.eligible')
   if (status.claimed) return t('usage.tokenIncentive.claimed')
-  if (status.eligible) return t('usage.tokenIncentive.eligible')
   return t('usage.tokenIncentive.inProgress')
 })
 
 const tokenIncentiveBadgeClass = computed(() => {
   const status = tokenIncentive.value
+  if (status?.claimable) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
   if (status?.claimed) return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
-  if (status?.eligible) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
   return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
 })
 
 const tokenIncentiveClaimButtonLabel = computed(() => {
   const status = tokenIncentive.value
   if (tokenIncentiveClaiming.value) return t('usage.tokenIncentive.claiming')
+  if (status?.claimable) return t('usage.tokenIncentive.claim')
   if (status?.claimed) return t('usage.tokenIncentive.claimed')
   if (!status?.eligible) return t('usage.tokenIncentive.inProgress')
   return t('usage.tokenIncentive.claim')
@@ -1157,7 +1162,7 @@ const tokenIncentiveClaimErrorMessage = (error: unknown): string => {
 }
 
 const claimTokenIncentiveReward = async () => {
-  if (!tokenIncentive.value?.eligible || tokenIncentive.value.claimed || tokenIncentiveClaiming.value) {
+  if (!tokenIncentive.value?.claimable || tokenIncentiveClaiming.value) {
     return
   }
   tokenIncentiveClaiming.value = true

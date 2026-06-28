@@ -12,7 +12,8 @@
   <div v-else class="ag-home" :class="{ 'ag-home-dark': isDark }">
     <header class="ag-header">
       <router-link to="/home" class="ag-brand" :aria-label="copy.homeAria">
-        <span class="ag-mark" aria-hidden="true"></span>
+        <img v-if="siteLogo" :src="siteLogo" :alt="siteName" class="ag-logo" />
+        <span v-else class="ag-mark" aria-hidden="true"></span>
         <span>{{ siteName }} {{ copy.brandSuffix }}</span>
       </router-link>
 
@@ -37,11 +38,13 @@
     <main>
       <section class="ag-hero">
         <div class="ag-brand-fade">
-          <span class="ag-mark small" aria-hidden="true"></span>
+          <img v-if="siteLogo" :src="siteLogo" :alt="siteName" class="ag-logo small" />
+          <span v-else class="ag-mark small" aria-hidden="true"></span>
           <span>{{ siteName }} {{ copy.brandSuffix }}</span>
         </div>
 
         <h1>{{ copy.heroTitle }}</h1>
+        <p v-if="siteSubtitle" class="ag-site-subtitle">{{ siteSubtitle }}</p>
 
         <div class="ag-hero-orbit" aria-hidden="true">
           <div v-for="tool in toolIcons" :key="tool.className" class="ag-tool" :class="tool.className">
@@ -49,7 +52,8 @@
             <span>{{ tool.label }}</span>
           </div>
           <div class="ag-liftoff-core">
-            <span class="ag-mark core" aria-hidden="true"></span>
+            <img v-if="siteLogo" :src="siteLogo" :alt="siteName" class="ag-logo core" />
+            <span v-else class="ag-mark core" aria-hidden="true"></span>
           </div>
         </div>
 
@@ -71,10 +75,13 @@
           <div class="ag-workspace">
             <aside>
               <span>{{ copy.previewProjects }}</span>
-              <strong>Sub2API</strong>
+              <strong>{{ siteName }}</strong>
+              <small v-if="siteSubtitle">{{ siteSubtitle }}</small>
               <em>{{ copy.previewRouting }}</em>
               <em>{{ copy.previewMapping }}</em>
               <em>{{ copy.previewBilling }}</em>
+              <em v-if="apiBaseUrl">{{ copy.previewApiBase }} {{ apiBaseUrl }}</em>
+              <em v-if="contactInfo">{{ copy.previewContact }} {{ contactInfo }}</em>
             </aside>
             <section>
               <p class="ag-code-line"><b>{{ copy.previewAgentLabel }}</b>{{ copy.previewAgentText }}</p>
@@ -99,6 +106,9 @@
 
     <footer class="ag-footer">
       <span>&copy; {{ currentYear }} {{ siteName }}</span>
+      <span v-if="siteSubtitle" class="ag-footer-meta">{{ siteSubtitle }}</span>
+      <span v-if="apiBaseUrl" class="ag-footer-meta">API: {{ apiBaseUrl }}</span>
+      <span v-if="contactInfo" class="ag-footer-meta">{{ contactInfo }}</span>
       <LocaleSwitcher placement="top" />
       <button type="button" @click="toggleTheme">{{ isDark ? copy.lightTheme : copy.darkTheme }}</button>
     </footer>
@@ -111,13 +121,27 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { sanitizeUrl } from '@/utils/url'
 
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
 const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Sub2API')
-const docUrl = computed(() => appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '')
+const siteLogo = computed(() =>
+  sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', {
+    allowRelative: true,
+    allowDataUrl: true
+  })
+)
+const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || '')
+const apiBaseUrl = computed(() => appStore.cachedPublicSettings?.api_base_url || appStore.apiBaseUrl || '')
+const contactInfo = computed(() => appStore.cachedPublicSettings?.contact_info || appStore.contactInfo || '')
+const docUrl = computed(() =>
+  sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '', {
+    allowRelative: true
+  })
+)
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
 const isHomeContentUrl = computed(() => {
   const content = homeContent.value.trim()
@@ -151,6 +175,8 @@ const copy = computed(() => {
       previewRouting: '创建 API Key',
       previewMapping: '配置模型映射',
       previewBilling: '设置计费配额',
+      previewApiBase: 'API 地址',
+      previewContact: '联系',
       previewAgentLabel: '接入',
       previewAgentText: ' 一个 API 密钥调用所有已接入模型',
       previewModelLabel: '映射',
@@ -179,6 +205,8 @@ const copy = computed(() => {
     previewRouting: 'Create API Key',
     previewMapping: 'Configure model mapping',
     previewBilling: 'Set billing quotas',
+    previewApiBase: 'API base',
+    previewContact: 'Contact',
     previewAgentLabel: 'access',
     previewAgentText: ' call all connected models with one API key',
     previewModelLabel: 'mapping',
@@ -338,6 +366,26 @@ onMounted(() => {
   opacity: 0.45;
 }
 
+.ag-logo {
+  width: 1.8rem;
+  height: 1.8rem;
+  flex: 0 0 auto;
+  border-radius: 0.55rem;
+  object-fit: cover;
+}
+
+.ag-logo.small {
+  width: 2rem;
+  height: 2rem;
+  opacity: 0.72;
+}
+
+.ag-logo.core {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.85rem;
+}
+
 .ag-nav {
   justify-content: center;
   gap: 2rem;
@@ -480,6 +528,16 @@ onMounted(() => {
   line-height: 0.92;
 }
 
+.ag-site-subtitle {
+  position: relative;
+  z-index: 2;
+  max-width: 48rem;
+  margin: 1.35rem 0 0;
+  color: rgba(17, 17, 20, 0.56);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  line-height: 1.7;
+}
+
 .ag-hero-actions {
   flex-wrap: wrap;
   justify-content: center;
@@ -567,6 +625,11 @@ onMounted(() => {
 .ag-workspace aside strong {
   color: #111114;
   font-size: 1.15rem;
+}
+
+.ag-workspace aside small {
+  color: rgba(17, 17, 20, 0.5);
+  line-height: 1.55;
 }
 
 .ag-workspace aside em,
@@ -681,10 +744,16 @@ onMounted(() => {
 }
 
 .ag-footer {
+  flex-wrap: wrap;
   justify-content: center;
   gap: 1rem;
   padding: 2rem;
   color: rgba(17, 17, 20, 0.56);
+}
+
+.ag-footer-meta {
+  max-width: min(42rem, 100%);
+  overflow-wrap: anywhere;
 }
 
 .ag-footer button {
@@ -744,6 +813,12 @@ onMounted(() => {
 .ag-home-dark .ag-hero h1,
 .ag-home-dark .ag-workspace aside strong {
   color: #f8fafc;
+}
+
+.ag-home-dark .ag-site-subtitle,
+.ag-home-dark .ag-workspace aside small,
+.ag-home-dark .ag-footer-meta {
+  color: rgba(248, 250, 252, 0.62);
 }
 
 .ag-home-dark .ag-hero-orbit::before,

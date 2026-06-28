@@ -30,20 +30,30 @@ func (r *tokenIncentiveRepository) GetWeeklyUsageTokens(ctx context.Context, use
 	return tokens, nil
 }
 
-func (r *tokenIncentiveRepository) GetClaim(ctx context.Context, userID int64, weekStart time.Time) (*service.TokenIncentiveClaim, error) {
+func (r *tokenIncentiveRepository) GetClaims(ctx context.Context, userID int64, weekStart time.Time) ([]*service.TokenIncentiveClaim, error) {
 	if r == nil || r.db == nil {
 		return nil, fmt.Errorf("token incentive repository is not initialized")
 	}
-	claim, err := scanTokenIncentiveClaim(r.db.QueryRowContext(ctx, tokenIncentiveClaimSelectSQL+`
+	rows, err := r.db.QueryContext(ctx, tokenIncentiveClaimSelectSQL+`
 WHERE user_id = $1 AND week_start = $2
-LIMIT 1`, userID, weekStart))
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
+ORDER BY threshold_tokens ASC, claimed_at ASC`, userID, weekStart)
 	if err != nil {
-		return nil, fmt.Errorf("get token incentive claim: %w", err)
+		return nil, fmt.Errorf("get token incentive claims: %w", err)
 	}
-	return claim, nil
+	defer func() { _ = rows.Close() }()
+
+	var claims []*service.TokenIncentiveClaim
+	for rows.Next() {
+		claim, err := scanTokenIncentiveClaim(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan token incentive claim: %w", err)
+		}
+		claims = append(claims, claim)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate token incentive claims: %w", err)
+	}
+	return claims, nil
 }
 
 func (r *tokenIncentiveRepository) ClaimReward(ctx context.Context, userID int64, weekStart, weekEnd time.Time, _ int64, thresholdTokens int64, rewardAmount float64) (*service.TokenIncentiveClaim, float64, error) {
@@ -61,8 +71,8 @@ func (r *tokenIncentiveRepository) ClaimReward(ctx context.Context, userID int64
 	))
 	if errors.Is(err, sql.ErrNoRows) {
 		existingClaim, getErr := scanTokenIncentiveClaim(tx.QueryRowContext(ctx, tokenIncentiveClaimSelectSQL+`
-WHERE user_id = $1 AND week_start = $2
-LIMIT 1`, userID, weekStart))
+WHERE user_id = $1 AND week_start = $2 AND threshold_tokens = $3
+LIMIT 1`, userID, weekStart, thresholdTokens))
 		if getErr == nil && existingClaim != nil {
 			return nil, 0, service.ErrTokenIncentiveAlreadyClaimed
 		}
@@ -118,15 +128,15 @@ const tokenIncentiveClaimInsertSQL = `
 WITH weekly_usage AS (
     ` + tokenIncentiveWeeklyUsageSQL + `
 )
-INSERT INTO token_incentive_claims (user_id, week_start, week_end, tokens, reward_amount, status)
-SELECT $1, $2, $3, tokens, $4, 'claimed'
+INSERT INTO token_incentive_claims (user_id, week_start, week_end, tokens, threshold_tokens, reward_amount, status)
+SELECT $1, $2, $3, tokens, $5, $4, 'claimed'
 FROM weekly_usage
 WHERE tokens >= $5
-ON CONFLICT (user_id, week_start) DO NOTHING
-RETURNING id, user_id, week_start, week_end, tokens, reward_amount::double precision, status, claimed_at, created_at, updated_at`
+ON CONFLICT (user_id, week_start, threshold_tokens) DO NOTHING
+RETURNING id, user_id, week_start, week_end, tokens, threshold_tokens, reward_amount::double precision, status, claimed_at, created_at, updated_at`
 
 const tokenIncentiveClaimSelectSQL = `
-SELECT id, user_id, week_start, week_end, tokens, reward_amount::double precision, status, claimed_at, created_at, updated_at
+SELECT id, user_id, week_start, week_end, tokens, threshold_tokens, reward_amount::double precision, status, claimed_at, created_at, updated_at
 FROM token_incentive_claims
 `
 
@@ -157,17 +167,18 @@ func insertTokenIncentiveRedeemHistory(ctx context.Context, tx *sql.Tx, claim *s
 }
 
 func tokenIncentiveRedeemCode(claimID int64) string {
-	return fmt.Sprintf("TI-CLAIM-%d", claimID)
+	return fmt.Sprintf("TI-TIER-%d", claimID)
 }
 
 func tokenIncentiveRedeemNotes(claim *service.TokenIncentiveClaim) string {
 	if claim == nil {
 		return ""
 	}
-	return fmt.Sprintf("Token incentive reward: week %s ~ %s, tokens=%d",
+	return fmt.Sprintf("Token incentive reward: week %s ~ %s, tokens=%d, threshold=%d",
 		claim.WeekStart.Format("2006-01-02"),
 		claim.WeekEnd.Format("2006-01-02"),
 		claim.Tokens,
+		claim.ThresholdTokens,
 	)
 }
 
@@ -179,6 +190,7 @@ func scanTokenIncentiveClaim(row tokenIncentiveClaimScanner) (*service.TokenInce
 		&claim.WeekStart,
 		&claim.WeekEnd,
 		&claim.Tokens,
+		&claim.ThresholdTokens,
 		&claim.RewardAmount,
 		&claim.Status,
 		&claim.ClaimedAt,

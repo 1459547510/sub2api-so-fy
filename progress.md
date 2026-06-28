@@ -280,3 +280,93 @@
 - `.gitignore`：放行 `docs/UPDATE_POLICY.md`，确保策略文档可提交。
 - `progress.md`：追加本轮修复记录。
 - 回滚方式：执行 `git checkout -- backend/internal/service/update_service.go backend/internal/service/update_service_test.go .gitignore docs/UPDATE_POLICY.md progress.md`，或回退包含本轮改动的提交。
+
+## 2026-06-28 - Task: merge upstream latest code into fork
+### What was done
+- Merged upstream main into the fork while preserving the fork's update target and release-based update prompt behavior.
+- Kept the current repository as the actual in-app update target and left the upstream repository only as a release signal source.
+
+### Testing
+- `go test -tags unit ./internal/service -run UpdateService` (in `D:\project\sub2api-so\backend`)
+
+### Notes
+- Files changed by merge include the backend/frontend updates from upstream, with the fork-specific update logic retained in `backend/internal/service/update_service.go`.
+- Rollback point: `git reset --hard 14b62588` to return to the pre-merge fork state; the pre-sync local work is preserved in `stash@{0}: On main: codex pre-upstream-sync`.
+
+
+## 2026-06-28 - Task: token incentive per-tier full reward claims
+### What was done
+- Changed token incentive rewards from weekly single-claim behavior to per-tier weekly claims.
+- Each reached tier can now be claimed once for its full configured amount, so 50M/100M/500M default tiers pay 2 + 5 + 10 instead of a differential amount.
+- Added tier-level claim tracking and updated the user progress UI to keep later reached tiers claimable after earlier tiers have been claimed.
+
+### Testing
+- `go test -tags unit ./internal/service ./internal/repository -run TokenIncentive` (in `D:\project\sub2api-so\backend`)
+- `pnpm exec vitest run src/views/user/__tests__/UsageView.spec.ts --reporter=verbose` (in `D:\project\sub2api-so\frontend`)
+- `pnpm typecheck` (in `D:\project\sub2api-so\frontend`)
+- `git diff --check` (in `D:\project\sub2api-so`)
+
+### Notes
+- `backend/internal/service/token_incentive_service.go`: selects the first reached unclaimed tier and reports claimed tiers plus total claimed reward.
+- `backend/internal/service/token_incentive_service_test.go`: covers second-tier and third-tier full configured reward claims.
+- `backend/internal/repository/token_incentive_repo.go`: stores and queries claims by `threshold_tokens`, and credits the configured tier amount.
+- `backend/internal/repository/token_incentive_repo_test.go`: verifies tier claim persistence, duplicate detection, and redeem history content.
+- `backend/migrations/157_token_incentive_tier_claims.sql`: adds `threshold_tokens` and changes uniqueness to one row per user/week/tier.
+- `frontend/src/types/index.ts`: exposes tier claim status fields to the frontend.
+- `frontend/src/views/user/UsageView.vue`: lets claimed and still-claimable tiers coexist in the progress card.
+- `docs/TOKEN_INCENTIVE.md`: documents per-tier full reward behavior and same-week claim requirement.
+- `progress.md`: appended this implementation record.
+- Rollback方式：执行 `git checkout -- backend/internal/service/token_incentive_service.go backend/internal/service/token_incentive_service_test.go backend/internal/repository/token_incentive_repo.go backend/internal/repository/token_incentive_repo_test.go frontend/src/types/index.ts frontend/src/views/user/UsageView.vue docs/TOKEN_INCENTIVE.md progress.md` 并删除 `backend/migrations/157_token_incentive_tier_claims.sql`，或回退包含本轮改动的提交。
+
+
+## 2026-06-28 - Task: 接入后台站点设置动态信息到默认首页
+### What was done
+- 修复默认首页只展示部分站点设置的问题，在未配置 `home_content` 时同步展示后台配置的站点 Logo、站点副标题、API 地址、联系方式和文档链接。
+- 将首页预览窗口中的固定 `Sub2API` 品牌改为动态站点名称，并在有配置时补充站点副标题、API 地址和联系方式。
+- 保留自定义首页内容 `home_content` 的最高优先级，管理员配置自定义 HTML 或 URL 时仍直接覆盖默认首页。
+
+### Testing
+- `rg -n "siteLogo|siteSubtitle|apiBaseUrl|contactInfo|previewApiBase|previewContact|ag-logo|ag-site-subtitle|ag-footer-meta" frontend/src/views/HomeView.vue docs/FRONTEND_PUBLIC_PAGES.md`：确认新增字段读取、模板展示和样式入口均存在。
+- `git diff --check -- frontend/src/views/HomeView.vue docs/FRONTEND_PUBLIC_PAGES.md`：通过，仅保留既有换行符提示。
+- `D:\environment\nodejs\node-v22.17.0-win-x64\pnpm.cmd build`（在 `frontend` 目录）：通过；仅保留既有 Browserslist、动态/静态导入分包和 chunk size 警告。
+- `Invoke-RestMethod http://localhost:5188/api/v1/settings/public` 与 `Invoke-RestMethod http://localhost:8080/api/v1/settings/public`：当前本地监听进程仍返回 404；源码路由已存在，说明当前运行态后端不是这份已注册公开设置路由的服务或未按最新代码启动，运行态字段回填需重启正确后端后再验证。
+
+### Notes
+- `frontend/src/views/HomeView.vue`：接入后台公开站点设置字段，补充 Logo、副标题、API 地址、联系方式展示，并对 Logo/文档链接做 URL 规范化。
+- `docs/FRONTEND_PUBLIC_PAGES.md`：补充默认首页会读取后台站点设置动态字段的说明。
+- `progress.md`：追加本轮修复、验证和当前运行态接口 404 的记录。
+- 回滚方式：执行 `git checkout -- frontend/src/views/HomeView.vue docs/FRONTEND_PUBLIC_PAGES.md progress.md` 可回退本轮首页动态字段修复与记录；如只回退日志，从 `progress.md` 末尾删除本条 `2026-06-28 - Task: 接入后台站点设置动态信息到默认首页` 段落。
+
+## 2026-06-28 - Task: audit token incentive tier claim logic
+### What was done
+- Audited the token incentive tier-claim path for duplicate-claim, legacy-data migration, amount mapping, and frontend state consistency risks.
+- Fixed legacy claim threshold resolution so old records without `threshold_tokens` map to the highest matching claimed tier, preventing accidental duplicate claims after upgrade.
+- Hardened the tier-claim migration to backfill old records from configured/default rules and to remain idempotent.
+- Kept the business rule unchanged: each reached target can claim that target's full configured amount once per week.
+
+### Testing
+- `go test -tags unit ./internal/service ./internal/repository -run TokenIncentive` (in `D:\project\sub2api-soackend`)
+- `pnpm exec vitest run src/views/user/__tests__/UsageView.spec.ts --reporter=verbose` (in `D:\project\sub2api-sorontend`)
+- `pnpm typecheck` (in `D:\project\sub2api-sorontend`)
+- `git diff --check` (in `D:\project\sub2api-so`)
+
+### Notes
+- `backend/internal/service/token_incentive_service.go`: preserves `eligible` as reached-target status, uses `claimable` for current claim availability, and resolves legacy claims to the highest matching reward tier.
+- `backend/internal/service/token_incentive_service_test.go`: adds regression coverage for legacy same-reward tier mapping and full per-tier rewards.
+- `backend/migrations/157_token_incentive_tier_claims.sql`: backfills old claims using configured/default tiers and adds an idempotent positive-threshold constraint.
+- `progress.md`: appended this audit record.
+- Rollback方式：执行 `git checkout -- backend/internal/service/token_incentive_service.go backend/internal/service/token_incentive_service_test.go backend/migrations/157_token_incentive_tier_claims.sql progress.md`，或回退包含本轮审计修复的提交。
+
+## 2026-06-28 - Task: prepare v0.1.139-fy.1 release metadata
+### What was done
+- Synced the fork source version metadata to upstream base `0.1.139` after the upstream merge.
+- Prepared the current fork changes for release tag `v0.1.139-fy.1`.
+
+### Testing
+- `git diff --check` (in `D:\project\sub2api-so`)
+
+### Notes
+- `backend/cmd/server/VERSION`: updated the source base version to `0.1.139`.
+- `backend/cmd/server/UPSTREAM_COMMIT`: updated the recorded upstream commit to `c275422251e72750bebe53e41fcf59db7f83fe6b`.
+- `progress.md`: appended this release metadata record.
+- Rollback方式：执行 `git checkout -- backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT progress.md`，或回退包含本轮发版元数据的提交。

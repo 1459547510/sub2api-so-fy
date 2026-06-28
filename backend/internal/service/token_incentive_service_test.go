@@ -15,7 +15,7 @@ import (
 
 type tokenIncentiveRepoStub struct {
 	tokens        int64
-	claim         *TokenIncentiveClaim
+	claims        []*TokenIncentiveClaim
 	claimErr      error
 	weeklyErr     error
 	capturedClaim tokenIncentiveCapturedClaim
@@ -38,11 +38,11 @@ func (r *tokenIncentiveRepoStub) GetWeeklyUsageTokens(ctx context.Context, userI
 	return r.tokens, nil
 }
 
-func (r *tokenIncentiveRepoStub) GetClaim(ctx context.Context, userID int64, weekStart time.Time) (*TokenIncentiveClaim, error) {
+func (r *tokenIncentiveRepoStub) GetClaims(ctx context.Context, userID int64, weekStart time.Time) ([]*TokenIncentiveClaim, error) {
 	if r.claimErr != nil {
 		return nil, r.claimErr
 	}
-	return r.claim, nil
+	return r.claims, nil
 }
 
 func (r *tokenIncentiveRepoStub) ClaimReward(ctx context.Context, userID int64, weekStart, weekEnd time.Time, tokens int64, thresholdTokens int64, rewardAmount float64) (*TokenIncentiveClaim, float64, error) {
@@ -56,14 +56,15 @@ func (r *tokenIncentiveRepoStub) ClaimReward(ctx context.Context, userID int64, 
 		called:          true,
 	}
 	return &TokenIncentiveClaim{
-		ID:           7,
-		UserID:       userID,
-		WeekStart:    weekStart,
-		WeekEnd:      weekEnd,
-		Tokens:       tokens,
-		RewardAmount: rewardAmount,
-		Status:       TokenIncentiveClaimedStatus,
-		ClaimedAt:    time.Now(),
+		ID:              7,
+		UserID:          userID,
+		WeekStart:       weekStart,
+		WeekEnd:         weekEnd,
+		Tokens:          tokens,
+		ThresholdTokens: thresholdTokens,
+		RewardAmount:    rewardAmount,
+		Status:          TokenIncentiveClaimedStatus,
+		ClaimedAt:       time.Now(),
 	}, 12.5, nil
 }
 
@@ -170,7 +171,7 @@ func TestSelectTokenIncentiveRule_SelectsHighestReachedTierAndNext(t *testing.T)
 	require.Nil(t, next)
 }
 
-func TestTokenIncentiveServiceClaim_UsesHighestConfiguredTier(t *testing.T) {
+func TestTokenIncentiveServiceClaim_UsesFirstReachedUnclaimedTier(t *testing.T) {
 	repo := &tokenIncentiveRepoStub{tokens: 500_000_000}
 	svc := newTokenIncentiveTestService(repo, `[{"threshold_tokens":50000000,"reward_amount":2},{"threshold_tokens":100000000,"reward_amount":5},{"threshold_tokens":500000000,"reward_amount":10}]`, true)
 
@@ -180,12 +181,88 @@ func TestTokenIncentiveServiceClaim_UsesHighestConfiguredTier(t *testing.T) {
 	require.True(t, repo.capturedClaim.called)
 	require.EqualValues(t, 42, repo.capturedClaim.userID)
 	require.EqualValues(t, 500_000_000, repo.capturedClaim.tokens)
+	require.EqualValues(t, 50_000_000, repo.capturedClaim.thresholdTokens)
+	require.Equal(t, 2.0, repo.capturedClaim.rewardAmount)
+	require.True(t, status.Claimed)
+	require.True(t, status.Claimable)
+	require.Equal(t, 5.0, status.RewardAmount)
+	require.NotNil(t, status.CurrentBalance)
+	require.Equal(t, 12.5, *status.CurrentBalance)
+}
+
+func TestTokenIncentiveServiceClaim_AllowsNextTierFullReward(t *testing.T) {
+	repo := &tokenIncentiveRepoStub{
+		tokens: 100_000_000,
+		claims: []*TokenIncentiveClaim{
+			{ID: 1, UserID: 42, Tokens: 50_000_000, ThresholdTokens: 50_000_000, RewardAmount: 2, ClaimedAt: time.Now()},
+		},
+	}
+	svc := newTokenIncentiveTestService(repo, `[{"threshold_tokens":50000000,"reward_amount":2},{"threshold_tokens":100000000,"reward_amount":5},{"threshold_tokens":500000000,"reward_amount":10}]`, true)
+
+	status, err := svc.Claim(context.Background(), 42)
+
+	require.NoError(t, err)
+	require.True(t, repo.capturedClaim.called)
+	require.EqualValues(t, 100_000_000, repo.capturedClaim.thresholdTokens)
+	require.Equal(t, 5.0, repo.capturedClaim.rewardAmount)
+	require.True(t, status.Claimed)
+	require.True(t, status.Eligible)
+	require.False(t, status.Claimable)
+	require.Equal(t, 7.0, status.ClaimedRewardAmount)
+	require.ElementsMatch(t, []int64{50_000_000, 100_000_000}, status.ClaimedThresholdTokens)
+}
+
+func TestTokenIncentiveServiceClaim_ThirdTierUsesFullConfiguredReward(t *testing.T) {
+	repo := &tokenIncentiveRepoStub{
+		tokens: 500_000_000,
+		claims: []*TokenIncentiveClaim{
+			{ID: 1, UserID: 42, Tokens: 50_000_000, ThresholdTokens: 50_000_000, RewardAmount: 2, ClaimedAt: time.Now()},
+			{ID: 2, UserID: 42, Tokens: 100_000_000, ThresholdTokens: 100_000_000, RewardAmount: 5, ClaimedAt: time.Now()},
+		},
+	}
+	svc := newTokenIncentiveTestService(repo, `[{"threshold_tokens":50000000,"reward_amount":2},{"threshold_tokens":100000000,"reward_amount":5},{"threshold_tokens":500000000,"reward_amount":10}]`, true)
+
+	status, err := svc.Claim(context.Background(), 42)
+
+	require.NoError(t, err)
+	require.True(t, repo.capturedClaim.called)
 	require.EqualValues(t, 500_000_000, repo.capturedClaim.thresholdTokens)
 	require.Equal(t, 10.0, repo.capturedClaim.rewardAmount)
 	require.True(t, status.Claimed)
-	require.Equal(t, 10.0, status.RewardAmount)
-	require.NotNil(t, status.CurrentBalance)
-	require.Equal(t, 12.5, *status.CurrentBalance)
+	require.True(t, status.Eligible)
+	require.False(t, status.Claimable)
+	require.Equal(t, 17.0, status.ClaimedRewardAmount)
+	require.ElementsMatch(t, []int64{50_000_000, 100_000_000, 500_000_000}, status.ClaimedThresholdTokens)
+}
+
+func TestTokenIncentiveStatus_LegacyClaimUsesHighestMatchingRewardTier(t *testing.T) {
+	rules := []TokenIncentiveRule{
+		{ThresholdTokens: 50_000_000, RewardAmount: 2},
+		{ThresholdTokens: 100_000_000, RewardAmount: 5},
+		{ThresholdTokens: 500_000_000, RewardAmount: 5},
+	}
+
+	status := buildTokenIncentiveStatus(
+		true,
+		time.Now(),
+		time.Now().AddDate(0, 0, 7),
+		500_000_000,
+		[]*TokenIncentiveClaim{{
+			ID:           1,
+			UserID:       42,
+			Tokens:       500_000_000,
+			RewardAmount: 5,
+			ClaimedAt:    time.Now(),
+		}},
+		nil,
+		rules,
+	)
+
+	require.True(t, status.Claimed)
+	require.True(t, status.Claimable)
+	require.EqualValues(t, 50_000_000, status.ThresholdTokens)
+	require.Equal(t, 2.0, status.RewardAmount)
+	require.ElementsMatch(t, []int64{500_000_000}, status.ClaimedThresholdTokens)
 }
 
 func TestTokenIncentiveServiceClaim_NotEligibleAndAlreadyClaimed(t *testing.T) {
@@ -202,7 +279,7 @@ func TestTokenIncentiveServiceClaim_NotEligibleAndAlreadyClaimed(t *testing.T) {
 	t.Run("already claimed before credit", func(t *testing.T) {
 		repo := &tokenIncentiveRepoStub{
 			tokens: 50_000_000,
-			claim:  &TokenIncentiveClaim{ID: 1, UserID: 42, Tokens: 50_000_000, RewardAmount: 2, ClaimedAt: time.Now()},
+			claims: []*TokenIncentiveClaim{{ID: 1, UserID: 42, Tokens: 50_000_000, ThresholdTokens: 50_000_000, RewardAmount: 2, ClaimedAt: time.Now()}},
 		}
 		svc := newTokenIncentiveTestService(repo, `[{"threshold_tokens":50000000,"reward_amount":2}]`, true)
 
@@ -230,21 +307,31 @@ func TestTokenIncentiveStatus_ClaimedKeepsLiveTokensAndClaimedAmount(t *testing.
 		time.Now(),
 		time.Now().AddDate(0, 0, 7),
 		600_000_000,
-		&TokenIncentiveClaim{
-			ID:           1,
-			UserID:       42,
-			Tokens:       100_000_000,
-			RewardAmount: 5,
-			ClaimedAt:    claimedAt,
-		},
+		[]*TokenIncentiveClaim{{
+			ID:              1,
+			UserID:          42,
+			Tokens:          50_000_000,
+			ThresholdTokens: 50_000_000,
+			RewardAmount:    2,
+			ClaimedAt:       claimedAt,
+		}, {
+			ID:              2,
+			UserID:          42,
+			Tokens:          100_000_000,
+			ThresholdTokens: 100_000_000,
+			RewardAmount:    5,
+			ClaimedAt:       claimedAt,
+		}},
 		nil,
 		DefaultTokenIncentiveRules(),
 	)
 
 	require.True(t, status.Eligible)
+	require.True(t, status.Claimable)
 	require.True(t, status.Claimed)
 	require.EqualValues(t, 600_000_000, status.Tokens)
-	require.Equal(t, 5.0, status.RewardAmount)
+	require.Equal(t, 10.0, status.RewardAmount)
+	require.Equal(t, 7.0, status.ClaimedRewardAmount)
 	require.NotNil(t, status.ClaimedAt)
 	require.Equal(t, claimedAt, *status.ClaimedAt)
 }

@@ -42,37 +42,41 @@ type TokenIncentiveRule struct {
 
 type TokenIncentiveRepository interface {
 	GetWeeklyUsageTokens(ctx context.Context, userID int64, weekStart, weekEnd time.Time) (int64, error)
-	GetClaim(ctx context.Context, userID int64, weekStart time.Time) (*TokenIncentiveClaim, error)
+	GetClaims(ctx context.Context, userID int64, weekStart time.Time) ([]*TokenIncentiveClaim, error)
 	ClaimReward(ctx context.Context, userID int64, weekStart, weekEnd time.Time, tokens int64, thresholdTokens int64, rewardAmount float64) (*TokenIncentiveClaim, float64, error)
 }
 
 type TokenIncentiveClaim struct {
-	ID           int64
-	UserID       int64
-	WeekStart    time.Time
-	WeekEnd      time.Time
-	Tokens       int64
-	RewardAmount float64
-	Status       string
-	ClaimedAt    time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID              int64
+	UserID          int64
+	WeekStart       time.Time
+	WeekEnd         time.Time
+	Tokens          int64
+	ThresholdTokens int64
+	RewardAmount    float64
+	Status          string
+	ClaimedAt       time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type TokenIncentiveStatus struct {
-	Enabled             bool                 `json:"enabled"`
-	Eligible            bool                 `json:"eligible"`
-	Claimed             bool                 `json:"claimed"`
-	WeekStart           time.Time            `json:"week_start"`
-	WeekEnd             time.Time            `json:"week_end"`
-	Tokens              int64                `json:"tokens"`
-	ThresholdTokens     int64                `json:"threshold_tokens"`
-	RewardAmount        float64              `json:"reward_amount"`
-	Rules               []TokenIncentiveRule `json:"rules"`
-	NextThresholdTokens int64                `json:"next_threshold_tokens,omitempty"`
-	NextRewardAmount    float64              `json:"next_reward_amount,omitempty"`
-	ClaimedAt           *time.Time           `json:"claimed_at,omitempty"`
-	CurrentBalance      *float64             `json:"current_balance,omitempty"`
+	Enabled                bool                 `json:"enabled"`
+	Eligible               bool                 `json:"eligible"`
+	Claimable              bool                 `json:"claimable"`
+	Claimed                bool                 `json:"claimed"`
+	WeekStart              time.Time            `json:"week_start"`
+	WeekEnd                time.Time            `json:"week_end"`
+	Tokens                 int64                `json:"tokens"`
+	ThresholdTokens        int64                `json:"threshold_tokens"`
+	RewardAmount           float64              `json:"reward_amount"`
+	ClaimedRewardAmount    float64              `json:"claimed_reward_amount"`
+	ClaimedThresholdTokens []int64              `json:"claimed_threshold_tokens,omitempty"`
+	Rules                  []TokenIncentiveRule `json:"rules"`
+	NextThresholdTokens    int64                `json:"next_threshold_tokens,omitempty"`
+	NextRewardAmount       float64              `json:"next_reward_amount,omitempty"`
+	ClaimedAt              *time.Time           `json:"claimed_at,omitempty"`
+	CurrentBalance         *float64             `json:"current_balance,omitempty"`
 }
 
 type TokenIncentiveService struct {
@@ -104,11 +108,11 @@ func (s *TokenIncentiveService) GetStatus(ctx context.Context, userID int64) (*T
 		return buildTokenIncentiveStatus(false, weekStart, weekEnd, 0, nil, nil, rules), nil
 	}
 
-	tokens, claim, err := s.loadWeekState(ctx, userID, weekStart, weekEnd)
+	tokens, claims, err := s.loadWeekState(ctx, userID, weekStart, weekEnd)
 	if err != nil {
 		return nil, err
 	}
-	return buildTokenIncentiveStatus(true, weekStart, weekEnd, tokens, claim, nil, rules), nil
+	return buildTokenIncentiveStatus(true, weekStart, weekEnd, tokens, claims, nil, rules), nil
 }
 
 func (s *TokenIncentiveService) Claim(ctx context.Context, userID int64) (*TokenIncentiveStatus, error) {
@@ -117,15 +121,15 @@ func (s *TokenIncentiveService) Claim(ctx context.Context, userID int64) (*Token
 	}
 	rules := s.rules(ctx)
 	weekStart, weekEnd := tokenIncentiveWeekWindow(timezone.Now())
-	tokens, existingClaim, err := s.loadWeekState(ctx, userID, weekStart, weekEnd)
+	tokens, existingClaims, err := s.loadWeekState(ctx, userID, weekStart, weekEnd)
 	if err != nil {
 		return nil, err
 	}
-	if existingClaim != nil {
-		return nil, ErrTokenIncentiveAlreadyClaimed
-	}
-	selected, _ := selectTokenIncentiveRule(tokens, rules)
+	selected, _ := selectClaimableTokenIncentiveRule(tokens, rules, existingClaims)
 	if selected == nil {
+		if reached, _ := selectTokenIncentiveRule(tokens, rules); reached != nil {
+			return nil, ErrTokenIncentiveAlreadyClaimed
+		}
 		return nil, ErrTokenIncentiveNotEligible
 	}
 
@@ -134,10 +138,11 @@ func (s *TokenIncentiveService) Claim(ctx context.Context, userID int64) (*Token
 		return nil, err
 	}
 	s.invalidateUserCaches(ctx, userID)
-	return buildTokenIncentiveStatus(true, weekStart, weekEnd, tokens, claim, &balanceAfter, rules), nil
+	claims := append(append([]*TokenIncentiveClaim{}, existingClaims...), claim)
+	return buildTokenIncentiveStatus(true, weekStart, weekEnd, tokens, claims, &balanceAfter, rules), nil
 }
 
-func (s *TokenIncentiveService) loadWeekState(ctx context.Context, userID int64, weekStart, weekEnd time.Time) (int64, *TokenIncentiveClaim, error) {
+func (s *TokenIncentiveService) loadWeekState(ctx context.Context, userID int64, weekStart, weekEnd time.Time) (int64, []*TokenIncentiveClaim, error) {
 	if s == nil || s.repo == nil {
 		return 0, nil, fmt.Errorf("token incentive service is not initialized")
 	}
@@ -145,11 +150,11 @@ func (s *TokenIncentiveService) loadWeekState(ctx context.Context, userID int64,
 	if err != nil {
 		return 0, nil, err
 	}
-	claim, err := s.repo.GetClaim(ctx, userID, weekStart)
+	claims, err := s.repo.GetClaims(ctx, userID, weekStart)
 	if err != nil {
 		return 0, nil, err
 	}
-	return tokens, claim, nil
+	return tokens, claims, nil
 }
 
 func (s *TokenIncentiveService) isEnabled(ctx context.Context) bool {
@@ -195,35 +200,38 @@ func tokenIncentiveWeekWindow(now time.Time) (time.Time, time.Time) {
 	return weekStart, weekStart.AddDate(0, 0, 7)
 }
 
-func buildTokenIncentiveStatus(enabled bool, weekStart, weekEnd time.Time, tokens int64, claim *TokenIncentiveClaim, currentBalance *float64, rules []TokenIncentiveRule) *TokenIncentiveStatus {
+func buildTokenIncentiveStatus(enabled bool, weekStart, weekEnd time.Time, tokens int64, claims []*TokenIncentiveClaim, currentBalance *float64, rules []TokenIncentiveRule) *TokenIncentiveStatus {
 	rules, err := NormalizeTokenIncentiveRules(rules)
 	if err != nil {
 		rules = DefaultTokenIncentiveRules()
 	}
-	selected, next := selectTokenIncentiveRule(tokens, rules)
-	displayRule := tokenIncentiveDisplayRule(selected, next, rules)
+	claimable, next := selectClaimableTokenIncentiveRule(tokens, rules, claims)
+	reached, _ := selectTokenIncentiveRule(tokens, rules)
+	displayRule := tokenIncentiveDisplayRule(claimable, next, rules)
+	claimedThresholds, claimedRewardAmount, latestClaimedAt := tokenIncentiveClaimSummary(claims, rules)
 
 	status := &TokenIncentiveStatus{
-		Enabled:         enabled,
-		Eligible:        enabled && selected != nil,
-		Claimed:         claim != nil,
-		WeekStart:       weekStart,
-		WeekEnd:         weekEnd,
-		Tokens:          tokens,
-		ThresholdTokens: displayRule.ThresholdTokens,
-		RewardAmount:    displayRule.RewardAmount,
-		Rules:           rules,
-		CurrentBalance:  currentBalance,
+		Enabled:                enabled,
+		Eligible:               enabled && reached != nil,
+		Claimable:              enabled && claimable != nil,
+		Claimed:                len(claims) > 0,
+		WeekStart:              weekStart,
+		WeekEnd:                weekEnd,
+		Tokens:                 tokens,
+		ThresholdTokens:        displayRule.ThresholdTokens,
+		RewardAmount:           displayRule.RewardAmount,
+		ClaimedRewardAmount:    claimedRewardAmount,
+		ClaimedThresholdTokens: claimedThresholds,
+		Rules:                  rules,
+		CurrentBalance:         currentBalance,
 	}
 	if next != nil {
 		status.NextThresholdTokens = next.ThresholdTokens
 		status.NextRewardAmount = next.RewardAmount
 	}
-	if claim != nil {
-		claimedAt := claim.ClaimedAt
+	if latestClaimedAt != nil {
+		claimedAt := *latestClaimedAt
 		status.ClaimedAt = &claimedAt
-		status.RewardAmount = claim.RewardAmount
-		status.Eligible = true
 	}
 	return status
 }
@@ -291,6 +299,105 @@ func selectTokenIncentiveRule(tokens int64, rules []TokenIncentiveRule) (*TokenI
 		}
 	}
 	return selected, next
+}
+
+func selectClaimableTokenIncentiveRule(tokens int64, rules []TokenIncentiveRule, claims []*TokenIncentiveClaim) (*TokenIncentiveRule, *TokenIncentiveRule) {
+	normalized, err := NormalizeTokenIncentiveRules(rules)
+	if err != nil {
+		normalized = DefaultTokenIncentiveRules()
+	}
+	claimed := tokenIncentiveClaimedThresholdSet(claims, normalized)
+	var claimable *TokenIncentiveRule
+	var next *TokenIncentiveRule
+	for i := range normalized {
+		if claimed[normalized[i].ThresholdTokens] {
+			continue
+		}
+		if tokens >= normalized[i].ThresholdTokens {
+			if claimable == nil {
+				claimable = &normalized[i]
+			}
+			continue
+		}
+		if next == nil {
+			next = &normalized[i]
+		}
+	}
+	return claimable, next
+}
+
+func tokenIncentiveClaimedThresholdSet(claims []*TokenIncentiveClaim, rules []TokenIncentiveRule) map[int64]bool {
+	claimed := make(map[int64]bool, len(claims))
+	for _, claim := range claims {
+		if claim == nil {
+			continue
+		}
+		if threshold := resolveTokenIncentiveClaimThreshold(claim, rules, claimed); threshold > 0 {
+			claimed[threshold] = true
+		}
+	}
+	return claimed
+}
+
+func resolveTokenIncentiveClaimThreshold(claim *TokenIncentiveClaim, rules []TokenIncentiveRule, claimed map[int64]bool) int64 {
+	if claim == nil {
+		return 0
+	}
+	for _, rule := range rules {
+		if claim.ThresholdTokens == rule.ThresholdTokens {
+			return rule.ThresholdTokens
+		}
+	}
+	var fallback int64
+	for _, rule := range rules {
+		if claimed[rule.ThresholdTokens] {
+			continue
+		}
+		if claim.Tokens >= rule.ThresholdTokens && tokenIncentiveRewardAmountEqual(claim.RewardAmount, rule.RewardAmount) {
+			fallback = rule.ThresholdTokens
+		}
+	}
+	if fallback > 0 {
+		return fallback
+	}
+	for _, rule := range rules {
+		if claimed[rule.ThresholdTokens] {
+			continue
+		}
+		if claim.Tokens >= rule.ThresholdTokens {
+			fallback = rule.ThresholdTokens
+		}
+	}
+	return fallback
+}
+
+func tokenIncentiveRewardAmountEqual(a, b float64) bool {
+	return math.Abs(a-b) <= 0.00000001
+}
+
+func tokenIncentiveClaimSummary(claims []*TokenIncentiveClaim, rules []TokenIncentiveRule) ([]int64, float64, *time.Time) {
+	thresholds := make([]int64, 0, len(claims))
+	claimed := make(map[int64]bool, len(claims))
+	var amount float64
+	var latest *time.Time
+	for _, claim := range claims {
+		if claim == nil {
+			continue
+		}
+		if threshold := resolveTokenIncentiveClaimThreshold(claim, rules, claimed); threshold > 0 {
+			claimed[threshold] = true
+			thresholds = append(thresholds, threshold)
+		}
+		amount += claim.RewardAmount
+		if latest == nil || claim.ClaimedAt.After(*latest) {
+			claimedAt := claim.ClaimedAt
+			latest = &claimedAt
+		}
+	}
+	sort.Slice(thresholds, func(i, j int) bool {
+		return thresholds[i] < thresholds[j]
+	})
+	return thresholds, amount, latest
 }
 
 func tokenIncentiveDisplayRule(selected, next *TokenIncentiveRule, rules []TokenIncentiveRule) TokenIncentiveRule {
