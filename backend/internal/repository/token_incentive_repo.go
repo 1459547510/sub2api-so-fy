@@ -115,7 +115,7 @@ SELECT COALESCE(SUM(
     COALESCE(output_tokens, 0)::bigint +
     COALESCE(cache_creation_tokens, 0)::bigint +
     COALESCE(cache_read_tokens, 0)::bigint
-), 0) AS tokens
+), 0)::bigint AS tokens
 FROM usage_logs
 WHERE user_id = $1
   AND created_at >= $2
@@ -127,9 +127,9 @@ WITH weekly_usage AS (
     ` + tokenIncentiveWeeklyUsageSQL + `
 )
 INSERT INTO token_incentive_claims (user_id, week_start, week_end, tokens, threshold_tokens, reward_amount, status)
-SELECT $1, $2, $3, tokens, $5, $4, 'claimed'
+SELECT $1, $2, $3, tokens, $5::bigint, $4, 'claimed'
 FROM weekly_usage
-WHERE tokens >= $5
+WHERE tokens >= $5::bigint
 ON CONFLICT (user_id, week_start, threshold_tokens) DO NOTHING
 RETURNING id, user_id, week_start, week_end, tokens, threshold_tokens, reward_amount::double precision, status, claimed_at, created_at, updated_at`
 

@@ -178,7 +178,8 @@ func TestTokenIncentiveRepositoryClaimReward_NoRowsMapsAlreadyClaimedBeforeNotEl
 func TestTokenIncentiveClaimInsertSQL_RechecksThresholdInDatabase(t *testing.T) {
 	compact := strings.Join(strings.Fields(tokenIncentiveClaimInsertSQL), " ")
 
-	require.Contains(t, compact, "WHERE tokens >= $5")
+	require.Contains(t, compact, "$5::bigint")
+	require.Contains(t, compact, "WHERE tokens >= $5::bigint")
 	require.Contains(t, compact, "ON CONFLICT (user_id, week_start, threshold_tokens) DO NOTHING")
 	require.NotContains(t, compact, "1000000000")
 	require.Contains(t, strings.Join(strings.Fields(tokenIncentiveRedeemInsertSQL), " "), "ON CONFLICT (code) DO NOTHING")

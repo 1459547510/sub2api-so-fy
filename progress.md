@@ -390,3 +390,20 @@
 - `docs/TOKEN_INCENTIVE.md`：补充说明奖励入账与余额变动记录的关系。
 - `progress.md`：追加本轮修复、验证和回滚记录。
 - 回滚方式：执行 `git checkout -- backend/internal/repository/token_incentive_repo.go backend/internal/repository/token_incentive_repo_test.go docs/TOKEN_INCENTIVE.md progress.md` 并删除 `backend/migrations/158_fix_token_incentive_tier_constraints.sql`；或回退包含本轮修复的提交。
+
+## 2026-06-29 - Task: 修复 Token 激励领取 SQL 类型推断失败
+### What was done
+- 修复 Token 激励领取入库 SQL 中 PostgreSQL 对同一参数 `$5` 推断类型不一致导致的领取 500 问题。
+- 将领取阈值参数在插入和资格复核条件中显式转换为 `bigint`，确保线上错误 `pq: inconsistent types deduced for parameter $5` 不再触发。
+- 补充单元测试断言，防止后续移除 `$5::bigint` 类型约束导致回归。
+
+### Testing
+- `go test -tags unit ./internal/repository -run TokenIncentive`（在 `D:\project\sub2api-so\backend`）通过。
+- `go test -tags unit ./internal/service ./internal/repository -run TokenIncentive`（在 `D:\project\sub2api-so\backend`）通过。
+- 本地无 Docker/psql 运行环境，未执行真实 PostgreSQL 集成测试；已根据生产日志中的 `pq: inconsistent types deduced for parameter $5` 对对应 SQL 参数做显式类型修复。
+
+### Notes
+- `backend/internal/repository/token_incentive_repo.go`：将本周 token 汇总结果和领取阈值参数显式固定为 `bigint`，修复 PostgreSQL 参数类型推断冲突。
+- `backend/internal/repository/token_incentive_repo_test.go`：新增对 `$5::bigint` 和数据库端阈值复核条件的回归断言。
+- `progress.md`：追加本轮线上领取失败修复、验证和回滚记录。
+- 回滚方式：执行 `git checkout -- backend/internal/repository/token_incentive_repo.go backend/internal/repository/token_incentive_repo_test.go progress.md`，或回退包含本轮修复的提交。
