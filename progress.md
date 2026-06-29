@@ -370,3 +370,23 @@
 - `backend/cmd/server/UPSTREAM_COMMIT`: updated the recorded upstream commit to `c275422251e72750bebe53e41fcf59db7f83fe6b`.
 - `progress.md`: appended this release metadata record.
 - Rollback方式：执行 `git checkout -- backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT progress.md`，或回退包含本轮发版元数据的提交。
+
+
+## 2026-06-29 - Task: 修复 Token 激励计划领取失败
+### What was done
+- 修复 Token 激励计划领取事务：档位领取记录和用户余额入账提交成功后即视为领取成功，余额变动记录补写失败不再回滚奖励。
+- 增加数据库兼容迁移，清理旧版一周只能领取一次的 `user_id + week_start` 唯一约束/索引残留，确保多档位可按 `threshold_tokens` 分别领取。
+- 补强余额变动记录写入的幂等性，避免重复补写记录时因为兑换码冲突影响后续流程。
+
+### Testing
+- `go test -tags unit ./internal/service ./internal/repository -run TokenIncentive`（在 `D:\project\sub2api-so\backend`）通过。
+- `go test -tags unit ./internal/repository -run 'ApplyMigrations|Migration'`（在 `D:\project\sub2api-so\backend`）通过。
+- `git diff --check`（在 `D:\project\sub2api-so`）通过。
+
+### Notes
+- `backend/internal/repository/token_incentive_repo.go`：将余额变动记录写入移到奖励主事务提交后执行，并改为失败只记录日志。
+- `backend/internal/repository/token_incentive_repo_test.go`：新增余额变动记录写入失败不影响领取成功的回归测试。
+- `backend/migrations/158_fix_token_incentive_tier_constraints.sql`：新增兼容迁移，移除旧单周唯一约束/索引，补齐档位唯一索引和 `redeem_codes.notes` 字段。
+- `docs/TOKEN_INCENTIVE.md`：补充说明奖励入账与余额变动记录的关系。
+- `progress.md`：追加本轮修复、验证和回滚记录。
+- 回滚方式：执行 `git checkout -- backend/internal/repository/token_incentive_repo.go backend/internal/repository/token_incentive_repo_test.go docs/TOKEN_INCENTIVE.md progress.md` 并删除 `backend/migrations/158_fix_token_incentive_tier_constraints.sql`；或回退包含本轮修复的提交。

@@ -46,10 +46,10 @@ func TestTokenIncentiveRepositoryClaimReward_PassesConfiguredTierAndCreditsBalan
 	mock.ExpectQuery(regexp.QuoteMeta("UPDATE users")).
 		WithArgs(5.0, int64(42)).
 		WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(17.0))
+	mock.ExpectCommit()
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO redeem_codes")).
 		WithArgs("TI-TIER-9", service.RedeemTypeTokenIncentive, 5.0, int64(42), claimedAt, "Token incentive reward: week 2026-06-22 ~ 2026-06-29, tokens=120000000, threshold=100000000").
 		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
 
 	claim, balanceAfter, err := repo.ClaimReward(ctx, 42, weekStart, weekEnd, 120_000_000, 100_000_000, 5)
 
@@ -59,6 +59,39 @@ func TestTokenIncentiveRepositoryClaimReward_PassesConfiguredTierAndCreditsBalan
 	require.EqualValues(t, 100_000_000, claim.ThresholdTokens)
 	require.Equal(t, 5.0, claim.RewardAmount)
 	require.Equal(t, 17.0, balanceAfter)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestTokenIncentiveRepositoryClaimReward_HistoryFailureDoesNotRollbackReward(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewTokenIncentiveRepository(db)
+	ctx := context.Background()
+	weekStart := time.Date(2026, 6, 22, 0, 0, 0, 0, time.UTC)
+	weekEnd := weekStart.AddDate(0, 0, 7)
+	claimedAt := weekStart.Add(12 * time.Hour)
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO token_incentive_claims")).
+		WithArgs(int64(42), weekStart, weekEnd, 2.0, int64(50_000_000)).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "user_id", "week_start", "week_end", "tokens", "threshold_tokens", "reward_amount", "status", "claimed_at", "created_at", "updated_at",
+		}).AddRow(int64(8), int64(42), weekStart, weekEnd, int64(60_000_000), int64(50_000_000), 2.0, service.TokenIncentiveClaimedStatus, claimedAt, claimedAt, claimedAt))
+	mock.ExpectQuery(regexp.QuoteMeta("UPDATE users")).
+		WithArgs(2.0, int64(42)).
+		WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(14.0))
+	mock.ExpectCommit()
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO redeem_codes")).
+		WithArgs("TI-TIER-8", service.RedeemTypeTokenIncentive, 2.0, int64(42), claimedAt, "Token incentive reward: week 2026-06-22 ~ 2026-06-29, tokens=60000000, threshold=50000000").
+		WillReturnError(sql.ErrConnDone)
+
+	claim, balanceAfter, err := repo.ClaimReward(ctx, 42, weekStart, weekEnd, 60_000_000, 50_000_000, 2)
+
+	require.NoError(t, err)
+	require.EqualValues(t, 8, claim.ID)
+	require.Equal(t, 14.0, balanceAfter)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -148,6 +181,7 @@ func TestTokenIncentiveClaimInsertSQL_RechecksThresholdInDatabase(t *testing.T) 
 	require.Contains(t, compact, "WHERE tokens >= $5")
 	require.Contains(t, compact, "ON CONFLICT (user_id, week_start, threshold_tokens) DO NOTHING")
 	require.NotContains(t, compact, "1000000000")
+	require.Contains(t, strings.Join(strings.Fields(tokenIncentiveRedeemInsertSQL), " "), "ON CONFLICT (code) DO NOTHING")
 }
 
 func TestTokenIncentiveRedeemHistoryHelpers(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -101,13 +102,10 @@ RETURNING balance::double precision`, rewardAmount, userID).Scan(&balanceAfter);
 		return nil, 0, fmt.Errorf("credit token incentive reward: %w", err)
 	}
 
-	if err := insertTokenIncentiveRedeemHistory(ctx, tx, claim); err != nil {
-		return nil, 0, err
-	}
-
 	if err := tx.Commit(); err != nil {
 		return nil, 0, fmt.Errorf("commit token incentive claim tx: %w", err)
 	}
+	r.recordTokenIncentiveRedeemHistory(claim)
 	return claim, balanceAfter, nil
 }
 
@@ -142,17 +140,40 @@ FROM token_incentive_claims
 
 const tokenIncentiveRedeemInsertSQL = `
 INSERT INTO redeem_codes (code, type, value, status, used_by, used_at, notes, created_at)
-VALUES ($1, $2, $3, 'used', $4, $5, $6, $5)`
+VALUES ($1, $2, $3, 'used', $4, $5, $6, $5)
+ON CONFLICT (code) DO NOTHING`
 
 type tokenIncentiveClaimScanner interface {
 	Scan(dest ...any) error
 }
 
-func insertTokenIncentiveRedeemHistory(ctx context.Context, tx *sql.Tx, claim *service.TokenIncentiveClaim) error {
+type tokenIncentiveRedeemExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+func (r *tokenIncentiveRepository) recordTokenIncentiveRedeemHistory(claim *service.TokenIncentiveClaim) {
+	if r == nil || r.db == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := insertTokenIncentiveRedeemHistory(ctx, r.db, claim); err != nil {
+		slog.Warn("record token incentive balance history failed",
+			"claim_id", claimIDForLog(claim),
+			"user_id", claimUserIDForLog(claim),
+			"error", err,
+		)
+	}
+}
+
+func insertTokenIncentiveRedeemHistory(ctx context.Context, execer tokenIncentiveRedeemExecer, claim *service.TokenIncentiveClaim) error {
+	if execer == nil {
+		return fmt.Errorf("record token incentive balance history: execer is nil")
+	}
 	if claim == nil {
 		return fmt.Errorf("record token incentive balance history: claim is nil")
 	}
-	_, err := tx.ExecContext(ctx, tokenIncentiveRedeemInsertSQL,
+	_, err := execer.ExecContext(ctx, tokenIncentiveRedeemInsertSQL,
 		tokenIncentiveRedeemCode(claim.ID),
 		service.RedeemTypeTokenIncentive,
 		claim.RewardAmount,
@@ -164,6 +185,20 @@ func insertTokenIncentiveRedeemHistory(ctx context.Context, tx *sql.Tx, claim *s
 		return fmt.Errorf("record token incentive balance history: %w", err)
 	}
 	return nil
+}
+
+func claimIDForLog(claim *service.TokenIncentiveClaim) int64 {
+	if claim == nil {
+		return 0
+	}
+	return claim.ID
+}
+
+func claimUserIDForLog(claim *service.TokenIncentiveClaim) int64 {
+	if claim == nil {
+		return 0
+	}
+	return claim.UserID
 }
 
 func tokenIncentiveRedeemCode(claimID int64) string {
