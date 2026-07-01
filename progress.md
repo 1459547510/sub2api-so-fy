@@ -407,3 +407,25 @@
 - `backend/internal/repository/token_incentive_repo_test.go`：新增对 `$5::bigint` 和数据库端阈值复核条件的回归断言。
 - `progress.md`：追加本轮线上领取失败修复、验证和回滚记录。
 - 回滚方式：执行 `git checkout -- backend/internal/repository/token_incentive_repo.go backend/internal/repository/token_incentive_repo_test.go progress.md`，或回退包含本轮修复的提交。
+
+## 2026-07-01 - Task: 合并原仓库 0.1.141 并保留二开功能
+### What was done
+- 合并原仓库 `Wei-Shaw/sub2api` 的最新 `main`（上游基线 `0.1.141` / `c1335bae12c30f6d73f1a86051eb5ba312ba23c9`）。
+- 解决版本文件、安装接口、用户用量页和用量页测试冲突；保留 Token 激励计划、二开更新逻辑和本仓库更新目标。
+- 用户用量页以上游新版统计/图表结构为底，重新嵌入 Token 激励进度条、档位状态和领取动作，避免丢失上游新增能力。
+
+### Testing
+- `go test -tags unit ./internal/service ./internal/repository -run TokenIncentive`（在 `D:\project\sub2api-so\backend`）通过。
+- `go test -tags unit ./internal/server ./internal/handler ./internal/service ./internal/repository -run "TokenIncentive|Update|Version|Usage"`（在 `D:\project\sub2api-so\backend`）通过。
+- `go test -tags unit ./internal/repository -run "ApplyMigrations|Migration"`（在 `D:\project\sub2api-so\backend`）通过。
+- `cmd /c pnpm.cmd exec vitest run src/views/user/__tests__/UsageView.spec.ts --reporter=verbose`（在 `D:\project\sub2api-so\frontend`）通过。
+- `cmd /c pnpm.cmd typecheck`（在 `D:\project\sub2api-so\frontend`）通过。
+
+### Notes
+- `backend/cmd/server/VERSION`：更新上游基线版本为 `0.1.141`。
+- `backend/cmd/server/UPSTREAM_COMMIT`：记录本次合并对应的上游提交 `c1335bae12c30f6d73f1a86051eb5ba312ba23c9`。
+- `frontend/src/api/setup.ts`：保留上游 gateway URL 构造，同时保留二开安装流程长超时。
+- `frontend/src/views/user/UsageView.vue`：在上游新版用量页结构中恢复 Token 激励状态、进度条、档位展示和领取逻辑。
+- `frontend/src/views/user/__tests__/UsageView.spec.ts`：补齐上游新版用量页测试与 Token 激励 API mock/领取回归覆盖。
+- 上游合并文件：其余 README、后端服务、迁移、前端组件/API 等变更来自 `upstream/main` 本次合并，未额外扩大人工改动范围。
+- 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>`；若只回滚人工冲突处理，可执行 `git checkout HEAD^ -- backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT frontend/src/api/setup.ts frontend/src/views/user/UsageView.vue frontend/src/views/user/__tests__/UsageView.spec.ts progress.md`。
