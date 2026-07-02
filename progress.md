@@ -429,3 +429,20 @@
 - `frontend/src/views/user/__tests__/UsageView.spec.ts`：补齐上游新版用量页测试与 Token 激励 API mock/领取回归覆盖。
 - 上游合并文件：其余 README、后端服务、迁移、前端组件/API 等变更来自 `upstream/main` 本次合并，未额外扩大人工改动范围。
 - 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>`；若只回滚人工冲突处理，可执行 `git checkout HEAD^ -- backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT frontend/src/api/setup.ts frontend/src/views/user/UsageView.vue frontend/src/views/user/__tests__/UsageView.spec.ts progress.md`。
+## 2026-07-02 - Task: 合并原仓库 0.1.142 并准备发版
+### What was done
+- 合并原仓库 `Wei-Shaw/sub2api` 最新 `main`，上游基线为 `0.1.142` / `7dc7cfce1db5d31599815ff29acf6847ead0f0b7`。
+- 解决版本文件冲突，将本仓库基础版本同步到 `0.1.142`，并更新记录的上游提交。
+- 保留当前仓库二开逻辑，通过普通 merge 引入上游新增的 Grok 媒体路由、Spark shadow 账号、订阅撤销修复、平台额度等更新。
+
+### Testing
+- `git diff --check`（在 `D:\project\sub2api-so`）通过。
+- `go test ./...`（在 `D:\project\sub2api-so\backend`）通过。
+- `D:\environment\nodejs\node-v22.17.0-win-x64\node_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-so\frontend`）通过；仅保留既有 Browserslist、动态/静态导入混用和 chunk size 警告。
+
+### Notes
+- `backend/cmd/server/VERSION`：解决合并冲突并同步上游基础版本到 `0.1.142`。
+- `backend/cmd/server/UPSTREAM_COMMIT`：更新本次合并对应的上游提交为 `7dc7cfce1db5d31599815ff29acf6847ead0f0b7`。
+- 上游合并文件：README、Docker、ent schema、迁移、账号/订阅/调度/网关服务、Grok 媒体路由、OpenAI/Spark shadow、前端账号/设置/用量页面及 i18n 等文件来自 `upstream/main` 的本次合并，未额外扩大人工改动范围。
+- `progress.md`：追加本轮合并、验证和回滚记录。
+- 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>`；若只回滚本轮人工冲突/元数据处理，可执行 `git checkout HEAD^ -- backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT progress.md`。
