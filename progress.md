@@ -446,3 +446,24 @@
 - 上游合并文件：README、Docker、ent schema、迁移、账号/订阅/调度/网关服务、Grok 媒体路由、OpenAI/Spark shadow、前端账号/设置/用量页面及 i18n 等文件来自 `upstream/main` 的本次合并，未额外扩大人工改动范围。
 - `progress.md`：追加本轮合并、验证和回滚记录。
 - 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>`；若只回滚本轮人工冲突/元数据处理，可执行 `git checkout HEAD^ -- backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT progress.md`。
+
+## 2026-07-05 - Task: 合并原仓库 0.1.144 并准备发版
+### What was done
+- 合并原仓库 `Wei-Shaw/sub2api` 最新 `main`，上游基线为 `0.1.144` / `b650bdd6e238396af88508c73cefaeb32409d9ba`。
+- 解决安装初始化迁移超时和前端 i18n 文案冲突：保留上游可配置迁移超时、IP 地理信息文案，同时保留当前仓库 Token 激励计划文案。
+- 同步版本元数据到 `0.1.144`，并更新记录的上游提交。
+
+### Testing
+- `git diff --check`（在 `D:\project\sub2api-so`）通过。
+- `go test ./...`（在 `D:\project\sub2api-so\backend`）通过。
+- `D:\environment\nodejs\node-v22.17.0-win-x64\node_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-so\frontend`）通过；仅保留既有 Browserslist、动态/静态导入混用和 chunk size 警告。
+
+### Notes
+- `backend/cmd/server/VERSION`：同步上游基础版本到 `0.1.144`。
+- `backend/cmd/server/UPSTREAM_COMMIT`：更新本次合并对应的上游提交为 `b650bdd6e238396af88508c73cefaeb32409d9ba`。
+- `backend/internal/setup/setup.go`：冲突处理保留上游新增的可配置安装迁移超时逻辑。
+- `frontend/src/i18n/locales/en.ts`：冲突处理同时保留 Token 激励计划和 IP 地理信息英文文案。
+- `frontend/src/i18n/locales/zh.ts`：冲突处理同时保留 Token 激励计划和 IP 地理信息中文文案。
+- 上游合并文件：README、部署配置、ent schema、迁移、账号/订阅/调度/网关/计费/并发/用量服务、前端账号/分组/订阅/用量/错误详情/i18n 等变更来自 `upstream/main` 的本次合并，未额外扩大人工改动范围。
+- `progress.md`：追加本轮合并、验证和回滚记录。
+- 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>`；若只回滚本轮人工冲突/元数据处理，可执行 `git checkout HEAD^ -- backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT backend/internal/setup/setup.go frontend/src/i18n/locales/en.ts frontend/src/i18n/locales/zh.ts progress.md`。
