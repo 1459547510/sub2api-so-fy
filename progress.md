@@ -467,3 +467,25 @@
 - 上游合并文件：README、部署配置、ent schema、迁移、账号/订阅/调度/网关/计费/并发/用量服务、前端账号/分组/订阅/用量/错误详情/i18n 等变更来自 `upstream/main` 的本次合并，未额外扩大人工改动范围。
 - `progress.md`：追加本轮合并、验证和回滚记录。
 - 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>`；若只回滚本轮人工冲突/元数据处理，可执行 `git checkout HEAD^ -- backend/cmd/server/VERSION backend/cmd/server/UPSTREAM_COMMIT backend/internal/setup/setup.go frontend/src/i18n/locales/en.ts frontend/src/i18n/locales/zh.ts progress.md`。
+
+## 2026-07-08 - Task: 合并原仓库 0.1.146 最新代码并排除首页改动发版
+### What was done
+- 合并原仓库 `Wei-Shaw/sub2api` 最新 `main`，上游基线为 `0.1.146` / `6631cbad67a0c15edf1006d2d0d60dc98169adf7`。
+- 解决设置模块拆分、前端 i18n 拆分带来的二开冲突；保留本仓库 Token 激励计划配置、领取状态文案、余额记录类型，同时接入上游新增拆分文件结构。
+- 当前首页相关未提交改动已继续隔离在 stash `wip-homepage-not-for-release-20260708-090240`，未纳入本次合并、推送或发版。
+
+### Testing
+- `git diff --check`（在 `D:\project\sub2api-so`）通过。
+- `go test ./...`（在 `D:\project\sub2api-so\backend`）通过。
+- `D:\environment\nodejs\node-v22.17.0-win-x64\node_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-so\frontend`）通过；仅保留既有 Browserslist、动态/静态导入混用和 chunk size 警告。
+
+### Notes
+- `backend/cmd/server/UPSTREAM_COMMIT`：记录本次合并对应的上游最新提交 `6631cbad67a0c15edf1006d2d0d60dc98169adf7`。
+- `backend/internal/handler/admin/setting_handler.go`：在上游设置处理器拆分后保留 Token 激励计划的设置读取与 DTO 转换。
+- `backend/internal/handler/admin/setting_handler_update.go`：在上游新增的设置更新处理器中接回 Token 激励计划开关与档位保存逻辑。
+- `backend/internal/handler/admin/setting_handler_audit.go`：在设置审计变更列表中保留 Token 激励计划相关字段。
+- `backend/internal/service/setting_update.go`、`backend/internal/service/setting_parse.go`、`backend/internal/service/setting_public.go`、`backend/internal/service/setting_token_incentive.go`：适配上游设置服务拆分，并保留 Token 激励默认值、解析、公开开关和规则读取逻辑。
+- `frontend/src/i18n/locales/en/**`、`frontend/src/i18n/locales/zh/**`：适配上游 i18n 目录拆分，并把 Token 激励计划文案迁移到新的语言包结构。
+- 上游合并文件：其余 backend/frontend/deploy/docs/README 等大量变更来自 `upstream/main` 本次合并，未额外扩大人工改动范围。
+- `progress.md`：追加本轮合并、验证和回滚记录。
+- 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>`；如只需找回未发布首页改动，执行 `git stash list` 找到 `wip-homepage-not-for-release-20260708-090240` 后再按需 `git stash apply`。
