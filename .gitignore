@@ -136,6 +136,7 @@ docs/*
 !docs/FRONTEND_PUBLIC_PAGES.md
 !docs/TOKEN_INCENTIVE.md
 !docs/UPDATE_POLICY.md
+!docs/GROK_XAI_SUPPORT.md
 !docs/legal/
 !docs/legal/*.md
 .serena/

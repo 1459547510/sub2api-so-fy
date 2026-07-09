@@ -530,3 +530,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/BUILD_SECURITY.md`：记录 Go 构建安全基线和版本同步要求。
 - `progress.md`：追加本轮失败定位、修复、验证和回滚记录。
 - 回滚方式：提交后执行 `git revert <本轮提交>` 可回退 Go 版本、安全扫描配置、Docker 基线和文档记录；如只是撤销发版 tag，删除本轮 tag 后重新发布上一版即可。
+
+## 2026-07-09 - Task: 补回 Grok 4.5 支持模型列表
+### What was done
+- 确认此前 Grok 4.5 改动被包含在 `wip-local-not-for-upstream-release-20260709-120915` stash 中，未进入当前 `main` 和 `v0.1.146-fy.3` 发版。
+- 只补回 Grok 相关改动：后端默认模型、模型映射、前端白名单、预设映射、README 和 Grok 独立文档。
+- 新增 `grok-4.5`、`grok-4.5-latest`、`grok-build-latest`，并保留 `grok` / `grok-latest` 继续指向 `grok-4.3`，避免升级后默认行为突然变化。
+- 补充 `grok-4.5` 兜底计费，按 xAI Pricing 当前价格记录为 `$2.00 / 1M input tokens`、`$0.50 / 1M cached input tokens`、`$6.00 / 1M output tokens`。
+
+### Testing
+- `go test ./internal/pkg/xai`（在 `D:\project\sub2api-soackend`）通过。
+- `go test ./internal/service -run "Grok|Billing"`（在 `D:\project\sub2api-soackend`）通过。
+- `git diff --check`（在 `D:\project\sub2api-so`）通过。
+- `D:\environment\nodejs\node-v22.17.0-win-x64\node_modules\@pnpm\exe\pnpm.exe run typecheck`（在 `D:\project\sub2api-so\frontend`，临时隔离首页 WIP 后）通过。
+
+### Notes
+- `backend/internal/pkg/xai/models.go`：新增 Grok 4.5 默认模型和显式 4.5/latest aliases。
+- `backend/internal/pkg/xai/oauth_test.go`：补充 Grok 4.5 alias 映射断言。
+- `backend/internal/service/billing_service.go`：新增 Grok 4.5 兜底计费。
+- `frontend/src/composables/useModelWhitelist.ts`：同步前端模型白名单和 Grok 预设映射。
+- `README.md`、`docs/GROK_XAI_SUPPORT.md`：补充 Grok 4.5 支持说明。
+- `.gitignore`：将 `docs/GROK_XAI_SUPPORT.md` 加入 docs 白名单，保证文档可被 Git 跟踪。
+- `progress.md`：追加本轮补回原因、验证和回滚记录。
+- 回滚方式：提交后执行 `git revert <本轮提交>` 可撤销 Grok 4.5 模型列表、计费、文档和白名单变更；首页 WIP 不在本轮提交内。
