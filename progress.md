@@ -489,3 +489,25 @@
 - 上游合并文件：其余 backend/frontend/deploy/docs/README 等大量变更来自 `upstream/main` 本次合并，未额外扩大人工改动范围。
 - `progress.md`：追加本轮合并、验证和回滚记录。
 - 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>`；如只需找回未发布首页改动，执行 `git stash list` 找到 `wip-homepage-not-for-release-20260708-090240` 后再按需 `git stash apply`。
+
+## 2026-07-09 - Task: 合并原仓库 0.1.146 最新提交并排除首页改动发版
+### What was done
+- 合并原仓库 `Wei-Shaw/sub2api` 最新 `main` 到当前仓库，本轮上游仍属于 `0.1.146` 基线，最新提交为 `6f43986c376d76144cb39c7a562c179e19ac7439`。
+- 记录本仓库更新检测用的上游提交指针，确保 Web 端只按原仓库新版本/当前仓库新版本逻辑识别更新，不把普通未发布首页改动带入发版。
+- 当前本地首页及其他未完成改动已隔离在 stash `wip-local-not-for-upstream-release-20260709-120915`，本轮提交、推送和发版不包含这些首页改动。
+
+### Testing
+- `git fetch upstream main --tags`（在 `D:\project\sub2api-so`）通过，确认 `upstream/main` 为 `6f43986c376d76144cb39c7a562c179e19ac7439`，最新上游 tag 仍为 `v0.1.146`。
+- `git diff --check`（在 `D:\project\sub2api-so`）通过。
+- `go test ./...`（在 `D:\project\sub2api-soackend`）通过。
+- `D:\environment
+odejs
+ode-v22.17.0-win-x64
+ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`）通过；仅保留既有 Browserslist、动态/静态导入混用和 chunk size 警告。
+
+### Notes
+- `backend/cmd/server/UPSTREAM_COMMIT`：更新本次合并对应的上游最新提交为 `6f43986c376d76144cb39c7a562c179e19ac7439`。
+- `progress.md`：追加本轮合并、验证、首页改动隔离和回滚记录。
+- 上游合并内容：引入上游 admin scheduler score opt-in、compact body signal routing、sidebar scroll position persist 等已发布基线后的最新修复提交。
+- 首页相关未发布改动：仍保留在 `stash@{0}` / `wip-local-not-for-upstream-release-20260709-120915`，未 stage、未 commit、未 push。
+- 回滚方式：本轮记录提交完成后可执行 `git revert HEAD` 回滚记录提交，再执行 `git revert -m 1 d750df90` 回滚本次上游合并；如只需恢复未发布首页改动，执行 `git stash list` 找到 `wip-local-not-for-upstream-release-20260709-120915` 后再按需 `git stash apply`。
