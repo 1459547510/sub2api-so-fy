@@ -511,3 +511,22 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - 上游合并内容：引入上游 admin scheduler score opt-in、compact body signal routing、sidebar scroll position persist 等已发布基线后的最新修复提交。
 - 首页相关未发布改动：仍保留在 `stash@{0}` / `wip-local-not-for-upstream-release-20260709-120915`，未 stage、未 commit、未 push。
 - 回滚方式：本轮记录提交完成后可执行 `git revert HEAD` 回滚记录提交，再执行 `git revert -m 1 d750df90` 回滚本次上游合并；如只需恢复未发布首页改动，执行 `git stash list` 找到 `wip-local-not-for-upstream-release-20260709-120915` 后再按需 `git stash apply`。
+
+## 2026-07-09 - Task: 修复 GitHub Security Scan 后端 govulncheck 失败
+### What was done
+- 定位 GitHub Security Scan 失败原因为 `govulncheck` 命中 Go 标准库漏洞 `GO-2026-5856`，当前 `go1.26.4` 的 `crypto/tls` 受影响，修复版本为 `go1.26.5`。
+- 将后端 Go 基线、GitHub CI/Release/Security Scan 校验和 Docker 构建镜像统一升级到 `1.26.5`。
+- 新增构建安全基线说明，避免后续把安全扫描和发布构建回退到受影响的 Go 版本。
+
+### Testing
+- `GOTOOLCHAIN=auto go run golang.org/x/vuln/cmd/govulncheck@latest ./...`（在 `D:\project\sub2api-soackend`）通过，结果为 `No vulnerabilities found` / `Your code is affected by 0 vulnerabilities`。
+- `GOTOOLCHAIN=auto go test ./...`（在 `D:\project\sub2api-soackend`）通过。
+- `git diff --check`（在 `D:\project\sub2api-so`）通过。
+
+### Notes
+- `backend/go.mod`：后端 Go 基线从 `1.26.4` 升级到 `1.26.5`。
+- `.github/workflows/backend-ci.yml`、`.github/workflows/security-scan.yml`、`.github/workflows/release.yml`：同步 CI、安全扫描和 Release 的 Go 版本校验到 `go1.26.5`。
+- `Dockerfile`、`backend/Dockerfile`、`deploy/Dockerfile`：同步 Docker 构建阶段 Go 镜像到 `golang:1.26.5-alpine`。
+- `docs/BUILD_SECURITY.md`：记录 Go 构建安全基线和版本同步要求。
+- `progress.md`：追加本轮失败定位、修复、验证和回滚记录。
+- 回滚方式：提交后执行 `git revert <本轮提交>` 可回退 Go 版本、安全扫描配置、Docker 基线和文档记录；如只是撤销发版 tag，删除本轮 tag 后重新发布上一版即可。
