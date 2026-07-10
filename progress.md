@@ -553,3 +553,29 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `.gitignore`：将 `docs/GROK_XAI_SUPPORT.md` 加入 docs 白名单，保证文档可被 Git 跟踪。
 - `progress.md`：追加本轮补回原因、验证和回滚记录。
 - 回滚方式：提交后执行 `git revert <本轮提交>` 可撤销 Grok 4.5 模型列表、计费、文档和白名单变更；首页 WIP 不在本轮提交内。
+
+## 2026-07-10 - Task: 合并原仓库 0.1.150 最新代码并排除本地未提交修改发版
+### What was done
+- 将当前本地未提交修改隔离到 stash `wip-local-not-for-upstream-release-20260710-162322`，本轮合并、提交、推送和发版不包含这些本地 WIP。
+- 合并原仓库 `Wei-Shaw/sub2api` 最新 `main` 到当前仓库，上游基线版本为 `0.1.150`，最新提交为 `6dd3274aafbc1a7a91304380fb3d7e50406841e0`。
+- 处理上游 `v0.1.150` 与当前二开逻辑的冲突，保留本仓库 GitHub Release 打包、fork 更新目标、原仓库按 release 版本提示的更新逻辑，并合入上游回滚候选、Grok 4.5 默认映射、GPT-5.6 计费/使用量修复等更新。
+- 首页冲突按上游版本解决，未恢复或提交本地未完成首页/WebGL/纹理相关改动。
+
+### Testing
+- `git diff --check`（在 `D:\project\sub2api-so`）通过。
+- `GOTOOLCHAIN=auto go test ./...`（在 `D:\project\sub2api-soackend`）通过。
+- `D:\environment
+odejs
+ode-v22.17.0-win-x64
+ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`）通过；仅保留既有 Browserslist、动态/静态导入混用和 chunk size 警告。
+
+### Notes
+- `.github/workflows/release.yml`：解决上游合并冲突，保留本仓库 Release 打包流程和 Go 1.26.5 校验。
+- `backend/cmd/server/VERSION`、`backend/cmd/server/UPSTREAM_COMMIT`：同步上游基线版本 `0.1.150` 和最新上游提交 `6dd3274aafbc1a7a91304380fb3d7e50406841e0`。
+- `backend/internal/service/update_service.go`、`backend/internal/repository/github_release_service.go` 及相关测试：合并上游回滚 release 列表能力，同时保留当前仓库更新目标和原仓库仅按 release 版本提示的二开逻辑。
+- `backend/internal/pkg/xai/models.go`、`backend/internal/service/billing_service.go`、`frontend/src/composables/useModelWhitelist.ts` 及相关测试：合入上游 Grok 4.5 默认模型映射和计费逻辑。
+- `frontend/src/components/common/VersionBadge.vue`：冲突处理保留当前仓库已发布的更新提示和应用内更新/重启入口。
+- `frontend/src/views/HomeView.vue`：冲突处理采用上游版本，避免带入本地未完成首页改动。
+- 上游合并文件：其余 backend/frontend/docs/deploy/README/ent/migrations/resources 等变更均来自 `upstream/main` 本次合并，未额外扩大人工改动范围。
+- `progress.md`：追加本轮合并、验证、本地 WIP 隔离和回滚记录。
+- 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>` 回滚上游合并，再执行 `git revert <本轮记录提交>` 回滚元数据/进度记录；如需恢复本地未提交修改，执行 `git stash list` 找到 `wip-local-not-for-upstream-release-20260710-162322` 后再按需 `git stash apply`。
