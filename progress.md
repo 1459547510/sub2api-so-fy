@@ -579,3 +579,78 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - 上游合并文件：其余 backend/frontend/docs/deploy/README/ent/migrations/resources 等变更均来自 `upstream/main` 本次合并，未额外扩大人工改动范围。
 - `progress.md`：追加本轮合并、验证、本地 WIP 隔离和回滚记录。
 - 回滚方式：提交后执行 `git revert -m 1 <本次合并提交>` 回滚上游合并，再执行 `git revert <本轮记录提交>` 回滚元数据/进度记录；如需恢复本地未提交修改，执行 `git stash list` 找到 `wip-local-not-for-upstream-release-20260710-162322` 后再按需 `git stash apply`。
+
+## 2026-07-12 - Task: 制作统一 AI 网关核心视觉概念例图
+### What was done
+- 将已确认的统一外框、同心机械核心、纯中性白光、黑钛金属、烟熏玻璃和稀疏深空背景组合为桌面首页概念例图。
+- 提供 Core、Route、Code、Meter 四相位交互预览，展示稳定外轮廓内的环体、导轨、接口探针和计量机构变化。
+
+### Testing
+- 本地视觉预览服务返回 HTTP 200，浏览器 `1440x900` 下 Core 画面非空。
+- 点击 Route 后相位状态和标题同步更新；恢复后的预览重新停在 Core。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/unified-gateway-core-concept-v2.html`：新增本地交互式视觉概念例图，不进入产品构建。
+- `progress.md`：追加本轮例图交付、验证和回滚点。
+- 回滚方式：删除 `.superpowers/brainstorm/unified-core-20260712/`，并删除 `progress.md` 中本条记录。
+
+## 2026-07-12 - Task: 合并原仓库 0.1.151 最新代码并排除当前本地修改发版
+### What was done
+- 将当前首页、首页资源、设计文档和工具预览等未提交修改隔离到 `wip-local-not-for-upstream-release-20260712` 与 `wip-superpowers-not-for-upstream-release-20260712`，并将合并期间出现的并行进度记录隔离到 `wip-progress-concurrent-not-for-upstream-release-20260712`。
+- 合并原仓库 `Wei-Shaw/sub2api` 最新 `main`，上游正式版本为 `0.1.151`，最新提交为 `e316ebf52838a89d57fc790981cce7520f819ac8`；本次自动合并无文本冲突。
+- 保持当前仓库的 Release 打包、更新目标、原仓库仅按正式 Release 提示、应用内更新/重启和 Token 激励逻辑不变，同时接入上游 OpenAI/Anthropic 工具转换、Fast/Flex 策略、缓存创建 Token 统计及错误捕获修复。
+
+### Testing
+- `git diff --check` 与 `git diff --cached --check`（在 `D:\project\sub2api-so`）通过。
+- `GOTOOLCHAIN=auto go test ./...`（在 `D:\project\sub2api-so\backend`）通过。
+- `D:\environment\nodejs\node-v22.17.0-win-x64\node_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-so\frontend`）通过；仅有既有 Browserslist、动态/静态导入混用和 chunk size 警告。
+
+### Notes
+- `backend/cmd/server/VERSION`：同步上游正式版本为 `0.1.151`。
+- `backend/cmd/server/UPSTREAM_COMMIT`：记录本轮上游最新提交 `e316ebf52838a89d57fc790981cce7520f819ac8`。
+- `backend/internal/handler/admin/admin_helpers_test.go`：同步上游管理员辅助测试的设置字段覆盖。
+- `backend/internal/handler/dto/settings.go`：同步上游用户级 Fast/Flex 策略设置 DTO。
+- `backend/internal/handler/ops_capture_writer_nil_test.go`：新增上游响应捕获 writer 释放后访问的回归测试。
+- `backend/internal/handler/ops_error_logger.go`：同步上游响应捕获 writer 的 nil 安全修复。
+- `backend/internal/pkg/apicompat/anthropic_to_responses_response.go`：同步 Anthropic 到 Responses 工具调用转换修复。
+- `backend/internal/pkg/apicompat/chatcompletions_responses_bridge.go`：同步 custom/tool_search 工具桥接、命名空间和降级选择逻辑。
+- `backend/internal/pkg/apicompat/chatcompletions_responses_bridge_custom_tools_test.go`：新增上游 custom/tool_search 桥接回归覆盖。
+- `backend/internal/pkg/apicompat/chatcompletions_responses_test.go`：同步工具转换断言。
+- `backend/internal/pkg/apicompat/responses_anthropic_cache_creation_test.go`：新增 cache_creation_input_tokens 转换回归测试。
+- `backend/internal/pkg/apicompat/responses_stream_event_wire.go`：同步流式工具事件线协议转换。
+- `backend/internal/pkg/apicompat/responses_stream_event_wire_test.go`：同步流式工具事件测试。
+- `backend/internal/pkg/apicompat/responses_to_anthropic.go`：同步 Responses 到 Anthropic 工具和缓存 Token 转换。
+- `backend/internal/pkg/apicompat/types.go`：同步 custom/tool_search 与缓存 Token 类型定义。
+- `backend/internal/pkg/ctxkey/ctxkey.go`：新增上游请求身份与用户策略上下文键。
+- `backend/internal/pkg/openai/request.go`：同步 OpenAI 请求身份字段和解析逻辑。
+- `backend/internal/pkg/openai/request_identity_test.go`：新增 OpenAI 请求身份解析测试。
+- `backend/internal/server/middleware/api_key_auth.go`：将用户级 Fast/Flex 策略写入请求上下文。
+- `backend/internal/server/middleware/api_key_auth_test.go`：同步 API Key 鉴权策略测试。
+- `backend/internal/server/middleware/openai_fast_policy_forwarding_test.go`：新增用户策略转发回归测试。
+- `backend/internal/service/account_test_service.go`：同步测试服务的用户策略字段。
+- `backend/internal/service/account_usage_service.go`：同步账户用量服务的用户策略传递。
+- `backend/internal/service/openai_codex_identity.go`：新增 Codex 请求 originator 与 User-Agent 处理。
+- `backend/internal/service/openai_codex_identity_test.go`：新增 Codex 请求身份测试。
+- `backend/internal/service/openai_fast_policy_test.go`：同步 Fast/Flex 策略测试。
+- `backend/internal/service/openai_fast_policy_ws_test.go`：同步 WebSocket Fast/Flex 策略测试。
+- `backend/internal/service/openai_gateway_forward.go`：同步网关请求身份转发。
+- `backend/internal/service/openai_gateway_grok.go`：同步 Grok reasoning effort 兼容处理。
+- `backend/internal/service/openai_gateway_grok_test.go`：同步 Grok reasoning effort 回归测试。
+- `backend/internal/service/openai_gateway_messages.go`：同步 Messages 路径请求身份和缓存 Token 处理。
+- `backend/internal/service/openai_gateway_messages_chat_fallback.go`：同步 Messages 降级桥接参数。
+- `backend/internal/service/openai_gateway_passthrough.go`：同步透传请求身份字段。
+- `backend/internal/service/openai_gateway_request_body.go`：同步请求体工具转换和身份处理。
+- `backend/internal/service/openai_gateway_responses_chat_fallback.go`：同步 Responses 降级桥接工具转换。
+- `backend/internal/service/openai_gateway_service_test.go`：同步网关服务构造和行为测试。
+- `backend/internal/service/openai_oauth_passthrough_test.go`：同步 OAuth 透传身份测试。
+- `backend/internal/service/openai_ws_forwarder_payload.go`：同步 WebSocket 请求策略载荷。
+- `backend/internal/service/openai_ws_forwarder_success_test.go`：同步 WebSocket 成功路径测试。
+- `backend/internal/service/setting_features.go`：新增管理员控制的用户级 Fast/Flex 策略开关。
+- `backend/internal/service/settings_view.go`：将 Fast/Flex 策略开关加入设置视图。
+- `frontend/src/api/admin/settings.ts`：同步管理员设置 API 类型。
+- `frontend/src/i18n/locales/en/admin/settings.ts`：新增 Fast/Flex 策略英文设置文案。
+- `frontend/src/i18n/locales/zh/admin/settings.ts`：新增 Fast/Flex 策略中文设置文案。
+- `frontend/src/views/admin/SettingsView.vue`：新增 Fast/Flex 用户策略管理开关界面。
+- `progress.md`：追加本轮隔离、合并、验证和回滚记录。
+- 本轮没有数据库结构、部署方式或外部配置文件变化；新增策略通过现有管理设置界面配置，无需新增部署文档。
+- 回滚方式：发版后执行 `git revert -m 1 <本次合并提交>` 回滚本轮上游合并；当前本地修改按需从上述三个 `20260712` stash 分别恢复，不应直接批量 `stash pop`。
