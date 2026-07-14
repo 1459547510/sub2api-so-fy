@@ -654,3 +654,312 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`：追加本轮隔离、合并、验证和回滚记录。
 - 本轮没有数据库结构、部署方式或外部配置文件变化；新增策略通过现有管理设置界面配置，无需新增部署文档。
 - 回滚方式：发版后执行 `git revert -m 1 <本次合并提交>` 回滚本轮上游合并；当前本地修改按需从上述三个 `20260712` stash 分别恢复，不应直接批量 `stash pop`。
+
+## 2026-07-12 - Task: 迭代统一 AI 网关核心震撼感例图
+### What was done
+- 保留统一黑钛外框、纯中性白光和稀疏深空背景，将四相位从小幅环体旋转升级为大尺度内部机械重组。
+- Route 展开四向路由闸，Code 接入三层接口舱，Meter 升起三列计量机构；换相增加短促白光冲击和轻微整体推进。
+
+### Testing
+- 本地预览服务返回 HTTP 200，并正确加载“震撼增强版例图”。
+- 浏览器 `1440x900` 实际切换并截图检查 Route、Code、Meter，三种内部剪影和对应标题均明显不同；最终恢复 Core。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/unified-gateway-core-concept-v2.html`：保留上一版高级感基线例图。
+- `.superpowers/brainstorm/unified-core-20260712/content/unified-gateway-core-impact-v3.html`：新增大尺度机械变化与白光冲击的增强版例图。
+- `progress.md`：追加本轮例图迭代、验证和回滚点。
+- 回滚方式：删除 `.superpowers/brainstorm/unified-core-20260712/`，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 制作外框联动变形的 B 方向视觉例图
+### What was done
+- 按 B 方向让统一 AI 网关核心的外部框架参与四相位变形，同时保留纯白舞台光、黑钛材质和稀疏深空背景。
+- Route 横向展开框架与四向路由闸，Code 开启框架并前推接口舱，Meter 纵向拉伸框架并升起计量塔；Core 保持闭合稳定的默认轮廓。
+
+### Testing
+- 本地视觉预览 `http://localhost:53007/` 返回 HTTP 200。
+- 浏览器 `1440x900` 依次切换 Route、Code、Meter、Core，装置和标题同步更新；四个状态均保持单屏，无横向或纵向溢出，最终恢复 Core。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/unified-gateway-core-stage-transform-v4.html`：新增外框参与大幅机械换形的 B 方向交互例图。
+- `progress.md`：追加本轮视觉例图、验证证据和回滚点。
+- 回滚方式：删除 `.superpowers/brainstorm/unified-core-20260712/content/unified-gateway-core-stage-transform-v4.html`，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 制作空间折叠入口 B 方向视觉例图
+### What was done
+- 放弃机械装置和中心模型，改用全屏 Three.js 空间裂隙作为统一 AI 网关入口，并保持纯黑背景与中性白光。
+- Core 使用稳定纵向入口，Route 展开多路径空间分流，Code 打开纵深接入通道，Meter 切换为横向计量脉冲；四阶段同步更新首页标题与业务文案。
+- 增加持续空间运动、换相冲击和鼠标视差，桌面端将视觉重心置于右侧，手机端将入口移到文字下方。
+
+### Testing
+- 本地视觉预览 `http://localhost:53007/` 返回 HTTP 200，并加载“Sub2API 空间折叠网关概念例图”。
+- 浏览器 `1440x900` 依次切换 Core、Route、Code、Meter，标题和场景状态同步更新，页面宽高与视口一致。
+- 浏览器 `390x844` 检查四阶段标题边界、正文与底部阶段导航，页面保持单屏且无横向或纵向溢出。
+- 截图像素检查确认桌面右侧场景非空；连续帧存在像素变化，鼠标从中央移动到右上后右侧场景产生明显像素差异。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/spatial-fold-gateway-v5.html`：新增空间折叠入口的 Three.js 交互视觉例图，不进入生产首页。
+- `progress.md`：追加本轮视觉方向、响应式验证、动态验证和回滚点。
+- 回滚方式：删除 `.superpowers/brainstorm/unified-core-20260712/content/spatial-fold-gateway-v5.html`，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 制作四个全新首页视觉方向示例图
+### What was done
+- 在机械装置、空间裂隙、模型文字矩阵和界面拼贴之外，提供真实开发现场、纪念性基础设施、生成能力电影、请求数据实景四个独立方向。
+- 每个方向均使用真实影像、Sub2API 首页导航、业务标题与简短价值表达，形成可直接比较的首页示例图，并支持点击标记。
+- 对比板采用桌面双列、手机单列布局，不把任何方向预设为推荐答案。
+
+### Testing
+- 本地视觉预览 `http://localhost:53007/` 返回 HTTP 200，并加载“Sub2API 首页视觉方向对比”。
+- 浏览器 `1440x900` 全页截图确认四张示例图及外部影像素材均正常显示，四个方向的画面来源和构图明显不同。
+- 浏览器 `390x844` 检查四张示例图、标题宽度和页面滚动区域，无横向溢出；点击 B 后选中状态正确更新。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/homepage-direction-board-v6.html`：新增四个首页视觉方向的高保真比较板。
+- `progress.md`：追加本轮示例图交付、浏览器验证和回滚点。
+- 回滚方式：删除 `.superpowers/brainstorm/unified-core-20260712/content/homepage-direction-board-v6.html`，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 子代理并行制作 A、C、D 三个完整首页候选
+### What was done
+- 将真实开发现场、生成能力电影、请求数据实景拆分为三个独立文件责任边界，由三个子代理并行完成完整一屏首页候选。
+- 三个候选均实现 Core、Route、Code、Meter 四阶段，阶段切换同步改变标题、业务文案和场景动画，并提供鼠标视差与减弱动画支持。
+- 新增统一切换入口，在同一视口内直接切换 A、C、D 完整页面，同时保留独立打开入口。
+- 统一手机验收发现 A 的装饰层扩大内部滚动区域，语义点击会将首屏内容上移；修复为不可程序滚动裁切，并将三个候选及统一入口的矩形焦点框替换为无框反馈。
+
+### Testing
+- A、C、D 页面及统一入口在 `http://localhost:53008/` 下均返回 HTTP 200；六个外部影像素材 URL 均返回 HTTP 200。
+- 浏览器 `1440x900` 对 A、C、D 分别点击 Core、Route、Code、Meter，共 12 次状态切换；标题均同步更新，页面宽高与视口一致。
+- 浏览器 `390x844` 对三个候选点击 Route 并截图检查；标题、正文、主动作和阶段导航均在视口内，页面无横向或纵向溢出。
+- A 修复后 `.hero` 的 `scrollTop` 在语义点击 Route 后保持 0；三个候选及统一入口的活动按钮 `outline-style` 均为 `none`。
+- 统一入口在桌面和手机端切换 A、C、D 后，描述、iframe 地址和加载状态正确更新；手机端保持 `390x844` 无页面溢出。
+- 四个新增 HTML 文件的 whitespace diff check 通过，`progress.md` 的 `git diff --check` 通过。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-a-developer-studio-v7.html`：新增真实开发现场完整候选页，并修复手机内部滚动和焦点框问题。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-c-generative-cinema-v7.html`：新增生成能力电影完整候选页，并使用无框键盘焦点反馈。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-d-request-telemetry-v7.html`：新增请求数据实景完整候选页，并使用无框键盘焦点反馈。
+- `.superpowers/brainstorm/unified-core-20260712/content/acd-variants-index-v8.html`：新增 A、C、D 统一切换和独立预览入口。
+- `progress.md`：追加本轮并行制作、缺陷修复、统一验证和回滚点。
+- 回滚方式：先停止监听 53008 端口的本地预览进程，再删除上述四个 HTML 文件，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 扩展五种首页候选并增加固定一屏滚轮换相
+### What was done
+- 为 A、C、D 增加统一滚轮协议：页面本身不滚动，滚轮向下依次切换阶段，向上反向切换，并使用短暂锁定避免触控板连续跳相。
+- A 与 D 从单一背景升级为 Core、Route、Code、Meter 四套真实影像，并分别保留开发现场与请求链路的动画重点。
+- C 将原有切片位移动画升级为镜头推进、曝光变化和斜向擦除的电影式换相。
+- 新增 E 简约风，以纯白界面、单线网络与超大文字表达统一入口；新增 F 黑白二次元风，以真实角色影像、网点与速度线表达四阶段。
+- 统一入口扩展为 A、C、D、E、F 五方案，手机端五个方案按钮保持单行五等分。
+
+### Testing
+- 实施前浏览器基线验证确认 A、C、D 滚轮后仍停留 Core；实施后五个候选向下滚轮均从 Core 切到 Route，向上均回到 Core。
+- 五个候选在 `1440x900` 和 `390x844` 下执行滚轮换相后，`scrollY` 均为 0，页面宽高与视口一致，标题保持在视口内。
+- A 与 D 分别检查四阶段可见背景图，均得到四个唯一影像 URL；相关外部素材返回 HTTP 200。
+- C 在换相中间帧与结束帧均产生显著截图像素差异，确认新镜头转场实际运行。
+- E、F 完成桌面与手机截图检查，导航、标题、主动作和阶段栏无重叠或溢出。
+- 五方案入口依次加载 A、C、D、E、F，iframe 地址、描述和加载状态同步更新；手机 `390x844` 下五个方案按钮保持同一行且页面无溢出。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-a-developer-studio-v7.html`：增加四阶段真实背景、滚轮换相和滚轮提示。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-c-generative-cinema-v7.html`：重做电影式镜头转场并增加滚轮换相。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-d-request-telemetry-v7.html`：增加四阶段技术背景、滚轮换相和滚轮提示。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-e-minimal-v9.html`：新增固定一屏简约风候选。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-f-anime-v9.html`：新增固定一屏黑白二次元风候选。
+- `.superpowers/brainstorm/unified-core-20260712/content/acd-variants-index-v8.html`：扩展为五方案统一入口并修复手机方案栏换行。
+- `progress.md`：追加本轮五方案扩展、滚轮协议、视觉与响应式验证记录。
+- 回滚方式：删除 E、F 两个新增候选，并在 A、C、D 与统一入口中反向移除本轮新增的滚轮、阶段背景、镜头擦除及五方案配置；随后删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 将五种固定一屏首页候选升级为独立彩色视觉
+### What was done
+- 保留五个候选的固定一屏、四阶段滚轮换相和鼠标交互，为 A、C、D、E 分别建立深蓝开发现场、彩色电影镜头、彩色遥测实景和明亮简约四套独立视觉体系。
+- 将 F 从单张黑白角色影像重做为四幕彩色二次元场景，每个阶段使用独立背景，并增加景深推进、斜切闪帧、速度线爆发和阶段色彩联动。
+- 修正 C 手机端专用遮罩造成的近黑白问题，并将 F 的页面标题和统一入口标签同步改为“彩色二次元风”。
+
+### Testing
+- 统一入口与五个候选页面均返回 HTTP 200；15 个外部影像 URL 的 HEAD 请求均返回 HTTP 200。
+- 浏览器 `1440x900` 验证五页滚轮向下均从 Core 切到 Route、向上均回到 Core，切换前后 `scrollY` 始终为 0，页面宽高与视口一致。
+- 桌面截图彩色像素占比为 A `57.0%`、C `22.9%`、D `6.5%`、E `13.0%`、F `63.8%`，确认五个方案均不再呈现纯黑白画面。
+- 浏览器 `390x844` 验证五页文案、主动作与阶段栏处于视口内，页面无横向或纵向溢出；C 手机端修正后彩色像素占比由 `0.5%` 提升至 `39.2%`。
+- A、D、F 分别逐阶段读取可见背景图，Core、Route、Code、Meter 均得到四个唯一影像 URL；F 的 Core 与 Route 截图确认人物、背景和主题色同步发生明显变化。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-a-developer-studio-v7.html`：为四阶段开发现场补充深蓝、蓝绿、紫色与暖橙的独立色彩氛围。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-c-generative-cinema-v7.html`：移除灰度镜头处理，增加阶段色彩覆盖并修复手机端近黑白遮罩。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-d-request-telemetry-v7.html`：将四套遥测实景升级为蓝、青绿、紫与金色的阶段化视觉。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-e-minimal-v9.html`：使用阶段色变量联动主动作、路径、大字、节点和轻量背景光。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-f-anime-v9.html`：重做为四套彩色二次元背景与复合转场动画。
+- `.superpowers/brainstorm/unified-core-20260712/content/acd-variants-index-v8.html`：将 F 方案标签更新为彩色二次元风。
+- `progress.md`：追加本轮彩色化、四场景、交互和响应式验证记录。
+- 回滚方式：以本条记录前的工作区状态为回滚点，反向移除上述六个候选 HTML 中本轮新增的色彩、F 四场景和 C 手机遮罩补丁，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 并行升级前三种 3D 首页并重做简约与二次元方案
+### What was done
+- 以独立文件责任边界并行重做 A、C、D：分别使用真实 Three.js 构建 3D 开发工作台、电影棱镜空间和请求遥测隧道，四阶段均改变几何结构、光色和镜头，而非只切换背景或颜色。
+- 将 E 从单线极简升级为动态极简流场，增加多层曲线路径、轨道、节点、斜向色域和阶段形变，并将底部长分隔线改为圆点与短刻度。
+- 将 F 的四阶段替换为四位不同的彩色 2D 美少女本地素材，并为 Route、Code、Meter 分别增加分叉扫线、字符式扫描和环形计量轨迹。
+- 终审修复 C 在减弱动态效果模式下累积多个阶段模型、Code 动画覆盖原始纵深两项问题；统一入口同步更新五个方案名称。
+
+### Testing
+- 统一入口、五个候选页面、四张本地 WebP 和 Three.js CDN 均返回 HTTP 200；四张角色图哈希各不相同。
+- 浏览器 `1440x900` 验证 A、C、D 均存在覆盖视口的非空 WebGL Canvas；五页滚轮向下均从 Core 切至 Route、向上回到 Core，切换前后 `scrollY=0`，控制台无脚本错误。
+- A、C、D 依次执行 Core、Route、Code、Meter，右侧场景相邻阶段平均像素差异分别为 A `10.41–27.03`、C `11.13–16.36`、D `11.71–19.02`，确认几何形态和画面实际变化。
+- 浏览器 `390x844` 验证五页宽高与视口一致、无横向或纵向溢出；A、C、D 手机 Canvas 均为 `390x844` 且非空，E/F 文案、动作与阶段导航均在视口内。
+- C 在 `prefers-reduced-motion` 下依次切换五次，每个阶段始终只有一个可见组；活动组透明度与缩放为 1，其余组均隐藏。
+- F 依次滚轮切换四阶段，浏览器读取到 `girl-1.webp` 至 `girl-4.webp` 四个唯一可见背景，页面本身始终不滚动。
+- 六个候选 HTML 的 whitespace check 与 `progress.md` 的 `git diff --check` 通过。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-a-developer-studio-v7.html`：重做为四阶段 Three.js 3D 开发工作台。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-c-generative-cinema-v7.html`：重做为 3D 电影棱镜，并修复减弱动画和代码纵深问题。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-d-request-telemetry-v7.html`：重做为四阶段 3D 请求遥测隧道。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-e-minimal-v9.html`：增加动态极简流场并移除底部长分隔线。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-f-anime-v9.html`：改用四位不同的 2D 美少女并增加阶段专属动画语法。
+- `.superpowers/brainstorm/unified-core-20260712/content/assets/anime-v10/girl-1.webp`：新增 F Core 阶段的本地 2D 插画素材。
+- `.superpowers/brainstorm/unified-core-20260712/content/assets/anime-v10/girl-2.webp`：新增 F Route 阶段的本地 2D 插画素材。
+- `.superpowers/brainstorm/unified-core-20260712/content/assets/anime-v10/girl-3.webp`：新增 F Code 阶段的本地 2D 插画素材。
+- `.superpowers/brainstorm/unified-core-20260712/content/assets/anime-v10/girl-4.webp`：新增 F Meter 阶段的本地 2D 插画素材。
+- `.superpowers/brainstorm/unified-core-20260712/content/acd-variants-index-v8.html`：更新五个方案的统一入口名称。
+- `progress.md`：追加本轮并行施工、终审修复、3D 与响应式验证记录。
+- 当前 F 素材仅用于概念预览，作品来源已记录在 HTML 注释中，但没有可核验的商用授权；正式发布前须替换为自有或明确授权素材。A、C、D 当前依赖 Three.js CDN，生产化时需决定是否本地化依赖。
+- 回滚方式：以本条记录前的工作区状态为回滚点，恢复上述六个 HTML 到本轮前版本，删除 `assets/anime-v10/`，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 将前三种中心 3D 模型改为真实内容驱动的 2.5D 动效
+### What was done
+- 完整移除 A、C、D 的中心球体、棱镜、轨道和 Three.js 模型代码，恢复真实开发、生成能力与遥测实景作为视觉主体。
+- A 改为真实开发现场与无框工作流内容层：Core 汇聚请求，Route 空间分流，Code 多层代码穿梭，Meter 轨迹与刻度展开；同时移除自动轮播，保证滚轮操作确定性。
+- C 改为多层影像切片与电影镜头：四阶段分别使用景深汇聚、纵向分流、代码推进和暖金旋转切入，并保留曝光闪帧、斜向擦除与鼠标视差。
+- D 改为真实技术实景与无框 Canvas 数据流：请求脉冲在纵深中穿梭、分叉、重连和收束，不再使用中心几何主体。
+- 统一入口将 A、C、D 名称更新为 2.5D 开发现场、2.5D 电影切片和 2.5D 遥测实景；E/F 保持上一轮状态。
+
+### Testing
+- 统一入口与 A、C、D 页面均返回 HTTP 200；三页引用的真实影像素材均可正常加载。
+- 浏览器 `1440x900` 对三页依次执行 `Core → Route → Code → Meter → Code → Route → Core`，全部阶段顺序正确且全过程 `scrollY=0`，页面宽高与视口一致。
+- 相邻阶段右侧画面平均像素差异分别为 A `12.33–18.03`、C `29.48–47.54`、D `18.65–26.57`，确认空间镜头和视觉内容实际发生明显变化。
+- 浏览器 `390x844` 验证 A、C、D 均无横向或纵向溢出；手机滚轮向下从 Core 到 Route、向上返回 Core，Canvas 与影像切片保持非空且文案无重叠。
+- A 页面加载后等待超过 8 秒仍保持 Core，随后滚轮向下切至 Route、向上回到 Core，确认自动轮播已移除。
+- 鼠标移动后，A、C、D 分别更新工作流、远中近景和遥测视差变量；浏览器控制台无脚本错误。
+- 静态检查确认 A、C、D 不再包含 Three.js CDN、WebGLRenderer 或几何模型代码；四个 HTML 的 whitespace check 与 `progress.md` 的 `git diff --check` 通过。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-a-developer-studio-v7.html`：将中心 3D 开发模型重做为真实现场与 2.5D 工作流动效，并取消自动换相。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-c-generative-cinema-v7.html`：将 3D 棱镜重做为真实影像切片与电影级透视镜头。
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-d-request-telemetry-v7.html`：将 3D 数据核心重做为真实遥测实景与纵深数据流。
+- `.superpowers/brainstorm/unified-core-20260712/content/acd-variants-index-v8.html`：同步更新前三个方案的 2.5D 名称。
+- `progress.md`：追加本轮方向纠偏、完整重做和运行态验证记录。
+- 回滚方式：以上一条“并行升级前三种 3D 首页并重做简约与二次元方案”记录完成时的工作区为回滚点，恢复上述四个 HTML 到上一轮 3D 模型版本，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 新增 G 方案 3D 空间工作流首页候选
+### What was done
+- 保留 A-F 候选与生产首页不变，新增固定一屏的 G「3D 空间工作流」候选，以 Core、Route、Code、Meter 内容平面构成纵深路径，不再使用中心球体、棱镜或通用科技模型。
+- 使用滚轮驱动相机逐段穿越、鼠标驱动观察角度，并让四段文案、强调色、空间平面和粒子氛围同步变化；Meter 镜头回退到完整构图，减弱动画模式仅保留当前章节平面。
+- 将 G 加入统一候选入口，桌面保持六方案导航，手机端使用单行六等分导航。
+
+### Testing
+- 浏览器 `1440x900` 依次完成 `Core → Route → Code → Meter → Code → Route → Core`，阶段顺序正确且全过程 `scrollY=0`；相邻阶段平均像素差为 `6.93 / 8.33 / 11.37`，鼠标移动前后相机矩阵不同，控制台无脚本错误。
+- 浏览器 `390x844` 下页面尺寸与视口同为 `390x844`，四个阶段按钮均完整位于视口内；滚轮可从 Core 切至 Route 并返回 Core，前后 `scrollY=0`，无横向或纵向溢出。
+- 桌面与手机的全屏 Canvas 尺寸分别为 `1440x900`、`390x844`；场景空白区域像素采样均非空。统一入口在桌面和手机端均无溢出，点击 G 后 iframe 指向 `variant-g-spatial-workflow-v10.html`。
+- G 与统一入口返回 HTTP 200，GSAP 与 Three.js CDN HEAD 请求返回 HTTP 200；模块脚本 `node --check`、UTF-8 严格解码、whitespace check、减弱动画当前章节静态断言和 `git diff --check` 通过。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-g-spatial-workflow-v10.html`：新增 CSS 3D 内容空间、GSAP 相机路径、Three.js 粒子氛围及桌面/手机交互。
+- `.superpowers/brainstorm/unified-core-20260712/content/acd-variants-index-v8.html`：新增 G 方案入口并调整手机端六等分导航。
+- `progress.md`：追加本轮 G 候选实现、验证、依赖与回滚记录。
+- G 当前通过 CDN 加载 GSAP `3.13.0` 与 Three.js `0.180.0`，仍属于独立概念候选，未接入生产首页。
+- 回滚点：以本条记录前的工作区状态为准；删除 G 候选文件，反向移除统一入口中的 G 配置、按钮和六等分样式，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 制作 H 光谱请求巨构主视觉与短动效样片
+### What was done
+- 保留 A-G 候选、统一入口和生产首页不变，新增独立 H「光谱请求巨构」样片，让请求线路、金属结构肋与实时数据脉冲共同构成超出屏幕的数据基础设施，不使用照片卡片、中心球体、棱镜或独立星空。
+- 建立 7.2 秒自动循环的 Core、Route、Code、Meter 四种结构轮廓，分别呈现汇聚主干、分流穹顶、协议走廊和计量地形；同步切换文案、空间标签、相机路径与鼠标视差。
+- 导出 Route 稳定帧作为 H 主视觉例图，便于在继续完整首页施工前单独评审视觉方向。
+
+### Testing
+- 浏览器 `1440x900` 验证 `Core → Route → Code → Meter → Core` 连续循环，四阶段 `scrollY=0`、Canvas 为 `1440x900`、控制台无脚本错误；右侧场景相邻阶段平均像素差为 `17.74 / 20.64 / 17.80`，有效画面覆盖率为 `29.3%–37.1%`。
+- 浏览器 `390x844` 验证四阶段循环后返回 Core，页面尺寸始终为 `390x844`、`scrollY=0`、控制台无脚本错误；下半屏场景有效像素覆盖率为 `59.1%`，文案、操作按钮和四阶段标签均位于视口内。
+- 桌面鼠标从中心移动到右上后，右侧场景平均像素差为 `15.58`，确认相机视差生效；主视觉例图尺寸为 `1440x900`，文件可正常解码。
+- H 页面、Three.js 核心模块、EffectComposer、RenderPass 与 UnrealBloomPass 均返回 HTTP 200；模块脚本 `node --check`、UTF-8 严格解码、whitespace check、固定一屏与禁用中心基础几何静态断言、`git diff --check` 通过。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/variant-h-spectral-infrastructure-study-v11.html`：新增全屏 Three.js 程序化请求巨构、Bloom、四阶段结构变形、同步文案和响应式样片。
+- `.superpowers/brainstorm/unified-core-20260712/content/assets/h-spectral-v11/route-main-visual.png`：新增从实际 H 页面导出的 Route 主视觉例图。
+- `progress.md`：追加本轮 H 样片实现、验证、依赖和回滚记录。
+- H 通过 CDN 加载 Three.js `0.180.0` 及其后期处理模块，目前仅作为独立方向样片，未加入统一候选入口。
+- 回滚点：以本条记录前的工作区状态为准；删除 H 样片文件与 `assets/h-spectral-v11/`，并删除 `progress.md` 中本条记录。
+
+## 2026-07-13 - Task: 将 D 请求遥测方案设为正式首页
+### What was done
+- 将 D「请求遥测实景」接入 `/home` 默认分支，并继续保留管理员 `home_content` 的 HTML/iframe 覆盖、站点 Logo/文档地址清洗、鉴权初始化及普通用户与管理员控制台分流。
+- 建立固定一屏的 Core、Route、Code、Meter 四阶段首页：本地实景素材与 Canvas 数据流同步切换，支持滚轮双向换相、阶段按钮、鼠标视差和点击脉冲，并在组件卸载时释放 RAF、定时器、媒体查询及全局事件监听。
+- 补齐中英文首页文案、桌面/手机竖屏/手机横屏布局及减弱动画静态帧；修正顶栏与阶段栏堆叠顺序，避免语言下拉菜单被阶段控件覆盖。
+- 更新公共页面文档和首页契约测试；A-G 候选与 H 独立样片保持原状，未删除或覆盖。
+
+### Testing
+- `pnpm exec vitest run src/views/__tests__/HomeTelemetryDefault.spec.ts src/components/layout/__tests__/siteLogoSanitization.spec.ts src/components/layout/__tests__/docUrlSanitization.spec.ts src/i18n/__tests__/localesNoKeyCollision.spec.ts`：4 个测试文件、20 项测试通过。
+- `pnpm run typecheck`、`pnpm run lint:check`、`pnpm run build` 均通过；生产构建完成 909 个模块转换，保留仓库既有的 Browserslist、动态/静态导入和大分包提示。
+- 浏览器在 `1440x900`、`390x844`、`844x390` 下确认根容器、Canvas 与文档尺寸等于视口，`scrollY=0` 且无横纵溢出；桌面完成 `Core -> Route -> Code -> Meter -> Code -> Route -> Core` 双向切换。
+- 浏览器确认鼠标视差、点击脉冲、离开 `/home` 后 Canvas 卸载、返回首页后单次滚轮不重复触发；英文 Route 点击“中文”后恢复中文 Core，标题、导航、阶段说明和指标同步变化。
+
+### Notes
+- `frontend/src/views/HomeView.vue`：将 D 遥测组件接入默认首页分支并保留现有自定义首页及业务入口逻辑。
+- `frontend/src/components/home/TelemetryHome.vue`：新增固定一屏的四阶段遥测首页、Canvas 动效、交互、响应式、减弱动画与资源清理，并修复语言菜单层级。
+- `frontend/src/assets/home/telemetry/core.webp`：新增 Core 阶段本地实景素材。
+- `frontend/src/assets/home/telemetry/route.webp`：新增 Route 阶段本地实景素材。
+- `frontend/src/assets/home/telemetry/code.webp`：新增 Code 阶段本地实景素材。
+- `frontend/src/assets/home/telemetry/meter.webp`：新增 Meter 阶段本地实景素材。
+- `frontend/src/i18n/locales/zh/landing.ts`：新增 D 首页中文导航、阶段、动作、指标与辅助文本。
+- `frontend/src/i18n/locales/en/landing.ts`：新增 D 首页英文导航、阶段、动作、指标与辅助文本。
+- `frontend/src/views/__tests__/HomeTelemetryDefault.spec.ts`：新增默认分支、四阶段、资源清理、横屏布局和语言菜单层级契约。
+- `docs/FRONTEND_PUBLIC_PAGES.md`：将公开首页说明更新为 D 请求遥测实景及其交互与响应式行为。
+- `progress.md`：追加本轮生产首页接入、验证、风险修复和回滚记录。
+- 回滚点：以本条记录前的工作区状态为准；恢复 `HomeView.vue`、两份 landing 语言包与公共页面文档到接入前状态，删除 `TelemetryHome.vue`、四张 telemetry WebP 和 `HomeTelemetryDefault.spec.ts`，并删除 `progress.md` 中本条记录。候选目录 `.superpowers/` 不参与回滚。
+
+## 2026-07-13 - Task: 将 D 首页回归测试纳入关键测试集
+### What was done
+- 将 D 正式首页契约测试加入前端关键 Vitest 集合，使默认首页、生命周期、横屏布局和语言菜单层级回归进入现有 CI 验证路径。
+
+### Testing
+- `make test-frontend-critical` 通过：7 个测试文件、95 项测试全部通过；输出中的 Browserslist 提示及 SettingsView `router-link` 解析警告为关键测试集既有提示。
+
+### Notes
+- `Makefile`：将 `HomeTelemetryDefault.spec.ts` 加入 `FRONTEND_CRITICAL_VITEST`。
+- `progress.md`：追加 D 首页测试进入 CI 关键集合的验证与回滚记录。
+- 回滚点：以本条记录前的工作区状态为准；从 `FRONTEND_CRITICAL_VITEST` 删除 `src/views/__tests__/HomeTelemetryDefault.spec.ts`，并删除 `progress.md` 中本条记录。
+
+## 2026-07-14 - Task: 确定 D 首页公共设置动态接入方案
+### What was done
+- 梳理公共设置中适合首页展示的数据，确认接入网站副标题、API Base URL、联系方式和用户可见的自定义菜单，不把自定义端点、版本号及后台管理配置塞入固定一屏首页。
+- 制作三种信息落点对比并确认方案 1“信息就近”：副标题跟随品牌，自定义菜单进入顶部导航，API 地址与联系方式紧邻主行动按钮，现有四阶段遥测文案、主视觉和底部指标保持不变。
+- 固化数据流、空值行为、菜单过滤排序、安全边界、响应式约束与验证标准，作为后续实现依据。
+
+### Testing
+- 布局对比页返回 HTTP 200，包含三个独立方案；浏览器 `1280x720` 下页面尺寸等于视口、三张主视觉均正常加载且默认选中方案 1。
+- 设计文档占位符扫描通过，无 `TBD`、`TODO` 或待定实现项；设计文档与原型文件的 `git diff --check` 通过。
+
+### Notes
+- `.superpowers/brainstorm/unified-core-20260712/content/home-settings-layout-options-v12.html`：新增 D 首页四类公共设置的三方案布局对比页。
+- `docs/superpowers/specs/2026-07-14-home-public-settings-design.md`：新增已确认方案 1 的数据范围、布局、交互、安全、响应式与验证设计。
+- `progress.md`：追加本轮公共设置范围梳理、视觉方案确认与设计验证记录。
+- 回滚点：以本条记录前的工作区状态为准；删除上述布局对比页和设计文档，并删除 `progress.md` 中本条记录，不影响现有 D 正式首页代码。
+
+## 2026-07-14 - Task: 接入 D 首页公共动态设置
+
+### What was done
+- 将公共设置中的网站副标题、API Base URL、联系方式和用户可见自定义菜单接入 D 正式首页；空值不占位，自定义菜单按 `sort_order` 排序并过滤非用户可见项。
+- 网站副标题跟随品牌展示，API 地址与联系方式紧邻主行动按钮；宽屏直接展示前两项自定义菜单并折叠其余项，`1200px` 及以下全部收进“更多入口”。
+- 补齐折叠菜单的外部点击、`Escape` 和跳转后关闭行为，并修正 `1280x720` 下主按钮、文档入口与动态元信息相互挤压的问题。
+- 保留四阶段遥测文案与指标的演示数据属性；自定义端点、版本号和管理员可见菜单不接入首页。
+
+### Testing
+- `pnpm exec vitest run src/components/home/__tests__/TelemetryHomePublicSettings.spec.ts src/views/__tests__/HomeTelemetryDefault.spec.ts src/components/layout/__tests__/siteLogoSanitization.spec.ts src/components/layout/__tests__/docUrlSanitization.spec.ts src/i18n/__tests__/localesNoKeyCollision.spec.ts`：5 个测试文件、25 项测试全部通过。
+- `make test-frontend-critical`：8 个测试文件、100 项测试全部通过。
+- `pnpm run typecheck`、`pnpm run lint:check`、`pnpm run build` 均通过；生产构建完成 909 个模块转换。
+- 浏览器在 `1440x900`、`390x844`、`844x390`、`1280x720` 下验证固定一屏、`scrollY=0` 且无横纵溢出；桌面与移动端菜单折叠、中英文切换、Core 与 Route 双向滚轮切换及动态字段展示均符合设计，控制台无错误。
+
+### Notes
+- `Makefile`：将首页公共设置契约测试加入前端关键测试集。
+- `docs/FRONTEND_PUBLIC_PAGES.md`：补充 D 首页公共设置数据范围、菜单规则、演示指标边界和响应式行为。
+- `frontend/src/views/HomeView.vue`：从公共设置中提取首页所需动态字段并传入 D 首页组件。
+- `frontend/src/components/home/TelemetryHome.vue`：展示动态副标题、API 地址、联系方式与用户菜单，并实现折叠交互和响应式布局。
+- `frontend/src/components/home/__tests__/TelemetryHomePublicSettings.spec.ts`：新增动态字段、菜单过滤排序、折叠关闭及空值行为测试。
+- `frontend/src/views/__tests__/HomeTelemetryDefault.spec.ts`：补充首页公共设置到 D 组件的传递契约测试。
+- `frontend/src/i18n/locales/zh/landing.ts`：新增 API 地址、联系方式和更多入口的中文文案。
+- `frontend/src/i18n/locales/en/landing.ts`：新增 API 地址、联系方式和更多入口的英文文案。
+- `progress.md`：追加本轮实现、验证与回滚记录。
+- 回滚点：以本条记录前的工作区状态为准；反向移除上述动态字段传递、展示、菜单交互、响应式规则及对应测试和文档，并从 `Makefile` 的关键测试集删除本轮新增测试。

@@ -14,6 +14,97 @@ export default {
     login: 'Login',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
+    telemetry: {
+      nav: {
+        models: 'Models',
+        docs: 'Docs',
+        more: 'More links',
+        login: 'Login',
+        dashboard: 'Dashboard'
+      },
+      aria: {
+        mainNav: 'Main navigation',
+        lifecycle: 'Request lifecycle',
+        canvas: 'A spatial telemetry trace showing requests entering, routing, executing, and settling',
+        home: 'Home'
+      },
+      phase: {
+        core: 'Core',
+        route: 'Route',
+        code: 'Code',
+        meter: 'Meter'
+      },
+      actions: {
+        primary: 'Get API Key',
+        docs: 'Read Integration Docs'
+      },
+      meta: {
+        apiBase: 'API Base',
+        contact: 'Contact'
+      },
+      wheelHint: 'Scroll to switch',
+      metrics: {
+        requestId: 'Request ID',
+        route: 'Route',
+        latency: 'Latency',
+        tokens: 'Tokens',
+        cost: 'Cost'
+      },
+      phases: {
+        core: {
+          eyebrow: 'LIVE REQUEST / INGESTED',
+          titleLine1: 'Connect once,',
+          titleLine2: 'reach every model',
+          lead: 'Bring authentication, routing, responses, and metering into one traceable path. Requests cross real infrastructure and reach every model reliably.',
+          signal: 'REQ 7F3A9C',
+          caption: 'DEPTH 24.8 / SIGNAL LOCKED',
+          request: 'req_7F3A9C',
+          route: 'auto',
+          latency: '842 ms',
+          tokens: '2,847',
+          cost: '$0.0184'
+        },
+        route: {
+          eyebrow: 'SMART ROUTING / 12 PROVIDERS READY',
+          titleLine1: 'Branch in depth,',
+          titleLine2: 'reconnect the best path',
+          lead: 'Every request is balanced across latency, quality, and availability. Paths unfold in depth and reconnect as soon as a failed node exits.',
+          signal: '12 / 03',
+          caption: 'BRANCHES LIVE / ROUTE LOCKED',
+          request: 'req_ROUTE_7F3A9C',
+          route: 'claude-4',
+          latency: '116 ms',
+          tokens: 'pending',
+          cost: 'estimating'
+        },
+        code: {
+          eyebrow: 'OPENAI COMPATIBLE / STREAM ACTIVE',
+          titleLine1: 'Keep your code,',
+          titleLine2: 'replace one endpoint',
+          lead: 'Keep familiar request formats and streaming responses. Characters and data blocks cross the infrastructure and keep arriving in your application.',
+          signal: 'POST /V1',
+          caption: 'DATA STREAM / CHANNEL OPEN',
+          request: 'req_CODE_7F3A9C',
+          route: 'quality',
+          latency: '428 ms',
+          tokens: '1,024 →',
+          cost: 'live'
+        },
+        meter: {
+          eyebrow: 'USAGE SETTLED / TRACE VERIFIED',
+          titleLine1: 'Every trace,',
+          titleLine2: 'settled with clarity',
+          lead: 'Requests, models, usage, and cost settle along the same depth trace. A warm data stream converges while every charge remains visible.',
+          signal: '$0.0184',
+          caption: '2,847 TOKENS / TRACE SETTLED',
+          request: 'req_METER_7F3A9C',
+          route: 'claude-4',
+          latency: '842 ms',
+          tokens: '2,847',
+          cost: '$0.0184'
+        }
+      }
+    },
     // User-focused value proposition
     heroSubtitle: 'One Key, All AI Models',
     heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',

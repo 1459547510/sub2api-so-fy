@@ -14,6 +14,97 @@ export default {
     login: '登录',
     getStarted: '立即开始',
     goToDashboard: '进入控制台',
+    telemetry: {
+      nav: {
+        models: '模型',
+        docs: '文档',
+        more: '更多入口',
+        login: '登录',
+        dashboard: '控制台'
+      },
+      aria: {
+        mainNav: '主导航',
+        lifecycle: '请求生命周期',
+        canvas: '请求数据从远景穿越、分流、执行并汇入计量的三维动态轨迹',
+        home: '首页'
+      },
+      phase: {
+        core: 'Core',
+        route: 'Route',
+        code: 'Code',
+        meter: 'Meter'
+      },
+      actions: {
+        primary: '获取 API Key',
+        docs: '阅读接入文档'
+      },
+      meta: {
+        apiBase: 'API 地址',
+        contact: '联系方式'
+      },
+      wheelHint: '滚动切换',
+      metrics: {
+        requestId: '请求 ID',
+        route: '路由',
+        latency: '延迟',
+        tokens: 'Tokens',
+        cost: '费用'
+      },
+      phases: {
+        core: {
+          eyebrow: '实时请求 / 已接入',
+          titleLine1: '一次接入，',
+          titleLine2: '穿透所有模型',
+          lead: '把鉴权、路由、响应与计量收进一条可追踪链路。请求穿过真实基础设施，稳定抵达每个模型。',
+          signal: 'REQ 7F3A9C',
+          caption: '纵深 24.8 / 信号已锁定',
+          request: 'req_7F3A9C',
+          route: 'auto',
+          latency: '842 ms',
+          tokens: '2,847',
+          cost: '$0.0184'
+        },
+        route: {
+          eyebrow: '智能路由 / 12 个供应方就绪',
+          titleLine1: '纵深分流，',
+          titleLine2: '重连最优路径',
+          lead: '请求在延迟、质量与可用性之间实时决策。路径从深处展开，故障节点退出后立即完成重连。',
+          signal: '12 / 03',
+          caption: '分支在线 / 路由已锁定',
+          request: 'req_ROUTE_7F3A9C',
+          route: 'claude-4',
+          latency: '116 ms',
+          tokens: 'pending',
+          cost: 'estimating'
+        },
+        code: {
+          eyebrow: '兼容 OPENAI / 流式传输中',
+          titleLine1: '保留代码，',
+          titleLine2: '只替换一个端点',
+          lead: '兼容熟悉的请求格式与流式响应。字符和数据块从基础设施深处穿梭而来，持续抵达你的应用。',
+          signal: 'POST /V1',
+          caption: '数据流 / 通道已开启',
+          request: 'req_CODE_7F3A9C',
+          route: 'quality',
+          latency: '428 ms',
+          tokens: '1,024 →',
+          cost: 'live'
+        },
+        meter: {
+          eyebrow: '用量已结算 / 轨迹已验证',
+          titleLine1: '每条轨迹，',
+          titleLine2: '最终清晰归集',
+          lead: '请求、模型、用量与成本沿同一条纵深轨迹完成结算。暖金数据流持续收束，费用去向实时可见。',
+          signal: '$0.0184',
+          caption: '2,847 TOKENS / 轨迹已结算',
+          request: 'req_METER_7F3A9C',
+          route: 'claude-4',
+          latency: '842 ms',
+          tokens: '2,847',
+          cost: '$0.0184'
+        }
+      }
+    },
     // 新增：面向用户的价值主张
     heroSubtitle: '一个密钥，畅用多个 AI 模型',
     heroDescription: '无需管理多个订阅账号，一站式接入 Claude、GPT、Gemini 等主流 AI 服务',
