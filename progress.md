@@ -963,3 +963,34 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/i18n/locales/en/landing.ts`：新增 API 地址、联系方式和更多入口的英文文案。
 - `progress.md`：追加本轮实现、验证与回滚记录。
 - 回滚点：以本条记录前的工作区状态为准；反向移除上述动态字段传递、展示、菜单交互、响应式规则及对应测试和文档，并从 `Makefile` 的关键测试集删除本轮新增测试。
+
+## 2026-07-14 - Task: 发布 D 首页并合并原仓库 0.1.153 最新代码
+### What was done
+- 将已确认的 D 请求遥测首页、公共动态设置、四张本地 WebP、双语文案、关键测试和公开页文档独立提交；`.superpowers/` 本地概念稿、样片及预览服务文件继续排除在产品提交和 Release 之外。
+- 合并原仓库 `Wei-Shaw/sub2api` 最新 `main`，上游正式版本为 `0.1.153`，最新提交为 `69bc6a87dde89e79ba39436467ec46dee6a6b234`。
+- 解决 README、配置加载和计费服务 3 个冲突：保留本仓库二开标识、GitHub 更新 Token、Grok 4.5 模型与计费，同时接入上游视频编辑/扩展、Server-Timing 和 Grok Build 缓存计费修复。
+- 接入上游 `0.1.152` 至 `0.1.153` 的数据库迁移、调度修复、OpenAI/Grok 网关能力、系统日志、静态资源缓存、支付与前端管理功能；本仓库更新目标、原仓库正式 Release 提示、应用内更新/重启和 Token 激励逻辑保持不变。
+
+### Testing
+- 首页提交前相关 Vitest：5 个测试文件、25 项测试通过；`pnpm run typecheck` 与 `pnpm run lint:check` 通过。
+- `GOTOOLCHAIN=auto go test ./...`（在 `D:\project\sub2api-so\backend`）通过。
+- `make test-frontend-critical`（在 `D:\project\sub2api-so`）通过，包含 D 首页默认分支与公共设置回归测试。
+- `D:\environment\nodejs\node-v22.17.0-win-x64\node_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-so\frontend`）通过，完成 912 个模块转换并输出四张首页 WebP；仅有既有 Browserslist、动态/静态导入混用和 chunk size 警告。
+- `git diff --check` 与 `git diff --cached --check` 通过；上游 `credentialsBuilder.spec.ts` 末尾空行已移除。
+
+### Notes
+- `frontend/src/views/HomeView.vue`、`frontend/src/components/home/TelemetryHome.vue`、`frontend/src/assets/home/telemetry/*`：发布 D 请求遥测正式首页及四阶段本地视觉素材。
+- `frontend/src/components/home/__tests__/TelemetryHomePublicSettings.spec.ts`、`frontend/src/views/__tests__/HomeTelemetryDefault.spec.ts`、`Makefile`：发布首页公共设置、默认分支和关键测试集覆盖。
+- `frontend/src/i18n/locales/en/landing.ts`、`frontend/src/i18n/locales/zh/landing.ts`、`docs/FRONTEND_PUBLIC_PAGES.md`：发布首页双语文案和公开行为文档。
+- `README.md`：冲突处理同时保留二开标识、Grok 4.5 aliases 和上游视频编辑/扩展端点说明。
+- `backend/internal/config/config.go`：冲突处理同时保留更新 Token 环境变量和上游 Server-Timing 环境变量。
+- `backend/internal/service/billing_service.go`：冲突处理保留 Grok 4.5 兜底价格并接入上游 Grok Build 缓存价格说明。
+- `frontend/src/components/account/__tests__/credentialsBuilder.spec.ts`：移除上游合并带入的文件末尾多余空行。
+- `backend/cmd/server/VERSION`、`backend/cmd/server/UPSTREAM_COMMIT`：同步上游基线 `0.1.153` 和提交 `69bc6a87dde89e79ba39436467ec46dee6a6b234`。
+- `backend/migrations/174_*`、`backend/migrations/175_*`、`backend/migrations/175a_*` 及迁移测试：同步用量长上下文计费、API Key 最新 IP 索引、Web Search 单次价格、系统日志 host 与默认计费开关迁移。
+- `backend/**`（其余 255 个上游文件）：同步 `0.1.152` 至 `0.1.153` 的实体、网关、调度、计费、Grok/OpenAI、日志、支付、缓存和测试变更。
+- `frontend/**`（其余 61 个上游文件）：同步账号、用量、设置、系统日志、Grok OAuth、日期格式和 API 客户端变更。
+- `deploy/**`（12 个上游文件）：同步 Apple Container、Docker Compose、示例配置和部署测试。
+- `.github/workflows/backend-ci.yml`、`.gitignore`、`README_CN.md`、`README_JA.md`：同步上游 CI、忽略规则和多语言说明。
+- `progress.md`：追加本轮首页发布、上游合并、验证、冲突和回滚记录。
+- 回滚方式：先执行 `git revert -m 1 <本次上游合并提交>` 回滚 `0.1.153`，再执行 `git revert 4e3d2f4a` 回滚 D 首页；数据库迁移已在生产执行时，应优先使用应用内旧版本回滚流程并确认旧程序兼容新增列，不直接删除迁移记录。
