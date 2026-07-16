@@ -177,6 +177,47 @@ func TestGatewayRoutesNonGrokVideosAreRejectedAtPlatformGate(t *testing.T) {
 	}
 }
 
+func TestGatewayRoutesLeoSupportsOnlyVideoGeneration(t *testing.T) {
+	router := newGatewayRoutesTestRouter(service.PlatformLeo)
+
+	for _, path := range []string{"/v1/videos/generations", "/videos/generations"} {
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"model":"seedance-2.0","prompt":"waves"}`))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		require.NotEqual(t, http.StatusNotFound, w.Code, "path=%s should hit Leo video handler", path)
+		require.NotContains(t, w.Body.String(), "not supported for this platform")
+	}
+
+	for _, tc := range []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{http.MethodPost, "/v1/images/generations", `{"model":"seedance-2.0","prompt":"waves"}`},
+		{http.MethodPost, "/v1/videos/edits", `{"model":"seedance-2.0","prompt":"waves"}`},
+		{http.MethodGet, "/v1/videos/request-123", ""},
+		{http.MethodPost, "/v1/messages", `{"model":"seedance-2.0","messages":[]}`},
+		{http.MethodPost, "/v1/responses", `{"model":"seedance-2.0","input":"waves"}`},
+		{http.MethodPost, "/responses", `{"model":"seedance-2.0","input":"waves"}`},
+		{http.MethodPost, "/v1/chat/completions", `{"model":"seedance-2.0","messages":[]}`},
+		{http.MethodPost, "/chat/completions", `{"model":"seedance-2.0","messages":[]}`},
+		{http.MethodPost, "/v1/embeddings", `{"model":"seedance-2.0","input":"waves"}`},
+		{http.MethodGet, "/v1/responses", ""},
+	} {
+		req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		require.Equal(t, http.StatusNotFound, w.Code, "method=%s path=%s body=%s", tc.method, tc.path, w.Body.String())
+		require.Contains(t, w.Body.String(), "not_found_error")
+	}
+}
+
 func TestGatewayRoutesGrokAllowsCLICompatibilityEntrypoints(t *testing.T) {
 	router := newGatewayRoutesTestRouter(service.PlatformGrok)
 
