@@ -235,7 +235,7 @@ func (s *AccountTestService) testLeoAccountConnection(c *gin.Context, account *A
 	if err != nil {
 		return s.sendErrorAndEnd(c, "Leo health check request failed")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
 
 	if resp.StatusCode != http.StatusOK {

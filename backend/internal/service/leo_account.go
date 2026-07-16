@@ -43,9 +43,7 @@ func NormalizeLeoBaseURL(raw string) (string, error) {
 	if u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Opaque != "" {
 		return "", invalidLeoCredentials("base_url must contain only scheme, host, port, and /v1 path")
 	}
-	if strings.HasSuffix(u.Path, "/") {
-		u.Path = strings.TrimSuffix(u.Path, "/")
-	}
+	u.Path = strings.TrimSuffix(u.Path, "/")
 	if u.Path != "/v1" || u.RawPath != "" {
 		return "", invalidLeoCredentials("base_url path must be /v1")
 	}
