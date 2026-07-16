@@ -139,6 +139,7 @@ docs/*
 !docs/TOKEN_INCENTIVE.md
 !docs/UPDATE_POLICY.md
 !docs/GROK_XAI_SUPPORT.md
+!docs/ASYNC_IMAGE_TASKS.md
 !docs/legal/
 !docs/legal/*.md
 .serena/

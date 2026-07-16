@@ -994,3 +994,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `.github/workflows/backend-ci.yml`、`.gitignore`、`README_CN.md`、`README_JA.md`：同步上游 CI、忽略规则和多语言说明。
 - `progress.md`：追加本轮首页发布、上游合并、验证、冲突和回滚记录。
 - 回滚方式：先执行 `git revert -m 1 <本次上游合并提交>` 回滚 `0.1.153`，再执行 `git revert 4e3d2f4a` 回滚 D 首页；数据库迁移已在生产执行时，应优先使用应用内旧版本回滚流程并确认旧程序兼容新增列，不直接删除迁移记录。
+## 2026-07-16 - Task: Merge upstream v0.1.156 and prepare fork release
+### What was done
+- Merged `upstream/main` at `393a8fe56a0b606d162183cf8014f9381adcbf7e` into the Leo video feature branch while retaining Leo video, token incentive, fork update configuration, and upstream async image functionality.
+- Resolved the ten merge conflicts by combining local fork behavior with upstream scheduler, gateway, account, audit, and object-storage changes.
+- Kept homepage WIP out of the release; the local changes remain isolated in `wip-local-not-for-upstream-release-20260716` and `wip-progress-concurrent-not-for-upstream-release-20260716`.
+- Regenerated Wire output and updated Leo callers for upstream scheduler and account-result API changes.
+### Testing
+- `go generate ./cmd/server`: passed.
+- `git diff --check`: passed.
+- `make test-frontend-critical`: passed, 8 files and 102 tests.
+- Backend compilation and all non-flaky packages passed. The upstream `TestContentModerationRuntimeSnapshotRefreshFailureKeepsStaleConfig` test consistently times out on Windows/Go 1.26 when run with the package suite because its 1ns TTL async-refresh assertion is not scheduled within 1 second; an isolated run passed once, but the full suite remains red on this known upstream test.
+### Notes
+- `.gitignore`, `backend/cmd/server/wire_gen.go`, `backend/internal/handler/handler.go`, `backend/internal/handler/openai_gateway_handler.go`, `backend/internal/handler/wire.go`, `backend/internal/server/routes/gateway.go`, `backend/internal/service/admin_account.go`, `backend/internal/service/scheduler_snapshot_service.go`, and `deploy/config.example.yaml`: resolved upstream/local merge conflicts.
+- `backend/internal/handler/leo_video.go` and `backend/internal/service/openai_account_scheduler_test.go`: aligned Leo calls with upstream scheduler and scheduling-result signatures.
+- Remaining files in this merge are upstream changes from `upstream/main`; use `git diff --cached --name-only` to inspect the complete file list.
+- Rollback point: revert the merge commit with `git revert -m 1 <merge-commit>` and remove tag `v0.1.156-fy.1` if the release must be withdrawn; do not restore the homepage WIP stashes into the release branch.

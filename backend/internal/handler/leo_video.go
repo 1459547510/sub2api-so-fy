@@ -145,6 +145,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 			"",
 			false,
 			false,
+			false,
 			service.PlatformLeo,
 		)
 		if err != nil || selection == nil || selection.Account == nil {
@@ -199,7 +200,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 		if err != nil {
 			var failoverErr *service.UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
-				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, false, nil)
+				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
 				if c.Writer.Size() != writerSizeBeforeForward {
 					h.handleFailoverExhausted(c, failoverErr, true, service.PlatformLeo)
 					return
@@ -220,7 +221,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 				)
 				continue
 			}
-			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, false, nil)
+			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
 			if c.Writer.Size() == writerSizeBeforeForward {
 				h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
 			}
@@ -228,7 +229,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 			return
 		}
 
-		h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, true, nil)
+		h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), true, nil)
 		if result == nil {
 			return
 		}
