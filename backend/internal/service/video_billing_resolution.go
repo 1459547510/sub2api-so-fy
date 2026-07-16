@@ -33,11 +33,11 @@ func NormalizeVideoBillingDurationSecondsOrDefault(durationSeconds int) int {
 
 func NormalizeVideoBillingResolutionOrDefault(resolution string) string {
 	switch strings.ToLower(strings.TrimSpace(resolution)) {
-	case "480", "480p", "sd":
+	case "480", "480p", "sd", "resolution_480":
 		return VideoBillingResolution480P
-	case "720", "720p", "hd":
+	case "720", "720p", "hd", "resolution_720":
 		return VideoBillingResolution720P
-	case "1080", "1080p", "full_hd", "full-hd", "fhd":
+	case "1080", "1080p", "full_hd", "full-hd", "fhd", "resolution_1080":
 		return VideoBillingResolution1080P
 	default:
 		return VideoBillingResolution480P
