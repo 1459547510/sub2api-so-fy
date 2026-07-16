@@ -188,6 +188,10 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 		return s.testOpenAIAccountConnection(c, account, modelID, prompt, normalizeAccountTestMode(mode))
 	}
 
+	if account.IsLeo() {
+		return s.testLeoAccountConnection(c, account)
+	}
+
 	if account.IsGemini() {
 		return s.testGeminiAccountConnection(c, account, modelID, prompt)
 	}
@@ -201,6 +205,50 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 	}
 
 	return s.testClaudeAccountConnection(c, account, modelID)
+}
+
+func (s *AccountTestService) testLeoAccountConnection(c *gin.Context, account *Account) error {
+	healthURL, err := BuildLeoHealthURL(account.GetCredential("base_url"))
+	if err != nil {
+		return s.sendErrorAndEnd(c, "Invalid Leo base URL")
+	}
+	apiKey := account.GetLeoAPIKey()
+	if apiKey == "" {
+		return s.sendErrorAndEnd(c, "Leo API key is not configured")
+	}
+
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, healthURL, nil)
+	if err != nil {
+		return s.sendErrorAndEnd(c, "Failed to create Leo health check request")
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Accept", "application/json")
+
+	proxyURL := ""
+	if account.ProxyID != nil && account.Proxy != nil {
+		proxyURL = account.Proxy.URL()
+	}
+	resp, err := s.httpUpstream.Do(req, proxyURL, account.ID, account.Concurrency)
+	if err != nil {
+		return s.sendErrorAndEnd(c, "Leo health check request failed")
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+
+	if resp.StatusCode != http.StatusOK {
+		message := fmt.Sprintf("Leo health check returned HTTP %d", resp.StatusCode)
+		if (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) && s.accountRepo != nil {
+			_ = s.accountRepo.SetError(c.Request.Context(), account.ID, message)
+		}
+		return s.sendErrorAndEnd(c, message)
+	}
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	s.sendEvent(c, TestEvent{Type: "content", Text: "LeoStudio health check passed"})
+	s.sendEvent(c, TestEvent{Type: "test_complete", Success: true})
+	return nil
 }
 
 // testClaudeAccountConnection tests an Anthropic Claude account's connection
