@@ -210,6 +210,78 @@ func TestAdminService_CreateGroup_WithVideoPricing(t *testing.T) {
 	require.InDelta(t, 0.18, *repo.created.VideoPrice1080P, 0.0001)
 }
 
+func TestLeoGroupVideoPriceCreateRequiresAllTiersAndAllowsZero(t *testing.T) {
+	zero := 0.0
+	one := 0.1
+	repo := &groupRepoStubForAdmin{}
+	svc := &adminServiceImpl{groupRepo: repo}
+
+	group, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name:           "leo-missing-price",
+		Platform:       PlatformLeo,
+		RateMultiplier: 1,
+		VideoPrice480P: &one,
+		VideoPrice720P: &one,
+	})
+	require.Nil(t, group)
+	require.ErrorContains(t, err, "video_price_1080p is required")
+	require.Nil(t, repo.created)
+
+	group, err = svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name:            "leo-free",
+		Platform:        PlatformLeo,
+		RateMultiplier:  1,
+		VideoPrice480P:  &zero,
+		VideoPrice720P:  &zero,
+		VideoPrice1080P: &zero,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, group)
+	require.NotNil(t, group.VideoPrice480P)
+	require.Zero(t, *group.VideoPrice480P)
+	require.NotNil(t, group.VideoPrice720P)
+	require.NotNil(t, group.VideoPrice1080P)
+}
+
+func TestLeoGroupVideoPriceUpdateValidatesMergedState(t *testing.T) {
+	one := 0.1
+	clear := -1.0
+
+	t.Run("cannot clear a required tier", func(t *testing.T) {
+		existing := &Group{
+			ID:                  1,
+			Name:                "leo",
+			Platform:            PlatformLeo,
+			Status:              StatusActive,
+			RateMultiplier:      1,
+			VideoPrice480P:      &one,
+			VideoPrice720P:      &one,
+			VideoPrice1080P:     &one,
+			VideoRateMultiplier: 1,
+		}
+		repo := &groupRepoStubForAdmin{getByID: existing}
+		svc := &adminServiceImpl{groupRepo: repo}
+
+		group, err := svc.UpdateGroup(context.Background(), existing.ID, &UpdateGroupInput{VideoPrice720P: &clear})
+
+		require.Nil(t, group)
+		require.ErrorContains(t, err, "video_price_720p is required")
+		require.Nil(t, repo.updated)
+	})
+
+	t.Run("cannot change platform without effective prices", func(t *testing.T) {
+		existing := &Group{ID: 2, Name: "openai", Platform: PlatformOpenAI, Status: StatusActive, RateMultiplier: 1}
+		repo := &groupRepoStubForAdmin{getByID: existing}
+		svc := &adminServiceImpl{groupRepo: repo}
+
+		group, err := svc.UpdateGroup(context.Background(), existing.ID, &UpdateGroupInput{Platform: PlatformLeo})
+
+		require.Nil(t, group)
+		require.ErrorContains(t, err, "video_price_480p is required")
+		require.Nil(t, repo.updated)
+	})
+}
+
 // TestAdminService_CreateGroup_NilImagePricing 测试 ImagePrice 为 nil 时正常创建
 func TestAdminService_CreateGroup_NilImagePricing(t *testing.T) {
 	repo := &groupRepoStubForAdmin{}

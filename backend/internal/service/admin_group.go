@@ -305,6 +305,9 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		ModelsListConfig:                normalizeGroupModelsListConfig(input.ModelsListConfig),
 		RPMLimit:                        input.RPMLimit,
 	}
+	if err := validateLeoVideoPrices(group); err != nil {
+		return nil, err
+	}
 	sanitizeGroupMessagesDispatchFields(group)
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return nil, err
@@ -356,6 +359,22 @@ func normalizePrice(price *float64) *float64 {
 		return nil
 	}
 	return price
+}
+
+func validateLeoVideoPrices(group *Group) error {
+	if group == nil || group.Platform != PlatformLeo {
+		return nil
+	}
+	if group.VideoPrice480P == nil {
+		return errors.New("video_price_480p is required for leo groups")
+	}
+	if group.VideoPrice720P == nil {
+		return errors.New("video_price_720p is required for leo groups")
+	}
+	if group.VideoPrice1080P == nil {
+		return errors.New("video_price_1080p is required for leo groups")
+	}
+	return nil
 }
 
 // validateFallbackGroup 校验降级分组的有效性
@@ -621,6 +640,9 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 		group.RPMLimit = *input.RPMLimit
 	}
 	sanitizeGroupMessagesDispatchFields(group)
+	if err := validateLeoVideoPrices(group); err != nil {
+		return nil, err
+	}
 
 	if err := s.groupRepo.Update(ctx, group); err != nil {
 		return nil, err

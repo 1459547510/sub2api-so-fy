@@ -2006,6 +2006,54 @@ func TestGrokVideoBillingUsesSeparateVideoRateMultiplier(t *testing.T) {
 	require.Equal(t, 1, *usageRepo.lastLog.VideoDurationSeconds)
 }
 
+func TestLeoVideoUsageUsesActualOutputMetadata(t *testing.T) {
+	groupID := int64(129)
+	videoPrice720P := 0.1
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{}, &openAIRecordUsageSubRepoStub{}, nil)
+
+	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:            "leo-video-request",
+			ResponseID:           "leo-generation-id",
+			Model:                "seedance-2.0",
+			BillingModel:         "seedance-2.0",
+			UpstreamModel:        "seedance-2.0-fast",
+			VideoCount:           1,
+			VideoResolution:      VideoBillingResolution720P,
+			VideoDurationSeconds: 12,
+			Duration:             time.Second,
+		},
+		APIKey: &APIKey{
+			ID:      10129,
+			GroupID: i64p(groupID),
+			Group: &Group{
+				ID:                   groupID,
+				Platform:             PlatformLeo,
+				RateMultiplier:       0.2,
+				VideoRateIndependent: true,
+				VideoRateMultiplier:  0.5,
+				VideoPrice720P:       &videoPrice720P,
+			},
+		},
+		User:    &User{ID: 20129},
+		Account: &Account{ID: 30129, Platform: PlatformLeo},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, usageRepo.lastLog)
+	require.NotNil(t, usageRepo.lastLog.BillingMode)
+	require.Equal(t, string(BillingModeVideo), *usageRepo.lastLog.BillingMode)
+	require.Equal(t, 1, usageRepo.lastLog.VideoCount)
+	require.NotNil(t, usageRepo.lastLog.VideoResolution)
+	require.Equal(t, VideoBillingResolution720P, *usageRepo.lastLog.VideoResolution)
+	require.NotNil(t, usageRepo.lastLog.VideoDurationSeconds)
+	require.Equal(t, 12, *usageRepo.lastLog.VideoDurationSeconds)
+	require.InDelta(t, 1.2, usageRepo.lastLog.TotalCost, 1e-12)
+	require.InDelta(t, 0.6, usageRepo.lastLog.ActualCost, 1e-12)
+	require.InDelta(t, 0.5, usageRepo.lastLog.RateMultiplier, 1e-12)
+}
+
 func TestOpenAIGatewayServiceRecordUsage_GrokVideoUsesDefaultRateCard(t *testing.T) {
 	groupID := int64(1261)
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
