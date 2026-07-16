@@ -1010,3 +1010,35 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/handler/leo_video.go` and `backend/internal/service/openai_account_scheduler_test.go`: aligned Leo calls with upstream scheduler and scheduling-result signatures.
 - Remaining files in this merge are upstream changes from `upstream/main`; use `git diff --cached --name-only` to inspect the complete file list.
 - Rollback point: revert the merge commit with `git revert -m 1 <merge-commit>` and remove tag `v0.1.156-fy.1` if the release must be withdrawn; do not restore the homepage WIP stashes into the release branch.
+
+## 2026-07-16 - Task: Fix CI regressions after upstream v0.1.156 merge
+### What was done
+- Fixed the remaining CI issues introduced by the upstream `leo` platform: explicit nil-test returns, checked response-body closes, normalized Leo `/v1` URLs, deterministic content-moderation cache expiry setup, and dynamic scheduler/quota/API contract expectations.
+- Kept homepage WIP changes out of the release branch; the working tree contains no frontend homepage changes.
+### Testing
+- `..\\.codex-run\\bin\\golangci-lint.exe run ./...` in `backend`: passed with `0 issues`.
+- `go test -tags=unit ./...` in `backend`: passed for all packages.
+- Scheduler targeted regressions and content-moderation refresh test (`-count=20`): passed.
+- `git diff --check` and `git diff --cached --check`: passed.
+### Notes
+- `backend/internal/handler/admin/payment_handler_test.go`: added explicit return after the nil guard for lint correctness.
+- `backend/internal/handler/admin/user_platform_quota_admin_test.go`: separated submitted quota count from all-platform cache invalidation count.
+- `backend/internal/pkg/proxyurl/parse_test.go`: added explicit return after the nil guard for lint correctness.
+- `backend/internal/server/api_contract_test.go`: included the Leo default platform quota in API contract fixtures.
+- `backend/internal/service/account_test_service.go`: handled response-body close errors without changing behavior.
+- `backend/internal/service/account_usage_service_test.go`: added explicit returns after nil guards.
+- `backend/internal/service/content_moderation_runtime_cache_test.go`: made stale-snapshot setup deterministic on Windows.
+- `backend/internal/service/gemini_messages_compat_service_test.go`: added an explicit return after the nil guard.
+- `backend/internal/service/leo_account.go`: normalized the trailing slash before validating the Leo `/v1` path.
+- `backend/internal/service/leo_video.go`: handled response-body close errors without changing behavior.
+- `backend/internal/service/openai_gateway_service_codex_snapshot_test.go`: added explicit returns after nil guards.
+- `backend/internal/service/openai_images_incomplete_test.go`: added explicit returns after nil guards.
+- `backend/internal/service/ops_service_user_error_test.go`: added an explicit return after the nil guard.
+- `backend/internal/service/ops_user_error_test.go`: added an explicit return after the nil guard.
+- `backend/internal/service/payment_order_result_test.go`: added explicit returns after nil guards.
+- `backend/internal/service/ratelimit_service_anthropic_test.go`: added explicit returns after nil guards.
+- `backend/internal/service/scheduler_snapshot_full_rebuild_lifecycle_test.go`: made full-rebuild bucket and account-query expectations follow the current platform set.
+- `backend/internal/service/scheduler_snapshot_group_lifecycle_test.go`: included Leo buckets and made lifecycle counts dynamic.
+- `backend/internal/service/scheduler_snapshot_retirement_test.go`: made canonical capture counts dynamic.
+- `progress.md`: recorded this CI repair and verification round.
+- Rollback point: revert code commit `79af7885` with `git revert 79af7885`; do not restore the homepage WIP stashes.
