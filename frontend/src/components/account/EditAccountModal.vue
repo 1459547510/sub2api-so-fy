@@ -33,6 +33,8 @@
           <input
             v-model="editBaseUrl"
             type="text"
+            :required="account.platform === 'leo'"
+            :data-testid="account.platform === 'leo' ? 'leo-base-url' : undefined"
             class="input"
             :placeholder="
               account.platform === 'openai'
@@ -43,7 +45,9 @@
                     ? 'https://cloudcode-pa.googleapis.com'
                     : account.platform === 'grok'
                       ? 'https://api.x.ai/v1'
-                      : 'https://api.anthropic.com'
+                      : account.platform === 'leo'
+                        ? 'http://leostudio:8000/v1'
+                        : 'https://api.anthropic.com'
             "
           />
           <p v-if="baseUrlHint" class="input-hint">{{ baseUrlHint }}</p>
@@ -53,6 +57,7 @@
           <input
             v-model="editApiKey"
             type="password"
+            :data-testid="account.platform === 'leo' ? 'leo-api-key' : undefined"
             class="input font-mono"
             autocomplete="new-password"
             data-1p-ignore
@@ -67,7 +72,9 @@
                     ? 'sk-...'
                     : account.platform === 'grok'
                       ? 'xai-...'
-                      : 'sk-ant-...'
+                      : account.platform === 'leo'
+                        ? 'leo-api-key'
+                        : 'sk-ant-...'
             "
           />
           <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') }}</p>
@@ -90,6 +97,7 @@
             <!-- Mode Toggle -->
             <div class="mb-4 flex gap-2">
               <button
+                v-if="account.platform !== 'leo'"
                 type="button"
                 @click="modelRestrictionMode = 'whitelist'"
                 :class="[
@@ -2652,6 +2660,7 @@ const baseUrlHint = computed(() => {
   if (props.account.platform === 'openai') return t('admin.accounts.openai.baseUrlHint')
   if (props.account.platform === 'gemini') return t('admin.accounts.gemini.baseUrlHint')
   if (props.account.platform === 'grok') return ''
+  if (props.account.platform === 'leo') return t('admin.accounts.leo.baseUrlHint')
   return t('admin.accounts.baseUrlHint')
 })
 
@@ -3109,6 +3118,7 @@ const defaultBaseUrl = computed(() => {
   if (props.account?.platform === 'openai') return 'https://api.openai.com'
   if (props.account?.platform === 'gemini') return 'https://generativelanguage.googleapis.com'
   if (props.account?.platform === 'grok') return 'https://api.x.ai/v1'
+  if (props.account?.platform === 'leo') return ''
   return 'https://api.anthropic.com'
 })
 
@@ -3411,7 +3421,9 @@ const syncFormFromAccount = (newAccount: Account | null) => {
           ? 'https://generativelanguage.googleapis.com'
           : newAccount.platform === 'grok'
             ? 'https://api.x.ai/v1'
-            : 'https://api.anthropic.com'
+            : newAccount.platform === 'leo'
+              ? ''
+              : 'https://api.anthropic.com'
     editBaseUrl.value = (credentials.base_url as string) || platformDefaultUrl
 
     // Load model mappings and detect mode
@@ -3489,7 +3501,9 @@ const syncFormFromAccount = (newAccount: Account | null) => {
           ? 'https://generativelanguage.googleapis.com'
           : newAccount.platform === 'grok'
             ? 'https://api.x.ai/v1'
-            : 'https://api.anthropic.com'
+            : newAccount.platform === 'leo'
+              ? ''
+              : 'https://api.anthropic.com'
     editBaseUrl.value = platformDefaultUrl
 
     // Load model mappings for OpenAI/Grok OAuth accounts
@@ -4009,6 +4023,10 @@ const handleSubmit = async () => {
     if (props.account.type === 'apikey') {
       const currentCredentials = (props.account.credentials as Record<string, unknown>) || {}
       const newBaseUrl = editBaseUrl.value.trim() || defaultBaseUrl.value
+      if (props.account.platform === 'leo' && !newBaseUrl) {
+        appStore.showError(t('admin.accounts.leo.baseUrlRequired'))
+        return
+      }
       const shouldApplyModelMapping = !(props.account.platform === 'openai' && openaiPassthroughEnabled.value)
 
       // Always update credentials for apikey type to handle model mapping changes
@@ -4034,6 +4052,10 @@ const handleSubmit = async () => {
       // Add model mapping if configured（OpenAI 开启自动透传时保留现有映射，不再编辑）
       if (shouldApplyModelMapping) {
         const modelMapping = buildModelRestrictionMapping()
+        if (props.account.platform === 'leo' && !modelMapping) {
+          appStore.showError(t('admin.accounts.leo.modelMappingRequired'))
+          return
+        }
         if (modelMapping) {
           newCredentials.model_mapping = modelMapping
         } else {

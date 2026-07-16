@@ -279,6 +279,23 @@ function buildGrokAPIKeyAccount() {
   } as any
 }
 
+function buildLeoAPIKeyAccount() {
+  return {
+    ...buildAccount(),
+    id: 7,
+    name: 'Leo API Key',
+    platform: 'leo',
+    credentials: {
+      base_url: 'http://leostudio:8000/v1',
+      model_mapping: {
+        'seedance-2.0': 'seedance-2.0',
+        'seedance-2.0-fast': 'seedance-2.0-fast'
+      }
+    },
+    credentials_status: { has_api_key: true }
+  } as any
+}
+
 function buildOpenAISetupTokenAccount() {
   return {
     ...buildAccount(),
@@ -856,6 +873,44 @@ describe('EditAccountModal', () => {
     expect(updateAccountMock).toHaveBeenCalledTimes(1)
     // 用户未输入新 key 时，payload 不应带 api_key，由后端合并保留旧值
     expect(updateAccountMock.mock.calls[0]?.[1]?.credentials).not.toHaveProperty('api_key')
+  })
+
+  it('loads a Leo account and preserves a redacted API key when the input stays empty', async () => {
+    const account = buildLeoAPIKeyAccount()
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false })
+
+    const wrapper = mountModal(account)
+    const baseUrl = wrapper.get<HTMLInputElement>('[data-testid="leo-base-url"]')
+    const apiKey = wrapper.get<HTMLInputElement>('[data-testid="leo-api-key"]')
+    expect(baseUrl.element.value).toBe('http://leostudio:8000/v1')
+    expect(baseUrl.attributes('required')).toBeDefined()
+    expect(apiKey.attributes('type')).toBe('password')
+
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials).toMatchObject({
+      base_url: 'http://leostudio:8000/v1',
+      model_mapping: {
+        'seedance-2.0': 'seedance-2.0',
+        'seedance-2.0-fast': 'seedance-2.0-fast'
+      }
+    })
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials).not.toHaveProperty('api_key')
+  })
+
+  it('submits a replacement Leo API key only when entered', async () => {
+    const account = buildLeoAPIKeyAccount()
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false })
+
+    const wrapper = mountModal(account)
+    await wrapper.get('[data-testid="leo-api-key"]').setValue('replacement-key')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials?.api_key).toBe('replacement-key')
   })
 
   it('allows saving apikey account against legacy backend without credentials_status', async () => {

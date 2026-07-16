@@ -893,6 +893,7 @@ export default {
         gemini: 'Gemini',
         antigravity: 'Antigravity',
         grok: 'Grok',
+        leo: 'Leo',
       },
       deleteConfirm:
         "Are you sure you want to delete '{name}'? All associated API keys will no longer belong to any group.",
@@ -931,6 +932,9 @@ export default {
       },
       videoPricing: {
         title: 'Video Generation Pricing',
+        leoDescription: 'Leo videos are billed by actual output duration. Manually enter all 480p, 720p, and 1080p prices in USD per second.',
+        allowVideoGeneration: 'Allow video generation for this group',
+        leoPricesRequired: 'Leo groups require non-negative 480p, 720p, and 1080p video prices',
         description:
           'Configure Grok video generation prices in USD per second of output video. Leave empty to use the default per-second rates (grok-imagine-video: $0.05/s 480p, $0.07/s 720p; video-1.5: $0.08/s 480p, $0.14/s 720p, $0.25/s 1080p).',
         independentMultiplier: 'Use independent video multiplier',

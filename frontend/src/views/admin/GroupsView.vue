@@ -980,8 +980,19 @@
             {{ t(videoPricingI18nKey("title")) }}
           </label>
           <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {{ t(videoPricingI18nKey("description")) }}
+            {{ t(createForm.platform === "leo" ? "admin.groups.videoPricing.leoDescription" : videoPricingI18nKey("description")) }}
           </p>
+          <label
+            v-if="createForm.platform === 'leo'"
+            class="mb-4 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+          >
+            <input
+              v-model="createForm.allow_image_generation"
+              type="checkbox"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            {{ t("admin.groups.videoPricing.allowVideoGeneration") }}
+          </label>
           <div class="mb-4">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
@@ -2494,8 +2505,19 @@
             {{ t(videoPricingI18nKey("title")) }}
           </label>
           <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {{ t(videoPricingI18nKey("description")) }}
+            {{ t(editForm.platform === "leo" ? "admin.groups.videoPricing.leoDescription" : videoPricingI18nKey("description")) }}
           </p>
+          <label
+            v-if="editForm.platform === 'leo'"
+            class="mb-4 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+          >
+            <input
+              v-model="editForm.allow_image_generation"
+              type="checkbox"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            {{ t("admin.groups.videoPricing.allowVideoGeneration") }}
+          </label>
           <div class="mb-4">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
@@ -3601,6 +3623,7 @@ import {
   getDefaultVideoPreviewPrice,
   getImagePricePlaceholder,
   getVideoPricePlaceholder,
+  hasCompleteLeoVideoPrices,
   imagePricingI18nKey,
   supportsImagePricingPlatform,
   supportsVideoPricingPlatform,
@@ -3743,6 +3766,7 @@ const platformOptions = computed(() => [
   { value: "gemini", label: "Gemini" },
   { value: "antigravity", label: "Antigravity" },
   { value: "grok", label: "Grok" },
+  { value: "leo", label: "Leo" },
 ]);
 
 const platformFilterOptions = computed(() => [
@@ -3752,6 +3776,7 @@ const platformFilterOptions = computed(() => [
   { value: "gemini", label: "Gemini" },
   { value: "antigravity", label: "Antigravity" },
   { value: "grok", label: "Grok" },
+  { value: "leo", label: "Leo" },
 ]);
 
 const editStatusOptions = computed(() => [
@@ -4763,6 +4788,10 @@ const handleCreateGroup = async () => {
     appStore.showError(t("admin.groups.nameRequired"));
     return;
   }
+  if (!hasCompleteLeoVideoPrices(createForm)) {
+    appStore.showError(t("admin.groups.videoPricing.leoPricesRequired"));
+    return;
+  }
   submitting.value = true;
   try {
     // 构建请求数据，包含模型路由配置
@@ -4945,6 +4974,10 @@ const handleUpdateGroup = async () => {
   if (!editingGroup.value) return;
   if (!editForm.name.trim()) {
     appStore.showError(t("admin.groups.nameRequired"));
+    return;
+  }
+  if (!hasCompleteLeoVideoPrices(editForm)) {
+    appStore.showError(t("admin.groups.videoPricing.leoPricesRequired"));
     return;
   }
 

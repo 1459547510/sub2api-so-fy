@@ -223,6 +223,7 @@ export default {
         gemini: 'Gemini',
         antigravity: 'Antigravity',
         grok: 'Grok',
+        leo: 'Leo',
       },
       types: {
         oauth: 'OAuth',
@@ -594,6 +595,13 @@ export default {
       grok: {
         baseUrlHint: 'Grok OAuth 账号会转发到官方 xAI API Base URL。',
         apiKeyHint: 'Grok 订阅支持使用 OAuth refresh token；API Key 账号不在本次范围内。'
+      },
+      leo: {
+        baseUrlHint: '填写 LeoStudio 实例的 /v1 地址，不会自动使用默认地址。',
+        apiKeyHint: '使用 LeoStudio 配置的 Bearer API Key。',
+        baseUrlRequired: '请输入 LeoStudio Base URL',
+        modelMappingRequired: 'Leo 账号至少需要一条有效模型映射',
+        videoOnlyHint: '当前仅支持同步视频生成接口。'
       },
       anthropic: {
         apiKeyPassthrough: '自动透传（仅替换认证）',

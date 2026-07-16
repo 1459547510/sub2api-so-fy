@@ -210,4 +210,37 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
 
     expect(createOpenAICodexPATMock.mock.calls[0]?.[0]?.extra?.openai_long_context_billing_enabled).toBe(false)
   })
+
+  it('creates a Leo API key account with required URL and Seedance mappings', async () => {
+    const wrapper = mountModal()
+
+    await wrapper.get('[data-testid="platform-leo"]').trigger('click')
+    await flushPromises()
+
+    const baseUrl = wrapper.get<HTMLInputElement>('[data-testid="leo-base-url"]')
+    const apiKey = wrapper.get<HTMLInputElement>('[data-testid="leo-api-key"]')
+    expect(baseUrl.attributes('required')).toBeDefined()
+    expect(apiKey.attributes('type')).toBe('password')
+    expect(wrapper.text()).not.toContain('OAuth')
+
+    await wrapper.get('form#create-account-form input[type="text"]').setValue('Leo pool')
+    await baseUrl.setValue('http://leostudio:8000/v1')
+    await apiKey.setValue('leo-secret')
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(createAccountMock).toHaveBeenCalledTimes(1)
+    expect(createAccountMock.mock.calls[0]?.[0]).toMatchObject({
+      platform: 'leo',
+      type: 'apikey',
+      credentials: {
+        base_url: 'http://leostudio:8000/v1',
+        api_key: 'leo-secret',
+        model_mapping: {
+          'seedance-2.0': 'seedance-2.0',
+          'seedance-2.0-fast': 'seedance-2.0-fast',
+        },
+      },
+    })
+  })
 })

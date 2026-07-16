@@ -5,6 +5,7 @@ import {
   getDefaultVideoPreviewPrice,
   getImagePricePlaceholder,
   getVideoPricePlaceholder,
+  hasCompleteLeoVideoPrices,
   imagePricingPlatforms,
   imagePricingI18nKey,
   supportsImagePricingPlatform,
@@ -20,7 +21,42 @@ describe("groups image pricing platform support", () => {
 
   it("enables video pricing controls for Grok only", () => {
     expect(supportsVideoPricingPlatform("grok")).toBe(true);
+    expect(supportsVideoPricingPlatform("leo")).toBe(true);
     expect(supportsVideoPricingPlatform("openai")).toBe(false);
+  });
+
+  it("requires operator-supplied Leo video prices without enabling image pricing", () => {
+    expect(supportsImagePricingPlatform("leo")).toBe(false);
+    expect(imagePricingPlatforms.has("leo")).toBe(false);
+    expect(getVideoPricePlaceholder("leo", "video_price_480p")).toBe("");
+    expect(getDefaultVideoPreviewPrice("leo", "video_price_480p")).toBeNull();
+  });
+
+  it("accepts only complete non-negative Leo video prices", () => {
+    expect(hasCompleteLeoVideoPrices({
+      platform: "leo",
+      video_price_480p: 0,
+      video_price_720p: "0.1",
+      video_price_1080p: 0.2,
+    })).toBe(true);
+    expect(hasCompleteLeoVideoPrices({
+      platform: "leo",
+      video_price_480p: 0,
+      video_price_720p: null,
+      video_price_1080p: 0.2,
+    })).toBe(false);
+    expect(hasCompleteLeoVideoPrices({
+      platform: "leo",
+      video_price_480p: 0,
+      video_price_720p: -1,
+      video_price_1080p: 0.2,
+    })).toBe(false);
+    expect(hasCompleteLeoVideoPrices({
+      platform: "grok",
+      video_price_480p: null,
+      video_price_720p: null,
+      video_price_1080p: null,
+    })).toBe(true);
   });
 
   it("keeps non-media group platforms out of the image pricing controls", () => {

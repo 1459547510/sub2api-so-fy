@@ -104,6 +104,7 @@ export default {
         gemini: 'Gemini',
         antigravity: 'Antigravity',
         grok: 'Grok',
+        leo: 'Leo',
       },
       types: {
         oauth: 'OAuth',
@@ -496,6 +497,13 @@ export default {
       grok: {
         baseUrlHint: 'Grok OAuth accounts forward to the official xAI API base URL.',
         apiKeyHint: 'Grok subscription support uses OAuth refresh tokens; API keys are out of scope for this account type.'
+      },
+      leo: {
+        baseUrlHint: 'Enter the /v1 URL of the LeoStudio instance. No default URL is submitted.',
+        apiKeyHint: 'Use the Bearer API key configured by LeoStudio.',
+        baseUrlRequired: 'Enter the LeoStudio Base URL',
+        modelMappingRequired: 'Leo accounts require at least one valid model mapping',
+        videoOnlyHint: 'Only synchronous video generation is supported in this release.'
       },
       anthropic: {
         apiKeyPassthrough: 'Auto passthrough (auth only)',

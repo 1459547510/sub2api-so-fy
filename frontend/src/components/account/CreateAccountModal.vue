@@ -160,6 +160,20 @@
             <PlatformIcon platform="grok" size="sm" />
             Grok
           </button>
+          <button
+            type="button"
+            data-testid="platform-leo"
+            @click="form.platform = 'leo'"
+            :class="[
+              'flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all',
+              form.platform === 'leo'
+                ? 'bg-white text-teal-700 shadow-sm dark:bg-dark-600 dark:text-teal-300'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            ]"
+          >
+            <PlatformIcon platform="leo" size="sm" />
+            Leo
+          </button>
         </div>
       </div>
 
@@ -1105,6 +1119,8 @@
           <input
             v-model="apiKeyBaseUrl"
             type="text"
+            :required="form.platform === 'leo'"
+            :data-testid="form.platform === 'leo' ? 'leo-base-url' : undefined"
             class="input"
             :placeholder="
               form.platform === 'openai'
@@ -1113,7 +1129,9 @@
                   ? 'https://generativelanguage.googleapis.com'
                   : form.platform === 'grok'
                     ? 'https://api.x.ai/v1'
-                    : 'https://api.anthropic.com'
+                    : form.platform === 'leo'
+                      ? 'http://leostudio:8000/v1'
+                      : 'https://api.anthropic.com'
             "
           />
           <p v-if="baseUrlHint" class="input-hint">{{ baseUrlHint }}</p>
@@ -1124,6 +1142,7 @@
             v-model="apiKeyValue"
             type="password"
             required
+            :data-testid="form.platform === 'leo' ? 'leo-api-key' : undefined"
             class="input font-mono"
             :placeholder="
               form.platform === 'openai'
@@ -1132,7 +1151,9 @@
                   ? 'AIza...'
                   : form.platform === 'grok'
                     ? 'xai-...'
-                    : 'sk-ant-...'
+                    : form.platform === 'leo'
+                      ? 'leo-api-key'
+                      : 'sk-ant-...'
             "
           />
           <p v-if="apiKeyHint" class="input-hint">{{ apiKeyHint }}</p>
@@ -1165,6 +1186,7 @@
             <!-- Mode Toggle -->
             <div class="mb-4 flex gap-2">
               <button
+                v-if="form.platform !== 'leo'"
                 type="button"
                 @click="modelRestrictionMode = 'whitelist'"
                 :class="[
@@ -3549,6 +3571,7 @@ const baseUrlHint = computed(() => {
   if (form.platform === 'openai') return t('admin.accounts.openai.baseUrlHint')
   if (form.platform === 'gemini') return t('admin.accounts.gemini.baseUrlHint')
   if (form.platform === 'grok') return ''
+  if (form.platform === 'leo') return t('admin.accounts.leo.baseUrlHint')
   return t('admin.accounts.baseUrlHint')
 })
 
@@ -3556,6 +3579,7 @@ const apiKeyHint = computed(() => {
   if (form.platform === 'openai') return t('admin.accounts.openai.apiKeyHint')
   if (form.platform === 'gemini') return t('admin.accounts.gemini.apiKeyHint')
   if (form.platform === 'grok') return ''
+  if (form.platform === 'leo') return t('admin.accounts.leo.apiKeyHint')
   return t('admin.accounts.apiKeyHint')
 })
 
@@ -4116,7 +4140,9 @@ watch(
           ? 'https://generativelanguage.googleapis.com'
           : newPlatform === 'grok'
             ? 'https://api.x.ai/v1'
-            : 'https://api.anthropic.com'
+            : newPlatform === 'leo'
+              ? ''
+              : 'https://api.anthropic.com'
     // Clear model-related settings
     allowedModels.value = []
     modelMappings.value = []
@@ -4142,6 +4168,15 @@ watch(
       modelRestrictionMode.value = 'mapping'
       form.concurrency = 1
       form.load_factor = null
+    }
+    if (newPlatform === 'leo') {
+      accountCategory.value = 'apikey'
+      form.type = 'apikey'
+      modelRestrictionMode.value = 'mapping'
+      modelMappings.value = [
+        { from: 'seedance-2.0', to: 'seedance-2.0' },
+        { from: 'seedance-2.0-fast', to: 'seedance-2.0-fast' }
+      ]
     }
     if (newPlatform !== 'gemini' && newPlatform !== 'anthropic' && accountCategory.value === 'service_account') {
       accountCategory.value = 'oauth-based'
@@ -4968,6 +5003,18 @@ const handleSubmit = async () => {
     appStore.showError(t('admin.accounts.pleaseEnterApiKey'))
     return
   }
+  if (form.platform === 'leo' && !apiKeyBaseUrl.value.trim()) {
+    appStore.showError(t('admin.accounts.leo.baseUrlRequired'))
+    return
+  }
+
+  const modelMapping = !isOpenAIModelRestrictionDisabled.value
+    ? buildModelMappingObject(modelRestrictionMode.value, allowedModels.value, modelMappings.value)
+    : undefined
+  if (form.platform === 'leo' && !modelMapping) {
+    appStore.showError(t('admin.accounts.leo.modelMappingRequired'))
+    return
+  }
 
   // Determine default base URL based on platform
   const defaultBaseUrl =
@@ -4977,7 +5024,9 @@ const handleSubmit = async () => {
         ? 'https://generativelanguage.googleapis.com'
         : form.platform === 'grok'
           ? 'https://api.x.ai/v1'
-          : 'https://api.anthropic.com'
+          : form.platform === 'leo'
+            ? ''
+            : 'https://api.anthropic.com'
 
   // Build credentials with optional model mapping
   const credentials: Record<string, unknown> = {
@@ -4990,7 +5039,6 @@ const handleSubmit = async () => {
 
   // Add model mapping if configured（OpenAI 开启自动透传时不应用）
   if (!isOpenAIModelRestrictionDisabled.value) {
-    const modelMapping = buildModelMappingObject(modelRestrictionMode.value, allowedModels.value, modelMappings.value)
     if (modelMapping) {
       credentials.model_mapping = modelMapping
     }
