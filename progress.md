@@ -1705,3 +1705,43 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/handler/leo_video_test.go`: added regression coverage proving a blocked Leo prompt never reaches account scheduling.
 - `progress.md`: recorded the v0.1.161 merge, verification evidence, changed-file list, exclusions, and rollback point.
 - Rollback point: deploy release `v0.1.159-fy.1`; revert this source merge with `git revert -m 1 <v0.1.161 merge commit>`. Do not apply or delete the homepage WIP stashes during rollback.
+
+## 2026-07-17 - Task: Persist Leo asynchronous video jobs
+### What was done
+- Added the durable `video_jobs` model for Sub2API-owned public IDs, Leo account affinity, request snapshots, lifecycle state, results, and billing state.
+- Added API-key-scoped reads and lists plus atomic allowed-state transitions so concurrent workers cannot advance the same job from a stale state.
+- Registered the repository for dependency injection and generated the Ent access layer.
+### Testing
+- `go test ./internal/repository -run TestVideoJobRepositoryCreateListAndTransition -count=1`: passed.
+- `go test ./internal/repository -run 'VideoJob|Migration' -count=1`: passed.
+- `go test ./ent/schema -count=1`: passed.
+- `go test ./migrations -count=1`: passed.
+- `go test ./internal/service -run VideoJob -count=1`: passed.
+### Notes
+- `backend/ent/schema/video_job.go`: defined the durable video job fields and indexes.
+- `backend/ent/schema/video_job_schema_test.go`: verified required fields and unique/query indexes.
+- `backend/migrations/182_video_jobs.sql`: added the additive PostgreSQL table and indexes.
+- `backend/migrations/video_jobs_migration_test.go`: verified the embedded migration contract.
+- `backend/internal/service/video_job.go`: added video job states, domain data, transition data, and repository contract.
+- `backend/internal/repository/video_job_repo.go`: implemented create, scoped reads, ordered lists, active scans, and conditional transitions.
+- `backend/internal/repository/video_job_repo_test.go`: covered persistence, API key isolation, ordering, and transition conflicts.
+- `backend/internal/repository/wire.go`: registered the video job repository provider.
+- `backend/ent/videojob.go`: generated the VideoJob entity model.
+- `backend/ent/videojob/videojob.go`: generated VideoJob field and order helpers.
+- `backend/ent/videojob/where.go`: generated VideoJob predicates.
+- `backend/ent/videojob_create.go`: generated VideoJob create builders.
+- `backend/ent/videojob_delete.go`: generated VideoJob delete builders.
+- `backend/ent/videojob_query.go`: generated VideoJob query builders.
+- `backend/ent/videojob_update.go`: generated VideoJob update builders.
+- `backend/ent/client.go`: registered the generated VideoJob client.
+- `backend/ent/ent.go`: registered VideoJob mutation metadata.
+- `backend/ent/hook/hook.go`: registered generated VideoJob hooks.
+- `backend/ent/intercept/intercept.go`: registered generated VideoJob interceptors.
+- `backend/ent/migrate/schema.go`: added the generated VideoJob table specification.
+- `backend/ent/mutation.go`: added the generated VideoJob mutation implementation.
+- `backend/ent/predicate/predicate.go`: added the generated VideoJob predicate type.
+- `backend/ent/runtime/runtime.go`: initialized generated VideoJob runtime metadata.
+- `backend/ent/tx.go`: exposed the generated VideoJob transactional client.
+- `backend/go.sum`: recorded the Ent generator command dependency checksum.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `d4daa84ed6bfdd338eb6c6c9f311b3b0e68487ea`; after this task is committed, run `git revert $(git log --format=%H --grep='^feat: persist leo video jobs$' -n 1)` from the repository root.

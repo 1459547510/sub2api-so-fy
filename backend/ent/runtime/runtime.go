@@ -44,6 +44,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/userplatformquota"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/videojob"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
@@ -2344,6 +2345,60 @@ func init() {
 	usersubscriptionDescAssignedAt := usersubscriptionFields[12].Descriptor()
 	// usersubscription.DefaultAssignedAt holds the default value on creation for the assigned_at field.
 	usersubscription.DefaultAssignedAt = usersubscriptionDescAssignedAt.Default.(func() time.Time)
+	videojobFields := schema.VideoJob{}.Fields()
+	_ = videojobFields
+	// videojobDescJobID is the schema descriptor for job_id field.
+	videojobDescJobID := videojobFields[0].Descriptor()
+	// videojob.JobIDValidator is a validator for the "job_id" field. It is called by the builders before save.
+	videojob.JobIDValidator = videojobDescJobID.Validators[0].(func(string) error)
+	// videojobDescStatus is the schema descriptor for status field.
+	videojobDescStatus := videojobFields[6].Descriptor()
+	// videojob.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	videojob.StatusValidator = videojobDescStatus.Validators[0].(func(string) error)
+	// videojobDescRequestedModel is the schema descriptor for requested_model field.
+	videojobDescRequestedModel := videojobFields[7].Descriptor()
+	// videojob.RequestedModelValidator is a validator for the "requested_model" field. It is called by the builders before save.
+	videojob.RequestedModelValidator = videojobDescRequestedModel.Validators[0].(func(string) error)
+	// videojobDescUpstreamModel is the schema descriptor for upstream_model field.
+	videojobDescUpstreamModel := videojobFields[8].Descriptor()
+	// videojob.UpstreamModelValidator is a validator for the "upstream_model" field. It is called by the builders before save.
+	videojob.UpstreamModelValidator = videojobDescUpstreamModel.Validators[0].(func(string) error)
+	// videojobDescResolution is the schema descriptor for resolution field.
+	videojobDescResolution := videojobFields[10].Descriptor()
+	// videojob.ResolutionValidator is a validator for the "resolution" field. It is called by the builders before save.
+	videojob.ResolutionValidator = videojobDescResolution.Validators[0].(func(string) error)
+	// videojobDescAspectRatio is the schema descriptor for aspect_ratio field.
+	videojobDescAspectRatio := videojobFields[12].Descriptor()
+	// videojob.AspectRatioValidator is a validator for the "aspect_ratio" field. It is called by the builders before save.
+	videojob.AspectRatioValidator = videojobDescAspectRatio.Validators[0].(func(string) error)
+	// videojobDescAudio is the schema descriptor for audio field.
+	videojobDescAudio := videojobFields[13].Descriptor()
+	// videojob.DefaultAudio holds the default value on creation for the audio field.
+	videojob.DefaultAudio = videojobDescAudio.Default.(bool)
+	// videojobDescImageSource is the schema descriptor for image_source field.
+	videojobDescImageSource := videojobFields[14].Descriptor()
+	// videojob.DefaultImageSource holds the default value on creation for the image_source field.
+	videojob.DefaultImageSource = videojobDescImageSource.Default.(string)
+	// videojob.ImageSourceValidator is a validator for the "image_source" field. It is called by the builders before save.
+	videojob.ImageSourceValidator = videojobDescImageSource.Validators[0].(func(string) error)
+	// videojobDescLocalInputName is the schema descriptor for local_input_name field.
+	videojobDescLocalInputName := videojobFields[16].Descriptor()
+	// videojob.LocalInputNameValidator is a validator for the "local_input_name" field. It is called by the builders before save.
+	videojob.LocalInputNameValidator = videojobDescLocalInputName.Validators[0].(func(string) error)
+	// videojobDescRequestHash is the schema descriptor for request_hash field.
+	videojobDescRequestHash := videojobFields[22].Descriptor()
+	// videojob.RequestHashValidator is a validator for the "request_hash" field. It is called by the builders before save.
+	videojob.RequestHashValidator = videojobDescRequestHash.Validators[0].(func(string) error)
+	// videojobDescCreatedAt is the schema descriptor for created_at field.
+	videojobDescCreatedAt := videojobFields[24].Descriptor()
+	// videojob.DefaultCreatedAt holds the default value on creation for the created_at field.
+	videojob.DefaultCreatedAt = videojobDescCreatedAt.Default.(func() time.Time)
+	// videojobDescUpdatedAt is the schema descriptor for updated_at field.
+	videojobDescUpdatedAt := videojobFields[25].Descriptor()
+	// videojob.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	videojob.DefaultUpdatedAt = videojobDescUpdatedAt.Default.(func() time.Time)
+	// videojob.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	videojob.UpdateDefaultUpdatedAt = videojobDescUpdatedAt.UpdateDefault.(func() time.Time)
 }
 
 const (

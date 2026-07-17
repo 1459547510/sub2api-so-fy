@@ -53,6 +53,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/userplatformquota"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/videojob"
 
 	stdsql "database/sql"
 )
@@ -138,6 +139,8 @@ type Client struct {
 	UserPlatformQuota *UserPlatformQuotaClient
 	// UserSubscription is the client for interacting with the UserSubscription builders.
 	UserSubscription *UserSubscriptionClient
+	// VideoJob is the client for interacting with the VideoJob builders.
+	VideoJob *VideoJobClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -187,6 +190,7 @@ func (c *Client) init() {
 	c.UserAttributeValue = NewUserAttributeValueClient(c.config)
 	c.UserPlatformQuota = NewUserPlatformQuotaClient(c.config)
 	c.UserSubscription = NewUserSubscriptionClient(c.config)
+	c.VideoJob = NewVideoJobClient(c.config)
 }
 
 type (
@@ -317,6 +321,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		UserAttributeValue:            NewUserAttributeValueClient(cfg),
 		UserPlatformQuota:             NewUserPlatformQuotaClient(cfg),
 		UserSubscription:              NewUserSubscriptionClient(cfg),
+		VideoJob:                      NewVideoJobClient(cfg),
 	}, nil
 }
 
@@ -374,6 +379,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		UserAttributeValue:            NewUserAttributeValueClient(cfg),
 		UserPlatformQuota:             NewUserPlatformQuotaClient(cfg),
 		UserSubscription:              NewUserSubscriptionClient(cfg),
+		VideoJob:                      NewVideoJobClient(cfg),
 	}, nil
 }
 
@@ -413,7 +419,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting, c.SubscriptionPlan,
 		c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog, c.User,
 		c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
-		c.UserPlatformQuota, c.UserSubscription,
+		c.UserPlatformQuota, c.UserSubscription, c.VideoJob,
 	} {
 		n.Use(hooks...)
 	}
@@ -433,7 +439,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting, c.SubscriptionPlan,
 		c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog, c.User,
 		c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
-		c.UserPlatformQuota, c.UserSubscription,
+		c.UserPlatformQuota, c.UserSubscription, c.VideoJob,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -518,6 +524,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.UserPlatformQuota.mutate(ctx, m)
 	case *UserSubscriptionMutation:
 		return c.UserSubscription.mutate(ctx, m)
+	case *VideoJobMutation:
+		return c.VideoJob.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -6663,6 +6671,139 @@ func (c *UserSubscriptionClient) mutate(ctx context.Context, m *UserSubscription
 	}
 }
 
+// VideoJobClient is a client for the VideoJob schema.
+type VideoJobClient struct {
+	config
+}
+
+// NewVideoJobClient returns a client for the VideoJob from the given config.
+func NewVideoJobClient(c config) *VideoJobClient {
+	return &VideoJobClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `videojob.Hooks(f(g(h())))`.
+func (c *VideoJobClient) Use(hooks ...Hook) {
+	c.hooks.VideoJob = append(c.hooks.VideoJob, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `videojob.Intercept(f(g(h())))`.
+func (c *VideoJobClient) Intercept(interceptors ...Interceptor) {
+	c.inters.VideoJob = append(c.inters.VideoJob, interceptors...)
+}
+
+// Create returns a builder for creating a VideoJob entity.
+func (c *VideoJobClient) Create() *VideoJobCreate {
+	mutation := newVideoJobMutation(c.config, OpCreate)
+	return &VideoJobCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of VideoJob entities.
+func (c *VideoJobClient) CreateBulk(builders ...*VideoJobCreate) *VideoJobCreateBulk {
+	return &VideoJobCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *VideoJobClient) MapCreateBulk(slice any, setFunc func(*VideoJobCreate, int)) *VideoJobCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &VideoJobCreateBulk{err: fmt.Errorf("calling to VideoJobClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*VideoJobCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &VideoJobCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for VideoJob.
+func (c *VideoJobClient) Update() *VideoJobUpdate {
+	mutation := newVideoJobMutation(c.config, OpUpdate)
+	return &VideoJobUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *VideoJobClient) UpdateOne(_m *VideoJob) *VideoJobUpdateOne {
+	mutation := newVideoJobMutation(c.config, OpUpdateOne, withVideoJob(_m))
+	return &VideoJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *VideoJobClient) UpdateOneID(id int64) *VideoJobUpdateOne {
+	mutation := newVideoJobMutation(c.config, OpUpdateOne, withVideoJobID(id))
+	return &VideoJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for VideoJob.
+func (c *VideoJobClient) Delete() *VideoJobDelete {
+	mutation := newVideoJobMutation(c.config, OpDelete)
+	return &VideoJobDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *VideoJobClient) DeleteOne(_m *VideoJob) *VideoJobDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *VideoJobClient) DeleteOneID(id int64) *VideoJobDeleteOne {
+	builder := c.Delete().Where(videojob.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &VideoJobDeleteOne{builder}
+}
+
+// Query returns a query builder for VideoJob.
+func (c *VideoJobClient) Query() *VideoJobQuery {
+	return &VideoJobQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeVideoJob},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a VideoJob entity by its id.
+func (c *VideoJobClient) Get(ctx context.Context, id int64) (*VideoJob, error) {
+	return c.Query().Where(videojob.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *VideoJobClient) GetX(ctx context.Context, id int64) *VideoJob {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *VideoJobClient) Hooks() []Hook {
+	return c.hooks.VideoJob
+}
+
+// Interceptors returns the client interceptors.
+func (c *VideoJobClient) Interceptors() []Interceptor {
+	return c.inters.VideoJob
+}
+
+func (c *VideoJobClient) mutate(ctx context.Context, m *VideoJobMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&VideoJobCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&VideoJobUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&VideoJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&VideoJobDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown VideoJob mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
@@ -6674,7 +6815,7 @@ type (
 		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
 		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
 		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
-		UserAttributeValue, UserPlatformQuota, UserSubscription []ent.Hook
+		UserAttributeValue, UserPlatformQuota, UserSubscription, VideoJob []ent.Hook
 	}
 	inters struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
@@ -6685,7 +6826,8 @@ type (
 		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
 		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
 		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
-		UserAttributeValue, UserPlatformQuota, UserSubscription []ent.Interceptor
+		UserAttributeValue, UserPlatformQuota, UserSubscription,
+		VideoJob []ent.Interceptor
 	}
 )
 

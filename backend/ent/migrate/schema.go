@@ -1996,6 +1996,74 @@ var (
 			},
 		},
 	}
+	// VideoJobsColumns holds the columns for the "video_jobs" table.
+	VideoJobsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "job_id", Type: field.TypeString, Size: 64},
+		{Name: "user_id", Type: field.TypeInt64},
+		{Name: "api_key_id", Type: field.TypeInt64},
+		{Name: "group_id", Type: field.TypeInt64},
+		{Name: "account_id", Type: field.TypeInt64},
+		{Name: "upstream_job_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "status", Type: field.TypeString, Size: 32},
+		{Name: "requested_model", Type: field.TypeString, Size: 128},
+		{Name: "upstream_model", Type: field.TypeString, Size: 128},
+		{Name: "prompt", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "resolution", Type: field.TypeString, Size: 32},
+		{Name: "duration_seconds", Type: field.TypeInt},
+		{Name: "aspect_ratio", Type: field.TypeString, Size: 32},
+		{Name: "audio", Type: field.TypeBool, Default: false},
+		{Name: "image_source", Type: field.TypeString, Size: 16, Default: "none"},
+		{Name: "image_url", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "local_input_name", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "result", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "hold_amount", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "actual_cost", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "billing_snapshot", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "request_hash", Type: field.TypeString, Size: 128},
+		{Name: "settled_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "finished_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// VideoJobsTable holds the schema information for the "video_jobs" table.
+	VideoJobsTable = &schema.Table{
+		Name:       "video_jobs",
+		Columns:    VideoJobsColumns,
+		PrimaryKey: []*schema.Column{VideoJobsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "videojob_job_id",
+				Unique:  true,
+				Columns: []*schema.Column{VideoJobsColumns[1]},
+			},
+			{
+				Name:    "videojob_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{VideoJobsColumns[2], VideoJobsColumns[25]},
+			},
+			{
+				Name:    "videojob_api_key_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{VideoJobsColumns[3], VideoJobsColumns[25]},
+			},
+			{
+				Name:    "videojob_status_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{VideoJobsColumns[7], VideoJobsColumns[26]},
+			},
+			{
+				Name:    "videojob_account_id_upstream_job_id",
+				Unique:  true,
+				Columns: []*schema.Column{VideoJobsColumns[5], VideoJobsColumns[6]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "upstream_job_id IS NOT NULL",
+				},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		APIKeysTable,
@@ -2036,6 +2104,7 @@ var (
 		UserAttributeValuesTable,
 		UserPlatformQuotasTable,
 		UserSubscriptionsTable,
+		VideoJobsTable,
 	}
 )
 
@@ -2188,5 +2257,8 @@ func init() {
 	UserSubscriptionsTable.ForeignKeys[2].RefTable = UsersTable
 	UserSubscriptionsTable.Annotation = &entsql.Annotation{
 		Table: "user_subscriptions",
+	}
+	VideoJobsTable.Annotation = &entsql.Annotation{
+		Table: "video_jobs",
 	}
 }
