@@ -1879,3 +1879,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/api/__tests__/videoGeneration.spec.ts`: covered multipart upload headers, async preference, API-key auth, list query, and DELETE cancellation.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `2f586842`; run `git revert $(git log --format=%H --grep='^feat: add leo video client api$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Add Leo video generation workbench
+### What was done
+- Added a responsive two-column user workbench for text, remote-image, and local-image Leo video generation.
+- Added active Leo API Key filtering, asynchronous job polling, pending cancellation, completed video preview, download/open actions, and empty states.
+- Added `/video-generation`, the user sidebar entry, and English/Chinese navigation and workbench messages.
+### Testing
+- `node node_modules/vitest/vitest.mjs run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts --reporter=verbose`: passed (8 tests).
+- `node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`: passed.
+- `git diff --check`: passed.
+- Targeted ESLint could not start because the existing workspace dependency `vue-eslint-parser` is missing; no dependency was added in this task.
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: implemented the responsive video workbench and async lifecycle controls.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covered Leo Key filtering, text/URL submission, preview, cancellation, and no-Key state.
+- `frontend/src/router/index.ts`: registered the authenticated `/video-generation` route.
+- `frontend/src/components/layout/AppSidebar.vue`: added a video-generation navigation icon and item.
+- `frontend/src/i18n/locales/en/common.ts`: added English navigation label.
+- `frontend/src/i18n/locales/zh/common.ts`: added Chinese navigation label.
+- `frontend/src/i18n/locales/en/dashboard.ts`: added English workbench messages.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: added Chinese workbench messages.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `b3b72ec5`; run `git revert $(git log --format=%H --grep='^feat: add leo video workbench$' -n 1)` from the repository root.
