@@ -1805,3 +1805,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/service/leo_video.go`: parsed aspect ratio and audio request fields.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `ab263a10`; run `git revert $(git log --format=%H --grep='^feat: manage leo async video jobs$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Reconcile Leo video jobs in the background
+### What was done
+- Added a restart-safe runtime that scans up to 50 active jobs, polls the fixed Leo account, preserves transient failures for retry, and advances completed jobs through settling before completion.
+- Added terminal failure/cancel release handling and loop shutdown that waits for in-flight upstream polling.
+- Wired the shared billing service, video job service, runtime startup, and cleanup ordering into the server and regenerated Wire output.
+### Testing
+- `go test ./internal/service -run TestVideoJobRuntime -count=1`: passed.
+- `go test ./internal/service -run 'TestVideoJobRuntime|VideoJobService|VideoJobBilling' -count=1`: passed.
+- `go test ./cmd/server -count=1`: passed.
+- `go generate ./cmd/server`: passed.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/service/video_job_runtime.go`: implemented active-job polling, settlement transitions, retry behavior, and Start/Stop lifecycle.
+- `backend/internal/service/video_job_runtime_test.go`: covered completion, settling, failure release, transient retry, restart scan, and in-flight Stop waiting.
+- `backend/internal/service/video_job_service.go`: added the production constructor used by Wire.
+- `backend/internal/service/video_job_service_test.go`: added the active-job fake repository method for runtime coverage.
+- `backend/internal/service/wire.go`: provided shared video billing/runtime services and interface bindings.
+- `backend/cmd/server/wire.go`: stopped the video runtime before infrastructure shutdown.
+- `backend/cmd/server/wire_gen.go`: regenerated runtime construction and cleanup wiring.
+- `backend/cmd/server/wire_gen_test.go`: updated cleanup fixture arguments.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `80c07244`; run `git revert $(git log --format=%H --grep='^feat: reconcile leo video jobs$' -n 1)` from the repository root.

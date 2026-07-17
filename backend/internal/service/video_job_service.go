@@ -35,6 +35,10 @@ type VideoJobService struct {
 	Billing  *VideoJobBillingService
 }
 
+func NewVideoJobService(repo VideoJobRepository, selector VideoJobAccountSelector, client VideoJobAsyncClient, billing *VideoJobBillingService) *VideoJobService {
+	return &VideoJobService{Repo: repo, Selector: selector, Client: client, Billing: billing}
+}
+
 func (s *VideoJobService) Create(ctx context.Context, in CreateVideoJobInput) (*VideoJob, error) {
 	if s == nil || s.Repo == nil || s.Selector == nil || s.Client == nil || s.Billing == nil {
 		return nil, errors.New("video job service is not configured")

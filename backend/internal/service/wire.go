@@ -51,6 +51,31 @@ func ProvideBatchImageModelPricingResolver(resolver *ModelPricingResolver) *Batc
 	return &BatchImageModelPricingResolver{Resolver: resolver}
 }
 
+func ProvideVideoJobBillingService(
+	usageRepo UsageBillingRepository,
+	openAIGateway *OpenAIGatewayService,
+	apiKeyRepo APIKeyRepository,
+	userRepo UserRepository,
+	accountRepo AccountRepository,
+	userSubRepo UserSubscriptionRepository,
+) *VideoJobBillingService {
+	return &VideoJobBillingService{
+		BillingRepo: usageRepo, UsageRecorder: openAIGateway, Gateway: openAIGateway,
+		APIKeys: apiKeyRepo, Users: userRepo, Accounts: accountRepo, Subscriptions: userSubRepo,
+	}
+}
+
+func ProvideVideoJobRuntime(
+	repo VideoJobRepository,
+	selector VideoJobAccountSelector,
+	client VideoJobAsyncClient,
+	billing *VideoJobBillingService,
+) *VideoJobRuntime {
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, PollInterval: 2 * time.Second}
+	runtime.Start(context.Background())
+	return runtime
+}
+
 func ProvideBatchImageCleanupService(repo BatchImageRepository, accountRepo AccountRepository, cfg *config.Config) *BatchImageCleanupService {
 	svc := NewBatchImageCleanupService(repo, accountRepo, cfg)
 	svc.Start()
@@ -682,6 +707,11 @@ var ProviderSet = wire.NewSet(
 	NewAdminService,
 	NewGatewayService,
 	NewOpenAIGatewayService,
+	ProvideVideoJobBillingService,
+	NewVideoJobService,
+	ProvideVideoJobRuntime,
+	wire.Bind(new(VideoJobAccountSelector), new(*OpenAIGatewayService)),
+	wire.Bind(new(VideoJobAsyncClient), new(*OpenAIGatewayService)),
 	ProvideImageTaskService,
 	ProvideBatchImageModelPricingResolver,
 	NewBatchImagePublicService,

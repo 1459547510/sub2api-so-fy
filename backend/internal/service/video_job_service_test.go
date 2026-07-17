@@ -45,6 +45,13 @@ func (r *fakeVideoJobServiceRepo) ListVideoJobsForAPIKey(_ context.Context, apiK
 	return r.list, nil
 }
 
+func (r *fakeVideoJobServiceRepo) ListActiveVideoJobs(_ context.Context, _ int) ([]*VideoJob, error) {
+	if r.job == nil || IsTerminalVideoJobStatus(r.job.Status) {
+		return nil, nil
+	}
+	return []*VideoJob{cloneVideoJob(r.job)}, nil
+}
+
 func (r *fakeVideoJobServiceRepo) TransitionVideoJob(_ context.Context, jobID string, _ []string, status string, transition VideoJobTransition) error {
 	r.transitions = append(r.transitions, struct {
 		jobID string
