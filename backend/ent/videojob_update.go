@@ -30,6 +30,27 @@ func (_u *VideoJobUpdate) Where(ps ...predicate.VideoJob) *VideoJobUpdate {
 	return _u
 }
 
+// SetAccountID sets the "account_id" field.
+func (_u *VideoJobUpdate) SetAccountID(v int64) *VideoJobUpdate {
+	_u.mutation.ResetAccountID()
+	_u.mutation.SetAccountID(v)
+	return _u
+}
+
+// SetNillableAccountID sets the "account_id" field if the given value is not nil.
+func (_u *VideoJobUpdate) SetNillableAccountID(v *int64) *VideoJobUpdate {
+	if v != nil {
+		_u.SetAccountID(*v)
+	}
+	return _u
+}
+
+// AddAccountID adds value to the "account_id" field.
+func (_u *VideoJobUpdate) AddAccountID(v int64) *VideoJobUpdate {
+	_u.mutation.AddAccountID(v)
+	return _u
+}
+
 // SetUpstreamJobID sets the "upstream_job_id" field.
 func (_u *VideoJobUpdate) SetUpstreamJobID(v int64) *VideoJobUpdate {
 	_u.mutation.ResetUpstreamJobID()
@@ -292,6 +313,12 @@ func (_u *VideoJobUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
+	if value, ok := _u.mutation.AccountID(); ok {
+		_spec.SetField(videojob.FieldAccountID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedAccountID(); ok {
+		_spec.AddField(videojob.FieldAccountID, field.TypeInt64, value)
+	}
 	if value, ok := _u.mutation.UpstreamJobID(); ok {
 		_spec.SetField(videojob.FieldUpstreamJobID, field.TypeInt64, value)
 	}
@@ -387,6 +414,27 @@ type VideoJobUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *VideoJobMutation
+}
+
+// SetAccountID sets the "account_id" field.
+func (_u *VideoJobUpdateOne) SetAccountID(v int64) *VideoJobUpdateOne {
+	_u.mutation.ResetAccountID()
+	_u.mutation.SetAccountID(v)
+	return _u
+}
+
+// SetNillableAccountID sets the "account_id" field if the given value is not nil.
+func (_u *VideoJobUpdateOne) SetNillableAccountID(v *int64) *VideoJobUpdateOne {
+	if v != nil {
+		_u.SetAccountID(*v)
+	}
+	return _u
+}
+
+// AddAccountID adds value to the "account_id" field.
+func (_u *VideoJobUpdateOne) AddAccountID(v int64) *VideoJobUpdateOne {
+	_u.mutation.AddAccountID(v)
+	return _u
 }
 
 // SetUpstreamJobID sets the "upstream_job_id" field.
@@ -680,6 +728,12 @@ func (_u *VideoJobUpdateOne) sqlSave(ctx context.Context) (_node *VideoJob, err 
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := _u.mutation.AccountID(); ok {
+		_spec.SetField(videojob.FieldAccountID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedAccountID(); ok {
+		_spec.AddField(videojob.FieldAccountID, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.UpstreamJobID(); ok {
 		_spec.SetField(videojob.FieldUpstreamJobID, field.TypeInt64, value)

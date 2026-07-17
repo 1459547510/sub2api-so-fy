@@ -136,6 +136,9 @@ func (r *videoJobRepository) TransitionVideoJob(ctx context.Context, jobID strin
 	update := client.VideoJob.Update().
 		Where(videojob.JobIDEQ(jobID), videojob.StatusIn(allowedStatuses...)).
 		SetStatus(status)
+	if transition.AccountID != nil {
+		update.SetAccountID(*transition.AccountID)
+	}
 	if transition.UpstreamJobID != nil {
 		update.SetUpstreamJobID(*transition.UpstreamJobID)
 	}

@@ -637,6 +637,24 @@ type (
 	}
 )
 
+// SetAccountID sets the "account_id" field.
+func (u *VideoJobUpsert) SetAccountID(v int64) *VideoJobUpsert {
+	u.Set(videojob.FieldAccountID, v)
+	return u
+}
+
+// UpdateAccountID sets the "account_id" field to the value that was provided on create.
+func (u *VideoJobUpsert) UpdateAccountID() *VideoJobUpsert {
+	u.SetExcluded(videojob.FieldAccountID)
+	return u
+}
+
+// AddAccountID adds v to the "account_id" field.
+func (u *VideoJobUpsert) AddAccountID(v int64) *VideoJobUpsert {
+	u.Add(videojob.FieldAccountID, v)
+	return u
+}
+
 // SetUpstreamJobID sets the "upstream_job_id" field.
 func (u *VideoJobUpsert) SetUpstreamJobID(v int64) *VideoJobUpsert {
 	u.Set(videojob.FieldUpstreamJobID, v)
@@ -846,9 +864,6 @@ func (u *VideoJobUpsertOne) UpdateNewValues() *VideoJobUpsertOne {
 		if _, exists := u.create.mutation.GroupID(); exists {
 			s.SetIgnore(videojob.FieldGroupID)
 		}
-		if _, exists := u.create.mutation.AccountID(); exists {
-			s.SetIgnore(videojob.FieldAccountID)
-		}
 		if _, exists := u.create.mutation.RequestedModel(); exists {
 			s.SetIgnore(videojob.FieldRequestedModel)
 		}
@@ -917,6 +932,27 @@ func (u *VideoJobUpsertOne) Update(set func(*VideoJobUpsert)) *VideoJobUpsertOne
 		set(&VideoJobUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetAccountID sets the "account_id" field.
+func (u *VideoJobUpsertOne) SetAccountID(v int64) *VideoJobUpsertOne {
+	return u.Update(func(s *VideoJobUpsert) {
+		s.SetAccountID(v)
+	})
+}
+
+// AddAccountID adds v to the "account_id" field.
+func (u *VideoJobUpsertOne) AddAccountID(v int64) *VideoJobUpsertOne {
+	return u.Update(func(s *VideoJobUpsert) {
+		s.AddAccountID(v)
+	})
+}
+
+// UpdateAccountID sets the "account_id" field to the value that was provided on create.
+func (u *VideoJobUpsertOne) UpdateAccountID() *VideoJobUpsertOne {
+	return u.Update(func(s *VideoJobUpsert) {
+		s.UpdateAccountID()
+	})
 }
 
 // SetUpstreamJobID sets the "upstream_job_id" field.
@@ -1324,9 +1360,6 @@ func (u *VideoJobUpsertBulk) UpdateNewValues() *VideoJobUpsertBulk {
 			if _, exists := b.mutation.GroupID(); exists {
 				s.SetIgnore(videojob.FieldGroupID)
 			}
-			if _, exists := b.mutation.AccountID(); exists {
-				s.SetIgnore(videojob.FieldAccountID)
-			}
 			if _, exists := b.mutation.RequestedModel(); exists {
 				s.SetIgnore(videojob.FieldRequestedModel)
 			}
@@ -1396,6 +1429,27 @@ func (u *VideoJobUpsertBulk) Update(set func(*VideoJobUpsert)) *VideoJobUpsertBu
 		set(&VideoJobUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetAccountID sets the "account_id" field.
+func (u *VideoJobUpsertBulk) SetAccountID(v int64) *VideoJobUpsertBulk {
+	return u.Update(func(s *VideoJobUpsert) {
+		s.SetAccountID(v)
+	})
+}
+
+// AddAccountID adds v to the "account_id" field.
+func (u *VideoJobUpsertBulk) AddAccountID(v int64) *VideoJobUpsertBulk {
+	return u.Update(func(s *VideoJobUpsert) {
+		s.AddAccountID(v)
+	})
+}
+
+// UpdateAccountID sets the "account_id" field to the value that was provided on create.
+func (u *VideoJobUpsertBulk) UpdateAccountID() *VideoJobUpsertBulk {
+	return u.Update(func(s *VideoJobUpsert) {
+		s.UpdateAccountID()
+	})
 }
 
 // SetUpstreamJobID sets the "upstream_job_id" field.

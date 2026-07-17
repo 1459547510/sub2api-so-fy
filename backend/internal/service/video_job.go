@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"time"
@@ -19,6 +21,7 @@ const (
 var (
 	ErrVideoJobNotFound           = errors.New("video job not found")
 	ErrVideoJobTransitionConflict = errors.New("video job transition conflict")
+	ErrVideoJobCancelConflict     = errors.New("video job cancel conflict")
 )
 
 type VideoJob struct {
@@ -54,6 +57,7 @@ type VideoJob struct {
 }
 
 type VideoJobTransition struct {
+	AccountID     *int64
 	UpstreamJobID *int64
 	Result        json.RawMessage
 	ErrorMessage  *string
@@ -80,4 +84,12 @@ func IsTerminalVideoJobStatus(status string) bool {
 	default:
 		return false
 	}
+}
+
+func NewVideoJobID() (string, error) {
+	var raw [24]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		return "", err
+	}
+	return "vidjob_" + base64.RawURLEncoding.EncodeToString(raw[:]), nil
 }

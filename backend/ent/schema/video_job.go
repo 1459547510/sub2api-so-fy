@@ -27,7 +27,7 @@ func (VideoJob) Fields() []ent.Field {
 		field.Int64("user_id").Immutable(),
 		field.Int64("api_key_id").Immutable(),
 		field.Int64("group_id").Immutable(),
-		field.Int64("account_id").Immutable(),
+		field.Int64("account_id"),
 		field.Int64("upstream_job_id").Optional().Nillable(),
 		field.String("status").MaxLen(32),
 		field.String("requested_model").MaxLen(128).Immutable(),

@@ -1782,3 +1782,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/service/batch_image_settlement_test.go`: extended the billing fake for the additive video hold interface.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `f0d930bb`; run `git revert $(git log --format=%H --grep='^feat: settle async leo video billing$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Create and access durable Leo video jobs
+### What was done
+- Added the task orchestration service for validation, Leo account selection, model mapping, hold-before-upstream submission, durable mapping, bounded pre-202 failover, and ambiguous-failure handling.
+- Added API-key-scoped list/detail access and pending-only cancellation with upstream cancellation and idempotent hold release.
+- Extended the request snapshot parser with aspect ratio and audio fields and allowed account affinity to change only while a job remains unaccepted.
+### Testing
+- `go test ./internal/service -run TestVideoJobService -count=1`: passed.
+- `go test ./internal/service -run 'VideoJobService|VideoJobBilling|LeoVideo' -count=1`: passed.
+- `go test ./internal/repository -run VideoJob -count=1`: passed.
+- `go test ./ent/schema -run VideoJob -count=1`: passed.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/service/video_job_service.go`: implemented durable submission, failover, access, and cancellation orchestration plus the gateway account-selector adapter.
+- `backend/internal/service/video_job_service_test.go`: covered validation, ordering, mapping, failover, ambiguity, isolation, and cancellation.
+- `backend/internal/service/video_job.go`: added public cancel conflict, account transition support, and opaque video job ID generation.
+- `backend/ent/schema/video_job.go`: allowed pre-acceptance account affinity updates.
+- `backend/ent/videojob_create.go`: regenerated account create builder metadata after the schema change.
+- `backend/ent/videojob_update.go`: regenerated account update setter used by pre-acceptance failover.
+- `backend/internal/repository/video_job_repo.go`: applied conditional account updates during failover.
+- `backend/internal/service/leo_video.go`: parsed aspect ratio and audio request fields.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `ab263a10`; run `git revert $(git log --format=%H --grep='^feat: manage leo async video jobs$' -n 1)` from the repository root.

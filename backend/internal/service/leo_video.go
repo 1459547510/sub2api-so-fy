@@ -19,6 +19,8 @@ type LeoVideoRequestInfo struct {
 	Resolution      string
 	DurationSeconds int
 	ImageURL        string
+	AspectRatio     string
+	Audio           bool
 }
 
 func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
@@ -26,10 +28,12 @@ func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
 		return LeoVideoRequestInfo{}, fmt.Errorf("invalid leo video JSON request")
 	}
 	info := LeoVideoRequestInfo{
-		Model:      strings.TrimSpace(gjson.GetBytes(body, "model").String()),
-		Prompt:     strings.TrimSpace(gjson.GetBytes(body, "prompt").String()),
-		Resolution: strings.TrimSpace(gjson.GetBytes(body, "resolution").String()),
-		ImageURL:   strings.TrimSpace(gjson.GetBytes(body, "image_url").String()),
+		Model:       strings.TrimSpace(gjson.GetBytes(body, "model").String()),
+		Prompt:      strings.TrimSpace(gjson.GetBytes(body, "prompt").String()),
+		Resolution:  strings.TrimSpace(gjson.GetBytes(body, "resolution").String()),
+		ImageURL:    strings.TrimSpace(gjson.GetBytes(body, "image_url").String()),
+		AspectRatio: strings.TrimSpace(gjson.GetBytes(body, "aspect_ratio").String()),
+		Audio:       gjson.GetBytes(body, "audio").Bool(),
 	}
 	if duration := gjson.GetBytes(body, "duration"); duration.Exists() && duration.Type == gjson.Number {
 		info.DurationSeconds = int(duration.Int())
