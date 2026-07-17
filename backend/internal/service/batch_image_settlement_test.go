@@ -482,6 +482,14 @@ func (r *fakeBatchImageBillingRepo) ReleaseBatchImageBalance(_ context.Context, 
 	return r.applyHold(cmd, &r.releases)
 }
 
+func (r *fakeBatchImageBillingRepo) ReserveVideoBalance(_ context.Context, _ *VideoBalanceHoldCommand) (*VideoBalanceHoldResult, error) {
+	return &VideoBalanceHoldResult{Applied: true}, nil
+}
+
+func (r *fakeBatchImageBillingRepo) ReleaseVideoBalance(_ context.Context, _ *VideoBalanceHoldCommand) (*VideoBalanceHoldResult, error) {
+	return &VideoBalanceHoldResult{Applied: true}, nil
+}
+
 func (r *fakeBatchImageBillingRepo) applyHold(cmd *BatchImageBalanceHoldCommand, calls *[]*BatchImageBalanceHoldCommand) (*BatchImageBalanceHoldResult, error) {
 	if r.seen == nil {
 		r.seen = make(map[string]struct{})

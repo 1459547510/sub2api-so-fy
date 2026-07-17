@@ -167,9 +167,40 @@ type BatchImageBalanceHoldResult struct {
 	FrozenBalance *float64
 }
 
+type VideoBalanceHoldCommand struct {
+	RequestID          string
+	APIKeyID           int64
+	RequestFingerprint string
+	RequestPayloadHash string
+	UserID             int64
+	JobID              string
+	HoldAmount         float64
+}
+
+func (c *VideoBalanceHoldCommand) Normalize() {
+	if c == nil {
+		return
+	}
+	c.RequestID = strings.TrimSpace(c.RequestID)
+	c.JobID = strings.TrimSpace(c.JobID)
+	if strings.TrimSpace(c.RequestFingerprint) == "" {
+		raw := fmt.Sprintf("%d|%d|%s|%0.10f|%s", c.UserID, c.APIKeyID, c.JobID, c.HoldAmount, strings.TrimSpace(c.RequestPayloadHash))
+		sum := sha256.Sum256([]byte(raw))
+		c.RequestFingerprint = hex.EncodeToString(sum[:])
+	}
+}
+
+type VideoBalanceHoldResult struct {
+	Applied       bool
+	NewBalance    *float64
+	FrozenBalance *float64
+}
+
 type UsageBillingRepository interface {
 	Apply(ctx context.Context, cmd *UsageBillingCommand) (*UsageBillingApplyResult, error)
 	ReserveBatchImageBalance(ctx context.Context, cmd *BatchImageBalanceHoldCommand) (*BatchImageBalanceHoldResult, error)
 	CaptureBatchImageBalance(ctx context.Context, cmd *BatchImageBalanceHoldCommand) (*BatchImageBalanceHoldResult, error)
 	ReleaseBatchImageBalance(ctx context.Context, cmd *BatchImageBalanceHoldCommand) (*BatchImageBalanceHoldResult, error)
+	ReserveVideoBalance(ctx context.Context, cmd *VideoBalanceHoldCommand) (*VideoBalanceHoldResult, error)
+	ReleaseVideoBalance(ctx context.Context, cmd *VideoBalanceHoldCommand) (*VideoBalanceHoldResult, error)
 }

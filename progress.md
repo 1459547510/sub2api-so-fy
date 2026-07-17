@@ -1760,3 +1760,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/service/leo_video_async_test.go`: covered preference parsing, model mapping, Bearer authentication, create/get/cancel decoding, and secret redaction.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `7605fd45`; run `git revert $(git log --format=%H --grep='^feat: call leo async video jobs$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Freeze and settle asynchronous video billing
+### What was done
+- Added idempotent video-specific balance hold and release commands using the existing usage dedup tables and frozen-balance accounting.
+- Added submission-time video price/rate snapshots and terminal settlement that records actual output cost through normal usage billing before releasing the full hold.
+- Added a cost override to normal OpenAI usage recording so asynchronous settlement does not recalculate against changed group pricing.
+### Testing
+- `go test ./internal/service ./internal/repository -run 'VideoJobBilling|VideoBalance|CostOverride' -count=1`: passed.
+- `go test ./internal/service -count=1`: passed.
+- `go test ./internal/repository -count=1`: passed.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/service/usage_billing.go`: added video hold command/result types and repository contract methods.
+- `backend/internal/repository/usage_billing_repo.go`: implemented idempotent video hold/release transactions and frozen-balance updates.
+- `backend/internal/repository/video_balance_hold_repo_test.go`: verified reserve and release SQL behavior.
+- `backend/internal/service/video_job_billing.go`: implemented price snapshots, reserve, actual-cost settlement, release, and loader contracts.
+- `backend/internal/service/video_job_billing_test.go`: covered snapshot hold, idempotent completion, and failure release behavior.
+- `backend/internal/service/openai_gateway_usage.go`: added the optional cost override path while preserving normal pricing.
+- `backend/internal/service/openai_gateway_record_usage_test.go`: verified snapshot cost wins over current group pricing.
+- `backend/internal/service/batch_image_settlement_test.go`: extended the billing fake for the additive video hold interface.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `f0d930bb`; run `git revert $(git log --format=%H --grep='^feat: settle async leo video billing$' -n 1)` from the repository root.

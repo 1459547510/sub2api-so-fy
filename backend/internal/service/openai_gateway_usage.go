@@ -35,6 +35,7 @@ type OpenAIRecordUsageInput struct {
 	// CyberBlocked 为 true 时把该用量行标记为 cyber（request_type=cyber），计费逻辑不变。
 	CyberBlocked bool
 	ChannelUsageFields
+	CostOverride *CostBreakdown
 }
 
 // CyberPolicyUsageInput 是 cyber 拒绝、未走正常 RecordUsage 的请求记录用量的入参。
@@ -194,19 +195,27 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		}
 	}
 	longContextBillingEnabled := billingAccount.IsOpenAILongContextBillingEnabled()
-	cost, err = s.calculateOpenAIRecordUsageCost(
-		ctx,
-		result,
-		apiKey,
-		billingModels,
-		multiplier,
-		imageMultiplier,
-		videoMultiplier,
-		baseMultiplier,
-		tokens,
-		serviceTier,
-		longContextBillingEnabled,
-	)
+	if input.CostOverride != nil {
+		costCopy := *input.CostOverride
+		cost = &costCopy
+		if isVideoUsageResult(result) && cost.TotalCost > 0 {
+			videoMultiplier = cost.ActualCost / cost.TotalCost
+		}
+	} else {
+		cost, err = s.calculateOpenAIRecordUsageCost(
+			ctx,
+			result,
+			apiKey,
+			billingModels,
+			multiplier,
+			imageMultiplier,
+			videoMultiplier,
+			baseMultiplier,
+			tokens,
+			serviceTier,
+			longContextBillingEnabled,
+		)
+	}
 	if err != nil {
 		if !isUsagePricingUnavailableError(err) {
 			return err

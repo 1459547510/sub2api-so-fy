@@ -121,6 +121,62 @@ func (r *usageBillingRepository) ReleaseBatchImageBalance(ctx context.Context, c
 	return r.applyBatchImageBalanceHold(ctx, cmd, releaseUsageBillingBatchImageBalance)
 }
 
+func (r *usageBillingRepository) ReserveVideoBalance(ctx context.Context, cmd *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
+	return r.applyVideoBalanceHold(ctx, cmd, reserveUsageBillingVideoBalance)
+}
+
+func (r *usageBillingRepository) ReleaseVideoBalance(ctx context.Context, cmd *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
+	return r.applyVideoBalanceHold(ctx, cmd, releaseUsageBillingVideoBalance)
+}
+
+func (r *usageBillingRepository) applyVideoBalanceHold(
+	ctx context.Context,
+	cmd *service.VideoBalanceHoldCommand,
+	apply func(context.Context, *sql.Tx, *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error),
+) (_ *service.VideoBalanceHoldResult, err error) {
+	if cmd == nil {
+		return &service.VideoBalanceHoldResult{}, nil
+	}
+	if r == nil || r.db == nil {
+		return nil, errors.New("usage billing repository db is nil")
+	}
+	cmd.Normalize()
+	if cmd.RequestID == "" {
+		return nil, service.ErrUsageBillingRequestIDRequired
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if tx != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	applied, err := r.claimUsageBillingRequest(ctx, tx, cmd.RequestID, cmd.APIKeyID, cmd.RequestFingerprint)
+	if err != nil {
+		return nil, err
+	}
+	if !applied {
+		return &service.VideoBalanceHoldResult{Applied: false}, nil
+	}
+	result, err := apply(ctx, tx, cmd)
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		result = &service.VideoBalanceHoldResult{}
+	}
+	result.Applied = true
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	tx = nil
+	return result, nil
+}
+
 func (r *usageBillingRepository) applyBatchImageBalanceHold(
 	ctx context.Context,
 	cmd *service.BatchImageBalanceHoldCommand,
@@ -329,6 +385,95 @@ func captureUsageBillingBatchImageBalance(ctx context.Context, tx *sql.Tx, cmd *
 		return nil, service.ErrUserNotFound
 	}
 	return nil, errors.New("batch image frozen balance is insufficient")
+}
+
+func reserveUsageBillingVideoBalance(ctx context.Context, tx *sql.Tx, cmd *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
+	if cmd.HoldAmount <= 0 {
+		return &service.VideoBalanceHoldResult{}, nil
+	}
+	var balance, frozen float64
+	err := tx.QueryRowContext(ctx, `
+		UPDATE users
+		SET balance = balance - $1,
+			frozen_balance = COALESCE(frozen_balance, 0) + $1,
+			updated_at = NOW()
+		WHERE id = $2 AND deleted_at IS NULL AND balance >= $1
+		RETURNING balance, frozen_balance
+	`, cmd.HoldAmount, cmd.UserID).Scan(&balance, &frozen)
+	if err == nil {
+		return &service.VideoBalanceHoldResult{NewBalance: &balance, FrozenBalance: &frozen}, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if exists, existsErr := userExistsForBilling(ctx, tx, cmd.UserID); existsErr != nil {
+		return nil, existsErr
+	} else if !exists {
+		return nil, service.ErrUserNotFound
+	}
+	return nil, service.ErrVideoInsufficientBalance
+}
+
+func releaseUsageBillingVideoBalance(ctx context.Context, tx *sql.Tx, cmd *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
+	if cmd.HoldAmount <= 0 {
+		return &service.VideoBalanceHoldResult{}, nil
+	}
+	held, err := videoHoldClaimExists(ctx, tx, service.VideoHoldRequestID(cmd.JobID), cmd.APIKeyID)
+	if err != nil {
+		return nil, err
+	}
+	if !held {
+		logger.LegacyPrintf("repository.usage_billing", "[Video] release skipped, hold was never reserved: job=%s", cmd.JobID)
+		return &service.VideoBalanceHoldResult{}, nil
+	}
+	var balance, frozen float64
+	err = tx.QueryRowContext(ctx, `
+		UPDATE users
+		SET balance = balance + $1,
+			frozen_balance = COALESCE(frozen_balance, 0) - $1,
+			updated_at = NOW()
+		WHERE id = $2 AND deleted_at IS NULL AND COALESCE(frozen_balance, 0) >= $1
+		RETURNING balance, frozen_balance
+	`, cmd.HoldAmount, cmd.UserID).Scan(&balance, &frozen)
+	if err == nil {
+		return &service.VideoBalanceHoldResult{NewBalance: &balance, FrozenBalance: &frozen}, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if exists, existsErr := userExistsForBilling(ctx, tx, cmd.UserID); existsErr != nil {
+		return nil, existsErr
+	} else if !exists {
+		return nil, service.ErrUserNotFound
+	}
+	return nil, errors.New("video frozen balance is insufficient")
+}
+
+func videoHoldClaimExists(ctx context.Context, tx *sql.Tx, holdRequestID string, apiKeyID int64) (bool, error) {
+	var exists int
+	err := tx.QueryRowContext(ctx, `
+		SELECT 1
+		FROM usage_billing_dedup
+		WHERE request_id = $1 AND api_key_id = $2
+	`, holdRequestID, apiKeyID).Scan(&exists)
+	if err == nil {
+		return true, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return false, err
+	}
+	err = tx.QueryRowContext(ctx, `
+		SELECT 1
+		FROM usage_billing_dedup_archive
+		WHERE request_id = $1 AND api_key_id = $2
+	`, holdRequestID, apiKeyID).Scan(&exists)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	return false, err
 }
 
 func releaseUsageBillingBatchImageBalance(ctx context.Context, tx *sql.Tx, cmd *service.BatchImageBalanceHoldCommand) (*service.BatchImageBalanceHoldResult, error) {

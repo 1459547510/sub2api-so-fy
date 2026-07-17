@@ -69,6 +69,26 @@ func TestOpenAIGatewayServiceRecordUsage_RejectsNilInput(t *testing.T) {
 	require.Error(t, svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{}))
 }
 
+func TestOpenAIGatewayServiceRecordUsageUsesCostOverride(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+	userRepo := &openAIRecordUsageUserRepoStub{}
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, userRepo, &openAIRecordUsageSubRepoStub{}, nil)
+	groupID := int64(91)
+
+	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{RequestID: "video_usage:vidjob_override", Model: "seedance-2.0", VideoCount: 1, VideoResolution: "720p", VideoDurationSeconds: 12},
+		APIKey: &APIKey{ID: 2, GroupID: &groupID, Group: &Group{ID: groupID, RateMultiplier: 9, VideoPrice720P: f64p(9)}},
+		User:   &User{ID: 1}, Account: &Account{ID: 3, Type: AccountTypeAPIKey},
+		CostOverride: &CostBreakdown{TotalCost: 1.2, ActualCost: 1.8, BillingMode: string(BillingModeVideo)},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, usageRepo.lastLog)
+	require.InDelta(t, 1.2, usageRepo.lastLog.TotalCost, 1e-12)
+	require.InDelta(t, 1.8, usageRepo.lastLog.ActualCost, 1e-12)
+	require.InDelta(t, 1.8, userRepo.lastAmount, 1e-12)
+}
+
 func TestRecordCyberPolicyUsageLog_BillsRealUpstreamTokens(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
 	userRepo := &openAIRecordUsageUserRepoStub{}
