@@ -1867,3 +1867,15 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/cmd/server/wire_gen.go`: regenerated handler construction for video dependencies.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `6a208440`; run `git revert $(git log --format=%H --grep='^feat: expose leo asynchronous video gateway routes$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Add Leo video client API
+### What was done
+- Added typed browser calls for local image upload, asynchronous generation, job listing, job detail, and pending-job cancellation.
+- Kept LeoStudio credentials out of the browser contract; every request uses the selected Sub2API API Key.
+### Testing
+- `node node_modules/vitest/vitest.mjs run src/api/__tests__/videoGeneration.spec.ts --reporter=verbose`: passed (3 tests).
+### Notes
+- `frontend/src/api/videoGeneration.ts`: added typed Leo video request/response wrappers and shared error parsing.
+- `frontend/src/api/__tests__/videoGeneration.spec.ts`: covered multipart upload headers, async preference, API-key auth, list query, and DELETE cancellation.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `2f586842`; run `git revert $(git log --format=%H --grep='^feat: add leo video client api$' -n 1)` from the repository root.
