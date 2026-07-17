@@ -1828,3 +1828,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/cmd/server/wire_gen_test.go`: updated cleanup fixture arguments.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `80c07244`; run `git revert $(git log --format=%H --grep='^feat: reconcile leo video jobs$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Store temporary Leo video input images locally
+### What was done
+- Added local disk storage under `<data_dir>/video-inputs` with content-based PNG/JPEG/WebP validation, a 10 MiB limit, opaque URL-safe tokens, and atomic file permissions.
+- Added terminal one-hour and orphan 24-hour cleanup plus loopback-only internal reads that reject non-loopback clients before token lookup.
+- Added an API-key-protected multipart upload handler returning an upload ID and loopback URL.
+### Testing
+- `go test ./internal/service ./internal/handler -run 'VideoInput' -count=1`: passed.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/service/video_input_store.go`: implemented local image save/open, token URL handling, terminal marking, and cleanup.
+- `backend/internal/service/video_input_store_test.go`: covered MIME detection, size limits, opaque names, terminal cleanup, and orphan cleanup.
+- `backend/internal/handler/video_input.go`: implemented authenticated upload and loopback-only streaming handlers.
+- `backend/internal/handler/video_input_test.go`: covered multipart upload, loopback read, non-loopback 404, and missing API key.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `d6ea34e4`; run `git revert $(git log --format=%H --grep='^feat: host temporary leo video inputs$' -n 1)` from the repository root.
