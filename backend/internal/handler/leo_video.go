@@ -19,6 +19,10 @@ import (
 )
 
 func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
+	if service.PrefersLeoRespondAsync(c.Request.Header) {
+		h.LeoVideoAsyncGeneration(c)
+		return
+	}
 	streamStarted := false
 	defer h.recoverResponsesPanic(c, &streamStarted)
 

@@ -1844,3 +1844,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/handler/video_input_test.go`: covered multipart upload, loopback read, non-loopback 404, and missing API key.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `d6ea34e4`; run `git revert $(git log --format=%H --grep='^feat: host temporary leo video inputs$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Expose Leo asynchronous video gateway routes
+### What was done
+- Added `Prefer: respond-async` dispatch before the existing synchronous Leo flow, preserving the synchronous response and accounting path.
+- Added public generation, upload, list, detail, cancel, and loopback input routes with Leo platform gating, API-key auth, no-store responses, and public-only job DTOs.
+- Wired video job and local input services into the OpenAI gateway handler without changing existing direct constructor call sites.
+### Testing
+- `go test ./internal/handler -run 'LeoVideoAsync|VideoInput' -count=1`: passed.
+- `go test ./internal/server/routes -count=1`: passed.
+- `go test ./internal/handler -run 'LeoVideo|VideoInput' -count=1`: passed.
+- `go generate ./cmd/server`: passed.
+- `go test ./cmd/server -count=1`: passed.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/handler/leo_video_async.go`: implemented async generation, upload, list, detail, cancel, DTO, and internal input endpoints.
+- `backend/internal/handler/leo_video_async_test.go`: covered 202 public mapping and API-key isolation.
+- `backend/internal/handler/leo_video.go`: dispatched exact async preference while preserving sync behavior.
+- `backend/internal/handler/openai_gateway_handler.go`: added video service fields and setter injection.
+- `backend/internal/handler/wire.go`: added video input/gateway providers and service injection.
+- `backend/internal/server/routes/gateway.go`: registered Leo-only `/videos/jobs`, `/videos/uploads`, cancel, and loopback routes.
+- `backend/cmd/server/wire_gen.go`: regenerated handler construction for video dependencies.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `6a208440`; run `git revert $(git log --format=%H --grep='^feat: expose leo asynchronous video gateway routes$' -n 1)` from the repository root.

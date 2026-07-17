@@ -123,11 +123,14 @@ func ProvideOpenAIGatewayHandler(
 	grokQuotaService *service.GrokQuotaService,
 	cfg *config.Config,
 	coordinator *securityaudit.Coordinator,
+	videoJobs *service.VideoJobService,
+	videoInput *VideoInputHandler,
 ) *OpenAIGatewayHandler {
 	h := NewOpenAIGatewayHandler(gatewayService, concurrencyService, billingCacheService, apiKeyService,
 		usageRecordWorkerPool, errorPassthroughService, contentModerationService, opsService, cfg)
 	h.securityAuditCoordinator = coordinator
 	h.grokMediaEligibilityProber = grokQuotaService
+	h.SetVideoServices(videoJobs, videoInput)
 	return h
 }
 
@@ -152,6 +155,20 @@ func ProvideSettingHandler(settingService *service.SettingService, buildInfo Bui
 	h := NewSettingHandler(settingService, buildInfo.Version)
 	h.SetNotificationEmailService(notificationEmailService)
 	return h
+}
+
+func ProvideVideoInputHandler(cfg *config.Config) *VideoInputHandler {
+	dataDir := "./data"
+	port := 8080
+	if cfg != nil {
+		if cfg.Pricing.DataDir != "" {
+			dataDir = cfg.Pricing.DataDir
+		}
+		if cfg.Server.Port > 0 {
+			port = cfg.Server.Port
+		}
+	}
+	return NewVideoInputHandler(service.NewVideoInputStore(dataDir, port))
 }
 
 // ProvideAdminSettingHandler creates admin.SettingHandler with notification template APIs.
@@ -222,6 +239,7 @@ var ProviderSet = wire.NewSet(
 	NewChannelMonitorUserHandler,
 	ProvideGatewayHandler,
 	ProvideOpenAIGatewayHandler,
+	ProvideVideoInputHandler,
 	NewTotpHandler,
 	ProvideSettingHandler,
 	NewPaymentHandler,
