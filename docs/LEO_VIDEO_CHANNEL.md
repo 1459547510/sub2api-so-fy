@@ -2,7 +2,7 @@
 
 Sub2API 的 `leo` 渠道用于连接二次开发的 LeoStudio Cookie 号池。每个 Sub2API Leo 账号对应一个 LeoStudio 服务实例，Sub2API 负责账号级调度、并发、代理、故障转移和计费，LeoStudio 继续负责其内部 Cookie 号池。
 
-本版本仅支持同步视频生成，不复用 Grok 渠道协议，也不包含异步任务系统。
+本版本保留同步视频生成兼容，同时新增基于 LeoStudio 异步协议的用户端视频工作台；不复用 Grok 渠道协议。
 
 ## LeoStudio 接口要求
 
@@ -81,4 +81,40 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 
 ## 能力边界
 
-本版本不支持 Leo 图片生成、视频编辑、视频扩展、生成状态查询、Messages、Responses、Chat、Embeddings 或 WebSocket 接口。这些请求不会回退到 Grok 或 OpenAI 账号。
+本版本不支持 Leo 图片生成、视频编辑、视频扩展、Messages、Responses、Chat、Embeddings 或 WebSocket 接口。这些请求不会回退到 Grok 或 OpenAI 账号。
+
+## 异步视频工作台
+
+前端用户端新增 `/video-generation` 工作台。页面只接触用户选择的 Sub2API API Key，不会显示 LeoStudio API Key、Cookie、上游账号或上游任务 ID。工作台支持：
+
+- 文生视频；
+- 远程 `http`/`https` 图片 URL；
+- PNG、JPEG、WebP 本地图片上传，最大 10 MiB；
+- `pending`、`running`、`settling`、`completed`、`failed`、`canceled` 状态查询；
+- 只有 `pending` 任务可取消，`running` 和终态任务不能取消；
+- 完成任务的视频预览、打开和下载。
+
+提交工作台任务时，浏览器请求 Sub2API：
+
+```http
+POST /v1/videos/generations
+Prefer: respond-async
+Authorization: Bearer <sub2_api_key>
+Content-Type: application/json
+```
+
+Sub2API 返回 `202` 和自己的 `job_id`，后台协调器再轮询固定的 LeoStudio 账号。页面刷新后通过 `GET /v1/videos/jobs?limit=50` 恢复任务，不需要保持长连接。
+
+## 本地图片生命周期
+
+本地图片保存在现有数据目录的 `video-inputs/` 子目录，文件名使用随机 token，权限为仅宿主机进程可读。LeoStudio 与 Sub2API 必须运行在同一宿主机，上传接口返回的图片 URL 使用 `127.0.0.1` 回环地址；跨主机、Docker 网络或多实例部署时不要猜测地址，应改用对象存储或显式内部地址方案。
+
+内部读取接口只接受真实 loopback `RemoteAddr`，不信任 `X-Forwarded-For`，也不返回目录列表或服务器路径。任务完成、失败或取消后文件会被标记为终态，至少保留 1 小时；没有关联任务的孤儿文件保留 24 小时。后台 runtime 启动时执行一次扫描，之后每天最多执行一次清理，删除失败会在下一轮重试。
+
+## 异步计费
+
+任务提交前按请求分辨率、时长和提交时价格快照冻结预计余额。完成任务按 LeoStudio 结果里的实际分辨率和时长只结算一次，并释放全部冻结额；失败或取消只释放冻结，不产生用量记录。任务记录和结算标记持久化在 `video_jobs` 表，Sub2API 重启后会继续查询和结算，不依赖浏览器在线。
+
+## 运维边界
+
+当前实现对应 LeoStudio 上游提交 `f822735629c51f15d115e3e60b161a93ec2e20ff` 的异步协议：`POST /v1/videos/generations`、`GET /v1/videos/jobs/:id` 和 `DELETE /v1/videos/jobs/:id`。第一版不保存生成视频到本地，不提供 Webhook、SSE、WebSocket、编辑、扩展或任务删除功能。

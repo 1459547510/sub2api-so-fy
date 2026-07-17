@@ -1923,3 +1923,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/cmd/server/wire_gen.go`: regenerated shared-store wiring.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `aa502fd3`; run `git revert $(git log --format=%H --grep='^fix: wire local video input lifecycle cleanup$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Document and verify Leo async video workbench
+### What was done
+- Updated the Leo channel guide with async submission, workbench usage, local-input lifecycle, same-host deployment, billing, and operational boundaries.
+### Testing
+- `backend: go test ./... -count=1`: passed.
+- `backend: go vet ./...`: passed.
+- `frontend: node node_modules/vitest/vitest.mjs run --exclude src/i18n/__tests__/localesMessageCompile.spec.ts --reporter=dot`: passed; the excluded pre-existing locale compiler test requires missing `@intlify/message-compiler`.
+- `frontend: node node_modules/vue-tsc/bin/vue-tsc.js --noEmit`: passed.
+- `frontend: node node_modules/vite/bin/vite.js build`: passed; only existing chunk-size and dynamic-import warnings were emitted.
+- `frontend: node node_modules/eslint/bin/eslint.js ...`: unavailable because the existing workspace dependency `vue-eslint-parser` is missing.
+- `git diff --check`: passed.
+### Notes
+- `docs/LEO_VIDEO_CHANNEL.md`: reconciled sync compatibility with the async workbench and documented setup, API, local storage, cleanup, billing, and limits.
+- `progress.md`: recorded the final tested task and rollback procedure.
+- Rollback point: `74850777`; run `git revert $(git log --format=%H --grep='^docs: explain leo async video workbench$' -n 1)` from the repository root.
