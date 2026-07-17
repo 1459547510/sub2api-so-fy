@@ -51,6 +51,32 @@ func ProvideBatchImageModelPricingResolver(resolver *ModelPricingResolver) *Batc
 	return &BatchImageModelPricingResolver{Resolver: resolver}
 }
 
+func ProvideVideoInputStore(cfg *config.Config) *VideoInputStore {
+	dataDir := "./data"
+	port := 8080
+	if cfg != nil {
+		if cfg.Pricing.DataDir != "" {
+			dataDir = cfg.Pricing.DataDir
+		}
+		if cfg.Server.Port > 0 {
+			port = cfg.Server.Port
+		}
+	}
+	return NewVideoInputStore(dataDir, port)
+}
+
+func ProvideVideoJobService(
+	repo VideoJobRepository,
+	selector VideoJobAccountSelector,
+	client VideoJobAsyncClient,
+	billing *VideoJobBillingService,
+	inputs *VideoInputStore,
+) *VideoJobService {
+	svc := NewVideoJobService(repo, selector, client, billing)
+	svc.SetVideoInputStore(inputs)
+	return svc
+}
+
 func ProvideVideoJobBillingService(
 	usageRepo UsageBillingRepository,
 	openAIGateway *OpenAIGatewayService,
@@ -70,8 +96,9 @@ func ProvideVideoJobRuntime(
 	selector VideoJobAccountSelector,
 	client VideoJobAsyncClient,
 	billing *VideoJobBillingService,
+	inputs *VideoInputStore,
 ) *VideoJobRuntime {
-	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, PollInterval: 2 * time.Second}
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, InputStore: inputs, PollInterval: 2 * time.Second}
 	runtime.Start(context.Background())
 	return runtime
 }
@@ -708,12 +735,13 @@ var ProviderSet = wire.NewSet(
 	NewGatewayService,
 	NewOpenAIGatewayService,
 	ProvideVideoJobBillingService,
-	NewVideoJobService,
+	ProvideVideoJobService,
 	ProvideVideoJobRuntime,
 	wire.Bind(new(VideoJobAccountSelector), new(*OpenAIGatewayService)),
 	wire.Bind(new(VideoJobAsyncClient), new(*OpenAIGatewayService)),
 	ProvideImageTaskService,
 	ProvideBatchImageModelPricingResolver,
+	ProvideVideoInputStore,
 	NewBatchImagePublicService,
 	NewBatchImageDownloadService,
 	ProvideBatchImageCleanupService,

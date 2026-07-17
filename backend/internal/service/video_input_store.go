@@ -46,6 +46,16 @@ type VideoInputStore struct {
 	entries map[string]videoInputEntry
 }
 
+func MarkVideoInputTerminal(store *VideoInputStore, token string, at time.Time) error {
+	if store == nil || strings.TrimSpace(token) == "" {
+		return nil
+	}
+	if err := store.MarkTerminal(token, at); err != nil && !errors.Is(err, ErrVideoInputNotFound) {
+		return err
+	}
+	return nil
+}
+
 func NewVideoInputStore(dataDir string, port int) *VideoInputStore {
 	return &VideoInputStore{root: filepath.Join(dataDir, "video-inputs"), port: port, entries: make(map[string]videoInputEntry)}
 }

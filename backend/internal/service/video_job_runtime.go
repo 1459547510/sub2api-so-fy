@@ -14,11 +14,14 @@ type VideoJobRuntime struct {
 	Accounts     VideoJobAccountSelector
 	Client       VideoJobAsyncClient
 	Billing      *VideoJobBillingService
+	InputStore   *VideoInputStore
 	PollInterval time.Duration
 
-	mu     sync.Mutex
-	cancel context.CancelFunc
-	done   chan struct{}
+	mu               sync.Mutex
+	cancel           context.CancelFunc
+	done             chan struct{}
+	inputCleanupMu   sync.Mutex
+	lastInputCleanup time.Time
 }
 
 func (r *VideoJobRuntime) Start(ctx context.Context) {
@@ -82,6 +85,9 @@ func (r *VideoJobRuntime) RunOnce(ctx context.Context) error {
 	if r == nil || r.Repo == nil || r.Accounts == nil || r.Client == nil || r.Billing == nil {
 		return errors.New("video job runtime is not configured")
 	}
+	if err := r.cleanupInputs(time.Now()); err != nil {
+		return err
+	}
 	jobs, err := r.Repo.ListActiveVideoJobs(ctx, 50)
 	if err != nil {
 		return err
@@ -92,6 +98,29 @@ func (r *VideoJobRuntime) RunOnce(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (r *VideoJobRuntime) cleanupInputs(now time.Time) error {
+	if r.InputStore == nil {
+		return nil
+	}
+	r.inputCleanupMu.Lock()
+	defer r.inputCleanupMu.Unlock()
+	if !r.lastInputCleanup.IsZero() && now.Before(r.lastInputCleanup.Add(24*time.Hour)) {
+		return nil
+	}
+	if _, err := r.InputStore.Cleanup(now); err != nil {
+		return err
+	}
+	r.lastInputCleanup = now
+	return nil
+}
+
+func (r *VideoJobRuntime) markInputTerminal(job *VideoJob, at time.Time) error {
+	if job == nil {
+		return nil
+	}
+	return MarkVideoInputTerminal(r.InputStore, job.LocalInputName, at)
 }
 
 func (r *VideoJobRuntime) processJob(ctx context.Context, job *VideoJob) error {
@@ -157,7 +186,10 @@ func (r *VideoJobRuntime) processJob(ctx context.Context, job *VideoJob) error {
 		if strings.EqualFold(upstream.Status, VideoJobCanceled) {
 			status = VideoJobCanceled
 		}
-		return r.Repo.TransitionVideoJob(ctx, job.JobID, []string{VideoJobPending, VideoJobRunning}, status, VideoJobTransition{ErrorMessage: &message, FinishedAt: &finished, SettledAt: job.SettledAt})
+		if err := r.Repo.TransitionVideoJob(ctx, job.JobID, []string{VideoJobPending, VideoJobRunning}, status, VideoJobTransition{ErrorMessage: &message, FinishedAt: &finished, SettledAt: job.SettledAt}); err != nil {
+			return err
+		}
+		return r.markInputTerminal(job, finished)
 	default:
 		return nil
 	}
@@ -172,7 +204,7 @@ func (r *VideoJobRuntime) settleCompleted(ctx context.Context, job *VideoJob, re
 	if err := r.Repo.TransitionVideoJob(ctx, job.JobID, []string{VideoJobSettling}, VideoJobCompleted, transition); err != nil {
 		return err
 	}
-	return nil
+	return r.markInputTerminal(job, finished)
 }
 
 func (r *VideoJobRuntime) failJob(ctx context.Context, job *VideoJob, err error) error {
@@ -181,5 +213,8 @@ func (r *VideoJobRuntime) failJob(ctx context.Context, job *VideoJob, err error)
 	}
 	message := videoJobFailureMessage(err)
 	finished := time.Now()
-	return r.Repo.TransitionVideoJob(ctx, job.JobID, []string{VideoJobPending, VideoJobRunning, VideoJobSettling}, VideoJobFailed, VideoJobTransition{ErrorMessage: &message, FinishedAt: &finished, SettledAt: job.SettledAt})
+	if err := r.Repo.TransitionVideoJob(ctx, job.JobID, []string{VideoJobPending, VideoJobRunning, VideoJobSettling}, VideoJobFailed, VideoJobTransition{ErrorMessage: &message, FinishedAt: &finished, SettledAt: job.SettledAt}); err != nil {
+		return err
+	}
+	return r.markInputTerminal(job, finished)
 }

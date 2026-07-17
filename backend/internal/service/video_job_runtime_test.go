@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"sync"
@@ -125,4 +126,24 @@ func TestVideoJobRuntimeStartRecoversAfterRestartAndStopWaitsForPoll(t *testing.
 	case <-time.After(time.Second):
 		t.Fatal("Stop did not wait for runtime shutdown")
 	}
+}
+
+func TestVideoJobRuntimeMarksLocalInputsTerminalForDelayedCleanup(t *testing.T) {
+	store := NewVideoInputStore(t.TempDir(), 8080)
+	input, err := store.Save(bytes.NewReader([]byte{137, 80, 78, 71, 13, 10, 26, 10}))
+	require.NoError(t, err)
+
+	repo := &fakeVideoJobServiceRepo{job: newRuntimeJob(VideoJobPending)}
+	repo.job.LocalInputName = input.Token
+	client := &runtimeVideoClient{job: &LeoAsyncJob{JobID: 42, Status: VideoJobFailed, Error: &LeoAsyncJobError{Message: "failed"}}}
+	selector := &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling(), InputStore: store}
+
+	require.NoError(t, runtime.RunOnce(context.Background()))
+	removed, err := store.Cleanup(time.Now().Add(30 * time.Minute))
+	require.NoError(t, err)
+	require.Equal(t, 0, removed)
+	removed, err = store.Cleanup(time.Now().Add(2 * time.Hour))
+	require.NoError(t, err)
+	require.Equal(t, 1, removed)
 }

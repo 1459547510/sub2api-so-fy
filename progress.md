@@ -1901,3 +1901,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/i18n/locales/zh/dashboard.ts`: added Chinese workbench messages.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `b3b72ec5`; run `git revert $(git log --format=%H --grep='^feat: add leo video workbench$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Wire local video input lifecycle cleanup
+### What was done
+- Shared one local input store across upload handling, job submission, cancellation, and the background runtime.
+- Marked local inputs terminal when jobs complete, fail, or cancel, and added startup/daily orphan and terminal cleanup execution.
+### Testing
+- `go test ./internal/service -run 'TestVideoJob(Runtime|Service)' -count=1`: passed.
+- `go generate ./cmd/server`: passed.
+- `go test ./cmd/server -count=1`: passed.
+- `go test ./internal/service ./internal/handler ./internal/server/routes ./cmd/server -count=1`: passed.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/service/video_input_store.go`: added terminal marking helper.
+- `backend/internal/service/video_job_runtime.go`: added shared-store cleanup scheduling and terminal marking.
+- `backend/internal/service/video_job_service.go`: marked canceled local inputs terminal.
+- `backend/internal/service/video_job_runtime_test.go`: verified delayed terminal-input cleanup.
+- `backend/internal/service/video_job_service_test.go`: verified cancellation terminal marking.
+- `backend/internal/service/wire.go`: provided one shared input store and injected it into job service/runtime.
+- `backend/internal/handler/wire.go`: reused the shared store for upload handling.
+- `backend/cmd/server/wire_gen.go`: regenerated shared-store wiring.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `aa502fd3`; run `git revert $(git log --format=%H --grep='^fix: wire local video input lifecycle cleanup$' -n 1)` from the repository root.

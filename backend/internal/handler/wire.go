@@ -157,18 +157,8 @@ func ProvideSettingHandler(settingService *service.SettingService, buildInfo Bui
 	return h
 }
 
-func ProvideVideoInputHandler(cfg *config.Config) *VideoInputHandler {
-	dataDir := "./data"
-	port := 8080
-	if cfg != nil {
-		if cfg.Pricing.DataDir != "" {
-			dataDir = cfg.Pricing.DataDir
-		}
-		if cfg.Server.Port > 0 {
-			port = cfg.Server.Port
-		}
-	}
-	return NewVideoInputHandler(service.NewVideoInputStore(dataDir, port))
+func ProvideVideoInputHandler(store *service.VideoInputStore) *VideoInputHandler {
+	return NewVideoInputHandler(store)
 }
 
 // ProvideAdminSettingHandler creates admin.SettingHandler with notification template APIs.

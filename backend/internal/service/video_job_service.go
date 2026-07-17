@@ -33,10 +33,17 @@ type VideoJobService struct {
 	Selector VideoJobAccountSelector
 	Client   VideoJobAsyncClient
 	Billing  *VideoJobBillingService
+	Inputs   *VideoInputStore
 }
 
 func NewVideoJobService(repo VideoJobRepository, selector VideoJobAccountSelector, client VideoJobAsyncClient, billing *VideoJobBillingService) *VideoJobService {
 	return &VideoJobService{Repo: repo, Selector: selector, Client: client, Billing: billing}
+}
+
+func (s *VideoJobService) SetVideoInputStore(inputs *VideoInputStore) {
+	if s != nil {
+		s.Inputs = inputs
+	}
 }
 
 func (s *VideoJobService) Create(ctx context.Context, in CreateVideoJobInput) (*VideoJob, error) {
@@ -198,6 +205,9 @@ func (s *VideoJobService) Cancel(ctx context.Context, jobID string, apiKeyID int
 	}
 	job.Status = VideoJobCanceled
 	job.FinishedAt = &finished
+	if err := MarkVideoInputTerminal(s.Inputs, job.LocalInputName, finished); err != nil {
+		return nil, err
+	}
 	return job, nil
 }
 

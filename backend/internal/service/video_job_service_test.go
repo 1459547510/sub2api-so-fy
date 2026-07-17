@@ -1,9 +1,11 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -209,6 +211,24 @@ func TestVideoJobServiceScopesAccessAndOnlyCancelsPending(t *testing.T) {
 	repo.job.Status = VideoJobRunning
 	_, err = service.Cancel(context.Background(), "vidjob_1", 2)
 	require.ErrorIs(t, err, ErrVideoJobCancelConflict)
+}
+
+func TestVideoJobServiceMarksCanceledLocalInputTerminal(t *testing.T) {
+	store := NewVideoInputStore(t.TempDir(), 8080)
+	input, err := store.Save(bytes.NewReader([]byte{137, 80, 78, 71, 13, 10, 26, 10}))
+	require.NoError(t, err)
+	repo := &fakeVideoJobServiceRepo{job: &VideoJob{JobID: "vidjob_local", APIKeyID: 2, UserID: 1, AccountID: 9, UpstreamJobID: 42, Status: VideoJobPending, LocalInputName: input.Token}}
+	service := &VideoJobService{Repo: repo, Selector: &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}, Client: &fakeVideoJobClient{}, Billing: newVideoJobServiceTestBilling()}
+	service.SetVideoInputStore(store)
+
+	_, err = service.Cancel(context.Background(), "vidjob_local", 2)
+	require.NoError(t, err)
+	removed, err := store.Cleanup(time.Now().Add(30 * time.Minute))
+	require.NoError(t, err)
+	require.Equal(t, 0, removed)
+	removed, err = store.Cleanup(time.Now().Add(2 * time.Hour))
+	require.NoError(t, err)
+	require.Equal(t, 1, removed)
 }
 
 func TestVideoJobServiceValidatesPromptBeforeSelectingAccount(t *testing.T) {
