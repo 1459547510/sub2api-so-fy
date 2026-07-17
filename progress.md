@@ -1042,3 +1042,166 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/service/scheduler_snapshot_retirement_test.go`: made canonical capture counts dynamic.
 - `progress.md`: recorded this CI repair and verification round.
 - Rollback point: revert code commit `79af7885` with `git revert 79af7885`; do not restore the homepage WIP stashes.
+
+
+## 2026-07-17 - Task: Merge upstream release v0.1.158 and prepare fork release
+### What was done
+- Merged official upstream tag `v0.1.158` at `26abd19a2812edba02bbef93c3e2a620141cc257` without including the ten later `upstream/main` commits.
+- Preserved Leo video, token incentive, fork update/restart behavior, and the already released fork homepage; local homepage WIP stashes remain isolated and were not applied.
+- Synced upstream group/channel-monitor duplication, bulk user limits, Grok endpoint fixes, Codex image/model fixes, and admin step-up 2FA hardening.
+- Corrected source version metadata to `0.1.158` because the upstream tag predates its post-tag VERSION synchronization commit.
+### Testing
+- `go generate ./cmd/server`: passed; regenerated Wire output matched the merged provider graph.
+- `..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues`.
+- `go test -p 2 -tags=unit ./...`: passed for all backend packages.
+- `go test -p 2 -tags=integration ./...`: passed for all backend packages.
+- `make test-frontend-critical`: passed, 8 files and 102 tests.
+- Upstream feature Vitest selection: passed, 13 files and 159 tests.
+- Frontend `lint:check`, `typecheck`, and production build: passed; Vite built 930 modules.
+- Local Apple-container shell validation was unavailable because the installed Windows shell is not GNU Bash; the GitHub macOS shell job remains the authoritative check.
+- `git diff --cached --check`: passed.
+### Notes
+- `README.md`: synced the upstream sponsor entries for v0.1.158.
+- `README_CN.md`: synced the upstream sponsor entries for v0.1.158.
+- `README_JA.md`: synced the upstream sponsor entries for v0.1.158.
+- `assets/partners/logos/claudeapi.jpg`: added the upstream sponsor logo asset.
+- `assets/partners/logos/code0.jpg`: added the upstream sponsor logo asset.
+- `backend/cmd/server/UPSTREAM_COMMIT`: recorded upstream tag commit 26abd19a.
+- `backend/cmd/server/VERSION`: set the fork source baseline to 0.1.158.
+- `backend/cmd/server/wire_gen.go`: regenerated dependency injection while retaining fork providers.
+- `backend/ent/group.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/ent/group/group.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/ent/group/where.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/ent/group_create.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/ent/group_update.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/ent/migrate/schema.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/ent/mutation.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/ent/runtime/runtime.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/ent/schema/group.go`: synced upstream generated entity/schema changes for group duplication.
+- `backend/internal/handler/admin/admin_basic_handlers_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/admin_service_stub_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/channel_monitor_duplicate_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/channel_monitor_handler.go`: synced upstream handler behavior while retaining fork handlers.
+- `backend/internal/handler/admin/grok_oauth_handler.go`: synced upstream handler behavior while retaining fork handlers.
+- `backend/internal/handler/admin/grok_oauth_handler_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/group_handler.go`: synced upstream handler behavior while retaining fork handlers.
+- `backend/internal/handler/admin/group_handler_duplicate_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/user_handler.go`: synced upstream handler behavior while retaining fork handlers.
+- `backend/internal/handler/admin/user_handler_activity_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/user_handler_batch_limits_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/user_handler_get_deleted_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/user_handler_list_apikey_group_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/admin/user_handler_role_stepup_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/auth_oauth_pending_flow_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/gateway_handler.go`: synced upstream handler behavior while retaining fork handlers.
+- `backend/internal/handler/gateway_models_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/openai_codex_models_handler_test.go`: synced upstream handler regression coverage.
+- `backend/internal/handler/totp_handler.go`: synced upstream handler behavior while retaining fork handlers.
+- `backend/internal/handler/user_handler_test.go`: synced upstream handler regression coverage.
+- `backend/internal/pkg/claude/constants.go`: synced upstream Claude/Grok helper behavior.
+- `backend/internal/pkg/xai/oauth.go`: synced upstream Claude/Grok helper behavior.
+- `backend/internal/pkg/xai/oauth_test.go`: synced upstream package regression coverage.
+- `backend/internal/repository/api_key_repo.go`: synced upstream repository behavior for duplication and account updates.
+- `backend/internal/repository/channel_monitor_duplicate_test.go`: synced upstream repository regression coverage.
+- `backend/internal/repository/channel_monitor_repo.go`: synced upstream repository behavior for duplication and account updates.
+- `backend/internal/repository/channel_monitor_template_duplicate_metadata_integration_test.go`: synced upstream repository regression coverage.
+- `backend/internal/repository/channel_monitor_template_duplicate_metadata_unit_test.go`: synced upstream repository regression coverage.
+- `backend/internal/repository/channel_monitor_template_repo.go`: synced upstream repository behavior for duplication and account updates.
+- `backend/internal/repository/group_repo.go`: synced upstream repository behavior for duplication and account updates.
+- `backend/internal/repository/group_repo_duplicate_integration_test.go`: synced upstream repository regression coverage.
+- `backend/internal/repository/group_repo_integration_test.go`: synced upstream repository regression coverage.
+- `backend/internal/repository/http_upstream.go`: synced upstream repository behavior for duplication and account updates.
+- `backend/internal/repository/http_upstream_test.go`: synced upstream repository regression coverage.
+- `backend/internal/repository/user_repo.go`: synced upstream repository behavior for duplication and account updates.
+- `backend/internal/repository/user_repo_integration_test.go`: synced upstream repository regression coverage.
+- `backend/internal/repository/wire.go`: synced upstream repository behavior for duplication and account updates.
+- `backend/internal/server/api_contract_test.go`: synced upstream server contract and security coverage.
+- `backend/internal/server/middleware/admin_auth_test.go`: synced upstream server contract and security coverage.
+- `backend/internal/server/middleware/step_up.go`: synced upstream routes and step-up authorization behavior.
+- `backend/internal/server/middleware/step_up_test.go`: synced upstream server contract and security coverage.
+- `backend/internal/server/routes/admin.go`: synced upstream routes and step-up authorization behavior.
+- `backend/internal/service/account.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/account_base_url_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/admin_group_duplicate.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/admin_group_duplicate_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/admin_service.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/admin_service_apikey_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/admin_service_batch_limits_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/admin_service_delete_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/admin_service_email_identity_sync_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/admin_user.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/auth_service_email_bind_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/channel_monitor_duplicate_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/channel_monitor_service.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/channel_monitor_types.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/content_moderation_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/gateway_anthropic_apikey_passthrough_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/gateway_claude_oauth_body.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/gateway_context_management_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/gateway_forward.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/gateway_upstream_request.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/grok_media.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/grok_upstream_url_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/group.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/group_service.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/openai_codex_models_service.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/openai_codex_models_service_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/openai_gateway_grok_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/openai_image_generation_controls_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/openai_ws_forwarder_ingress.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/openai_ws_forwarder_ingress_session_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/openai_ws_forwarder_success_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/openai_ws_forwarder_v2.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/openai_ws_http_bridge.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/openai_ws_v2_passthrough_adapter.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/totp_service.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/totp_verification_method_test.go`: synced upstream service and gateway regression coverage.
+- `backend/internal/service/user_service.go`: synced upstream service, Grok, 2FA, and duplication behavior.
+- `backend/internal/service/user_service_test.go`: synced upstream service and gateway regression coverage.
+- `backend/migrations/181_group_duplicate_operation_id.sql`: added the upstream group-duplication operation-id migration.
+- `docs/UPDATE_POLICY.md`: documented the v0.1.158 baseline and exclusion of post-tag main commits.
+- `frontend/src/api/__tests__/admin.channelMonitor.duplicate.spec.ts`: synced upstream frontend API regression coverage.
+- `frontend/src/api/__tests__/admin.groups.duplicate.spec.ts`: synced upstream frontend API regression coverage.
+- `frontend/src/api/__tests__/admin.users.spec.ts`: synced upstream frontend API regression coverage.
+- `frontend/src/api/admin/channelMonitor.ts`: synced upstream admin API contracts.
+- `frontend/src/api/admin/groups.ts`: synced upstream admin API contracts.
+- `frontend/src/api/admin/users.ts`: synced upstream admin API contracts.
+- `frontend/src/components/account/BulkEditAccountModal.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/account/CreateAccountModal.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/account/EditAccountModal.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/account/GrokBaseUrlPresets.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/account/__tests__/BulkEditAccountModal.spec.ts`: synced upstream component regression coverage.
+- `frontend/src/components/account/__tests__/EditAccountModal.grokUpstream.spec.ts`: synced upstream component regression coverage.
+- `frontend/src/components/account/__tests__/EditAccountModal.spec.ts`: synced upstream component regression coverage.
+- `frontend/src/components/account/__tests__/credentialsBuilder.spec.ts`: synced upstream component regression coverage.
+- `frontend/src/components/account/credentialsBuilder.ts`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/admin/monitor/MonitorActionsCell.spec.ts`: synced upstream component regression coverage.
+- `frontend/src/components/admin/monitor/MonitorActionsCell.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/admin/user/BulkEditUserModal.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/admin/user/UserCreateModal.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/admin/user/UserEditModal.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/admin/user/__tests__/BulkEditUserModal.spec.ts`: synced upstream component regression coverage.
+- `frontend/src/components/common/DataTable.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/common/__tests__/DataTable.spec.ts`: synced upstream component regression coverage.
+- `frontend/src/components/keys/UseKeyModal.vue`: synced upstream account, admin, table, and Grok controls.
+- `frontend/src/components/keys/__tests__/UseKeyModal.spec.ts`: synced upstream component regression coverage.
+- `frontend/src/i18n/locales/en/admin/accounts.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/en/admin/channels.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/en/admin/overview.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/en/admin/resources.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/en/dashboard.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/zh/admin/channels.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/zh/admin/overview.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/zh/admin/resources.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: synced upstream admin and dashboard translations.
+- `frontend/src/types/index.ts`: synced upstream frontend API types.
+- `frontend/src/views/admin/AuditLogView.vue`: synced upstream admin views for duplication, audit, and batch limits.
+- `frontend/src/views/admin/ChannelMonitorView.vue`: synced upstream admin views for duplication, audit, and batch limits.
+- `frontend/src/views/admin/GroupsView.vue`: synced upstream admin views for duplication, audit, and batch limits.
+- `frontend/src/views/admin/UsersView.vue`: synced upstream admin views for duplication, audit, and batch limits.
+- `frontend/src/views/admin/__tests__/ChannelMonitorView.duplicate.spec.ts`: synced upstream admin-view regression coverage.
+- `frontend/src/views/admin/__tests__/GroupsView.duplicate.spec.ts`: synced upstream admin-view regression coverage.
+- `frontend/src/views/admin/__tests__/UsersView.spec.ts`: synced upstream admin-view regression coverage.
+- `progress.md`: recorded the v0.1.158 merge, verification evidence, changed-file list, and rollback point.
+- Rollback point: deploy release `v0.1.156-fy.2`; revert this source merge with `git revert -m 1 <v0.1.158 merge commit>`. Do not apply or delete the homepage WIP stashes during rollback.
