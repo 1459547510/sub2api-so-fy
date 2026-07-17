@@ -1205,3 +1205,55 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/admin/__tests__/UsersView.spec.ts`: synced upstream admin-view regression coverage.
 - `progress.md`: recorded the v0.1.158 merge, verification evidence, changed-file list, and rollback point.
 - Rollback point: deploy release `v0.1.156-fy.2`; revert this source merge with `git revert -m 1 <v0.1.158 merge commit>`. Do not apply or delete the homepage WIP stashes during rollback.
+
+
+## 2026-07-17 - Task: Merge upstream release v0.1.159 and prepare fork release
+### What was done
+- Merged official upstream tag `v0.1.159` at `2a75d7d2387587d86ca3c5e5cd8ca96cf3d104c6` after explicit approval for its authentication and client-IP security changes.
+- Synced the API-key alpha search scheduling fix, trusted forwarded client-IP handling, Grok Free function-tool cache routing, account upstream-site links, and lazy Stripe loading.
+- Preserved Leo video, token incentive, and fork update/restart behavior; local homepage WIP stashes remained isolated and were not applied.
+- Corrected source version metadata to `0.1.159` because the upstream tag still contains the prior `0.1.158` VERSION value.
+### Testing
+- `go generate ./cmd/server`: passed; regenerated Wire output had no diff and retained the fork providers.
+- `..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues`.
+- `go test -p 2 -tags=unit ./...`: passed for all backend packages.
+- `go test -p 2 -tags=integration ./...`: passed for all backend packages.
+- v0.1.159 frontend Vitest selection: passed, 3 files and 13 tests.
+- `make test-frontend-critical`: passed, 8 files and 102 tests.
+- Frontend ESLint, `vue-tsc --noEmit`, build typecheck, and Vite production build: passed; Vite built 930 modules.
+- `git diff --check`: passed; final cached checks run before commit.
+### Notes
+- `backend/cmd/server/UPSTREAM_COMMIT`: recorded upstream tag commit `2a75d7d2`.
+- `backend/cmd/server/VERSION`: set the fork source baseline to `0.1.159`.
+- `backend/internal/handler/admin/audit_log_handler.go`: routed audit client-IP resolution through the shared trusted-forwarding policy.
+- `backend/internal/pkg/ip/ip.go`: added shared request client-IP resolution for trusted proxy deployments.
+- `backend/internal/pkg/ip/ip_test.go`: added trusted and untrusted forwarded-IP regression coverage.
+- `backend/internal/server/middleware/api_key_auth.go`: reused the shared client-IP resolver for API-key ACL checks.
+- `backend/internal/server/middleware/api_key_auth_google.go`: reused the shared client-IP resolver for Google-compatible API-key ACL checks.
+- `backend/internal/server/middleware/audit_log.go`: aligned audit-log IP capture with the shared trust setting.
+- `backend/internal/server/middleware/session_binding.go`: aligned session IP binding with trusted forwarded client IPs.
+- `backend/internal/server/middleware/session_binding_test.go`: added session-binding regression coverage for proxy trust modes.
+- `backend/internal/server/router.go`: wired the shared trusted-client-IP policy into middleware construction.
+- `backend/internal/service/account.go`: exposed API-key account upstream-site metadata used by the admin link.
+- `backend/internal/service/openai_account_scheduler_test.go`: covered API-key scheduling for OpenAI alpha search.
+- `backend/internal/service/openai_alpha_search.go`: restored API-key account scheduling and compatible failover for alpha search.
+- `backend/internal/service/openai_alpha_search_test.go`: added pure and mixed-group alpha-search regressions.
+- `backend/internal/service/openai_gateway_grok.go`: enabled Grok Free cache routing for Responses function tools.
+- `backend/internal/service/openai_gateway_grok_cache.go`: handled function-tool and built-in web-search name conflicts in cache routing.
+- `backend/internal/service/openai_images_test.go`: updated image gateway regression fixtures for current routing behavior.
+- `backend/internal/service/openai_ws_http_bridge.go`: applied Grok Free function-tool cache routing to the WebSocket bridge.
+- `docs/UPDATE_POLICY.md`: advanced the documented upstream baseline to v0.1.159.
+- `frontend/src/components/payment/StripePaymentInline.vue`: switched Stripe SDK loading to the lazy path.
+- `frontend/src/i18n/locales/en/admin/accounts.ts`: added English account upstream-link labels.
+- `frontend/src/i18n/locales/en/admin/settings.ts`: updated English trusted-client-IP setting guidance.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: added Chinese account upstream-link labels.
+- `frontend/src/i18n/locales/zh/admin/settings.ts`: updated Chinese trusted-client-IP setting guidance.
+- `frontend/src/views/admin/AccountsView.vue`: linked API-key account names to their configured upstream sites.
+- `frontend/src/views/admin/__tests__/AccountsView.sparkShadow.spec.ts`: added account upstream-link view coverage.
+- `frontend/src/views/user/StripePaymentView.vue`: lazy-loaded the Stripe SDK on the dedicated payment page.
+- `frontend/src/views/user/StripePopupView.vue`: lazy-loaded the Stripe SDK in popup payment flow.
+- `frontend/src/views/user/__tests__/StripePaymentView.spec.ts`: updated Stripe payment view regression setup.
+- `frontend/src/views/user/__tests__/stripeLazyLoading.spec.ts`: added Stripe lazy-loading regressions.
+- `frontend/vite.config.ts`: split the on-demand Stripe dependency into its own vendor chunk.
+- `progress.md`: recorded the v0.1.159 merge, verification evidence, changed-file list, and rollback point.
+- Rollback point: deploy release `v0.1.158-fy.1`; revert this source merge with `git revert -m 1 <v0.1.159 merge commit>`. Do not apply or delete the homepage WIP stashes during rollback.
