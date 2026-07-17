@@ -1745,3 +1745,18 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/go.sum`: recorded the Ent generator command dependency checksum.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `d4daa84ed6bfdd338eb6c6c9f311b3b0e68487ea`; after this task is committed, run `git revert $(git log --format=%H --grep='^feat: persist leo video jobs$' -n 1)` from the repository root.
+
+## 2026-07-17 - Task: Call LeoStudio asynchronous video jobs
+### What was done
+- Added exact `Prefer: respond-async` detection without treating parameterized or assigned values as opt-in.
+- Added authenticated LeoStudio create, status, and pending-cancel clients with model mapping and typed responses.
+- Kept transport and upstream errors detached from Gin and removed configured Leo credentials and sensitive query values from surfaced messages.
+### Testing
+- `go test ./internal/service -run 'PrefersLeoRespondAsync|LeoAsync' -count=1`: passed.
+- `go test ./internal/service -run 'PrefersLeoRespondAsync|LeoAsync|ForwardLeoVideo|LeoVideo' -count=1`: passed, including existing synchronous Leo forwarding coverage.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/service/leo_video_async.go`: implemented the narrow LeoStudio asynchronous protocol client and typed errors.
+- `backend/internal/service/leo_video_async_test.go`: covered preference parsing, model mapping, Bearer authentication, create/get/cancel decoding, and secret redaction.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `7605fd45`; run `git revert $(git log --format=%H --grep='^feat: call leo async video jobs$' -n 1)` from the repository root.
