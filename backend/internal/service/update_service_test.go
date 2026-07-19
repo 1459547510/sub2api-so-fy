@@ -303,6 +303,42 @@ func TestUpdateServiceDetectsForkBranchCommitUpdate(t *testing.T) {
 	require.Contains(t, info.BranchInfo.CompareURL, "/compare/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
 }
 
+func TestUpdateServiceIgnoresForkBranchWhenBranchIsBehindCurrentRelease(t *testing.T) {
+	currentCommit := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	branchCommit := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	client := &updateServiceGitHubClientStub{
+		release: &GitHubRelease{
+			TagName: "v0.1.159-fy.1",
+			Name:    "v0.1.159-fy.1",
+		},
+		branch: &GitHubBranch{
+			Name:   githubBranch,
+			Commit: GitHubCommitRef{SHA: branchCommit},
+		},
+		compare: &GitHubCompare{
+			Status:       "behind",
+			BehindBy:     1,
+			TotalCommits: 1,
+		},
+	}
+	svc := NewUpdateService(
+		&updateServiceCacheStub{},
+		client,
+		"0.1.159-fy.1",
+		"release",
+		currentCommit,
+	)
+
+	info, err := svc.CheckUpdate(context.Background(), true)
+
+	require.NoError(t, err)
+	require.NotNil(t, info.BranchInfo)
+	require.False(t, info.BranchInfo.HasNewCommit)
+	require.Equal(t, "ahead", info.BranchInfo.Status)
+	require.Equal(t, currentCommit, info.BranchInfo.CurrentCommit)
+	require.Equal(t, branchCommit, info.BranchInfo.LatestCommit)
+}
+
 func TestUpdateServiceDetectsUpstreamReleaseVersionButBlocksOneClickUntilForkRelease(t *testing.T) {
 	forkHead := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	client := &updateServiceGitHubClientStub{

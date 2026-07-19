@@ -596,6 +596,39 @@ func (s *UpdateService) fetchBranchInfo(ctx context.Context) (*BranchInfo, error
 
 	currentCommit := normalizeCommitSHA(s.currentCommit)
 	info := s.branchInfoForLatestCommit(latestCommit, currentCommit)
+	if !info.CanCompare || commitMatches(currentCommit, latestCommit) {
+		return info, nil
+	}
+
+	compare, err := s.githubClient.CompareCommits(ctx, githubRepo, currentCommit, latestCommit)
+	if err != nil {
+		info.HasNewCommit = false
+		info.Status = "unknown_compare"
+		return info, fmt.Errorf("fork branch compare: %w", err)
+	}
+	if compare == nil {
+		info.HasNewCommit = false
+		info.Status = "unknown_compare"
+		return info, fmt.Errorf("fork branch compare returned no result")
+	}
+
+	switch strings.ToLower(strings.TrimSpace(compare.Status)) {
+	case "ahead":
+		info.HasNewCommit = compare.AheadBy > 0 || compare.TotalCommits > 0
+		info.Status = "behind"
+	case "behind":
+		info.HasNewCommit = false
+		info.Status = "ahead"
+	case "identical":
+		info.HasNewCommit = false
+		info.Status = "current"
+	case "diverged":
+		info.HasNewCommit = compare.AheadBy > 0 || compare.TotalCommits > 0
+		info.Status = "diverged"
+	default:
+		info.HasNewCommit = compare.AheadBy > 0 || compare.TotalCommits > 0
+		info.Status = "unknown_compare"
+	}
 
 	return info, nil
 }

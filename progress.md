@@ -1257,3 +1257,56 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/vite.config.ts`: split the on-demand Stripe dependency into its own vendor chunk.
 - `progress.md`: recorded the v0.1.159 merge, verification evidence, changed-file list, and rollback point.
 - Rollback point: deploy release `v0.1.158-fy.1`; revert this source merge with `git revert -m 1 <v0.1.159 merge commit>`. Do not apply or delete the homepage WIP stashes during rollback.
+
+
+## 2026-07-17 - Task: Fix false fork branch update notice and missing version translations
+### What was done
+- Fixed the update check so a fork default branch behind the running Release is not reported as a newer branch commit.
+- Preserved branch notices when the branch is actually ahead or has commits absent from the running build.
+- Added the missing Chinese and English text for fork Release, upstream Release, synchronization, and branch update states.
+- Documented that branch update notices require the default branch to be ahead of the running version.
+### Testing
+- Added a backend regression test and confirmed it failed before the fix because `HasNewCommit` was incorrectly true.
+- `go test -tags=unit -run TestUpdateService ./internal/service`: passed.
+- `go test -p 2 -tags=unit ./internal/service`: passed.
+- `..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues`.
+- VersionBadge locale-key presence check: passed for all 9 added keys in Chinese and English.
+- `localesNoKeyCollision.spec.ts`: passed, 6 tests.
+- `localesMessageCompile.spec.ts` could not collect because the existing frontend manifest does not declare `@intlify/message-compiler` as a direct dependency; no dependency changes were made for this scoped fix.
+- Frontend ESLint, `vue-tsc --noEmit`, build typecheck, and Vite production build: passed; Vite built 930 modules.
+- `git diff --check`: passed before the documentation and progress-log append; final checks follow.
+### Notes
+- `backend/internal/service/update_service.go`: compares the running commit with the fork branch before setting the branch-update flag.
+- `backend/internal/service/update_service_test.go`: covers a fork branch that is behind the installed Release commit.
+- `frontend/src/i18n/locales/en/misc.ts`: added English VersionBadge update-state messages.
+- `frontend/src/i18n/locales/zh/misc.ts`: added Chinese VersionBadge update-state messages.
+- `docs/UPDATE_POLICY.md`: documented directional branch-update detection.
+- `progress.md`: recorded the false-update fix, translation completion, verification, and rollback point.
+- Rollback point: revert these uncommitted files before release, or revert the eventual fix commit with `git revert <fix commit>`.
+
+
+## 2026-07-17 - Task: 设计 Leo 异步视频工作台
+### What was done
+- 确定用户端采用双栏视频工作台，支持纯文本、图片 URL、本地图片和多任务异步队列。
+- 确定 Sub2API 持久化 LeoStudio 任务映射、后台同步状态，并通过冻结、结算和释放保证多任务只计费一次。
+- 确定同宿主机本地磁盘图片方案、回环临时 URL、文件清理策略、API Key 隔离和数据库边界。
+### Testing
+- 对照 LeoStudio `f822735629c51f15d115e3e60b161a93ec2e20ff` 的异步创建、查询、取消和图片 URL 契约完成逐项复核。
+- 规格占位符、矛盾、范围和歧义检查通过；明确了创建响应不确定时不重提、标记失败并释放冻结的 at-most-once 策略。
+### Notes
+- `docs/superpowers/specs/2026-07-17-leo-async-video-workbench-design.md`: 新增已批准范围下的异步协议、数据模型、计费、本地图片和客户端设计。
+- `progress.md`: 追加本轮设计决策、验证与回滚记录。
+- 回滚点：删除上述设计文档，并删除 `progress.md` 中本条记录；尚未修改数据库、后端协议或客户端代码。
+
+
+## 2026-07-17 - Task: 制定 Leo 异步视频工作台实施计划
+### What was done
+- 将已确认设计拆分为数据模型、异步协议、账务、本地图片、后台协调、网关和客户端十个可独立验证的 TDD 任务。
+- 固定每个任务的文件边界、失败测试、最小实现、验证命令和提交点，并保留同步 Leo 回归检查。
+### Testing
+- 逐项对照设计规格复核任务覆盖，包含数据库、重启恢复、多任务、三类图片输入、幂等计费、权限、客户端和文档。
+- 计划占位符、类型命名和路径一致性检查通过；中英文导航与工作台文案文件已精确定位。
+### Notes
+- `docs/superpowers/plans/2026-07-17-leo-async-video-workbench.md`: 新增完整实施计划。
+- `progress.md`: 追加本轮计划拆分、验证与回滚记录。
+- 回滚点：删除上述实施计划，并删除 `progress.md` 中本条记录；设计提交 `a12565b3` 不受影响。
