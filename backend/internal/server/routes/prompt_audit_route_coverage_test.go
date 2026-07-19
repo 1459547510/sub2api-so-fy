@@ -47,6 +47,7 @@ func TestEveryGatewayPOSTRouteIsClassifiedForPromptAuditCoverage(t *testing.T) {
 	excluded := map[string]string{
 		"/messages/count_tokens":     "tokenization only; it does not execute a model request",
 		"/images/batches/:id/cancel": "control-plane cancellation with no user prompt",
+		"/videos/uploads":            "image upload only; prompt audit runs when the video job is submitted",
 	}
 
 	unclassified := make([]string, 0)

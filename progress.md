@@ -1983,3 +1983,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/admin/__tests__/SettingsView.spec.ts`: verified loading and submitting the video menu toggle.
 - `progress.md`: recorded this tested task and rollback procedure.
 - Rollback point: `8067ef3c`; run `git revert $(git log --format=%H --grep='^feat: add video generation menu setting$' -n 1)` from the repository root after the task commit is created.
+
+## 2026-07-19 - Task: Integrate the Leo video workbench and menu switch into v0.1.161
+### What was done
+- Ported the complete asynchronous Leo video job chain, user workbench, and administrator video-generation menu switch onto the `v0.1.161-fy.1` fork baseline.
+- Resolved dependency-injection conflicts so v0.1.161 prompt auditing, Grok eligibility probing, authentication cache invalidation, Token Incentive, update/restart behavior, and the new video runtime remain wired together.
+- Added the image-only `/videos/uploads` route to the v0.1.161 prompt-audit route manifest with an explicit no-prompt reason; video generation prompts remain audited at job submission.
+- Confirmed the duplicate `182_*` migration prefix is safe because migrations are tracked by full filename, so `182_prompt_audit_full_prompt.sql` and `182_video_jobs.sql` execute independently.
+### Testing
+- Targeted backend video, settings, API-contract, Ent schema, migration, repository, service, handler, and route tests: passed across 7 packages.
+- Targeted frontend video API, workbench, sidebar, administrator settings, and app-store tests: passed across 5 test files.
+- `go test ./internal/server/routes -run 'TestEveryGatewayPOSTRouteIsClassifiedForPromptAuditCoverage|Leo|Video' -count=1`: passed after classifying the upload route.
+- `go test -p 2 -tags=unit -timeout 10m ./...`: passed for all backend packages.
+- `..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues`.
+- `pnpm run test:run`: passed for the complete frontend Vitest suite.
+- `pnpm run lint:check`: passed.
+- `pnpm run typecheck`: passed.
+- `pnpm run build`: passed.
+- PostgreSQL migration integration entrypoint exited successfully but explicitly skipped because Docker is unavailable on this Windows host; GitHub CI remains the real database integration gate.
+- `go build -o ..\\.codex-run\\sub2api-v0.1.161-fy.2.exe ./cmd/server` and `--version`: passed and reported `Sub2API 0.1.161`.
+- `git diff --check`: passed before this final progress append; final staged checks follow.
+### Notes
+- The preceding 12 task entries in `progress.md` list every backend, frontend, migration, generated Ent, documentation, and test file introduced by the video implementation commits.
+- `backend/internal/server/routes/prompt_audit_route_coverage_test.go`: classified the image-upload-only route while preserving prompt-audit enforcement for video generation submissions.
+- `progress.md`: recorded the v0.1.161 integration, conflict resolution, verification evidence, release target, and rollback procedure.
+- Rollback point: deploy `v0.1.161-fy.1`; for source rollback, run `git revert --no-commit v0.1.161-fy.1..HEAD`, review the staged reversal, and commit it without applying or deleting the homepage stash or `.superpowers/`.
