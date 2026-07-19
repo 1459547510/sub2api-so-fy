@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/securityaudit"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -42,6 +43,28 @@ func TestLeoVideoGenerationRequiresVideoPermission(t *testing.T) {
 
 	require.Equal(t, http.StatusForbidden, rec.Code)
 	require.Contains(t, rec.Body.String(), service.ImageGenerationPermissionMessage())
+}
+
+func TestLeoVideoGenerationSecurityAuditRunsBeforeScheduling(t *testing.T) {
+	rec, c := newLeoVideoHandlerTestContext(`{"model":"seedance-2.0","prompt":"blocked video prompt"}`, true)
+	engine := blockingHandlerPromptEngine()
+	h := &OpenAIGatewayHandler{
+		gatewayService:           &service.OpenAIGatewayService{},
+		billingCacheService:      &service.BillingCacheService{},
+		apiKeyService:            &service.APIKeyService{},
+		concurrencyHelper:        &ConcurrencyHelper{concurrencyService: &service.ConcurrencyService{}},
+		securityAuditCoordinator: securityaudit.NewCoordinator(nil, engine),
+	}
+
+	h.LeoVideoGeneration(c)
+
+	require.Equal(t, http.StatusForbidden, rec.Code)
+	require.Contains(t, rec.Body.String(), securityaudit.ErrorCodeBlocked)
+	evaluated, _, requests := engine.snapshot()
+	require.Equal(t, 1, evaluated)
+	require.Len(t, requests, 1)
+	require.Contains(t, string(requests[0].Body), "blocked video prompt")
+	require.Equal(t, service.PlatformLeo, requests[0].Provider)
 }
 
 func newLeoVideoHandlerTestContext(body string, allowVideo bool) (*httptest.ResponseRecorder, *gin.Context) {

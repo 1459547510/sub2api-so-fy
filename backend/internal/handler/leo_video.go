@@ -85,9 +85,9 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 	setOpsRequestContext(c, requestModel, false)
 	setOpsEndpointContext(c, "/v1/videos/generations", int16(service.RequestTypeSync))
 	if moderationBody := leoVideoModerationBody(requestInfo); len(moderationBody) > 0 {
-		decision := h.checkContentModeration(c, reqLog, apiKey, subject, service.ContentModerationProtocolOpenAIImages, requestModel, moderationBody)
-		if decision != nil && decision.Blocked {
-			h.errorResponse(c, contentModerationStatus(decision), contentModerationErrorCode(decision), decision.Message)
+		decision := h.checkSecurityAudit(c, reqLog, apiKey, subject, service.ContentModerationProtocolOpenAIImages, requestModel, moderationBody)
+		if decision != nil && !decision.AllowNextStage {
+			h.openAISecurityAuditError(c, decision)
 			return
 		}
 	}
