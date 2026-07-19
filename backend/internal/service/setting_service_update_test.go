@@ -529,6 +529,16 @@ func TestSettingService_UpdateSettings_APIKeyACLTrustForwardedIPRefreshesConfig(
 	require.True(t, cfg.TrustForwardedIPForAPIKeyACL())
 }
 
+func TestSettingService_UpdateSettings_PersistsVideoGenerationMenuSwitch(t *testing.T) {
+	repo := &settingUpdateRepoStub{}
+	svc := NewSettingService(repo, &config.Config{})
+
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{VideoGenerationEnabled: false})
+
+	require.NoError(t, err)
+	require.Equal(t, "false", repo.updates[SettingKeyVideoGenerationEnabled])
+}
+
 func TestSettingService_ParseSettings_APIKeyACLTrustForwardedIPFallsBackToConfigWhenMissing(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.Security.TrustForwardedIPForAPIKeyACL = true

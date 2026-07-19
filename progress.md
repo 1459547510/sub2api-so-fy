@@ -1939,3 +1939,47 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_CHANNEL.md`: reconciled sync compatibility with the async workbench and documented setup, API, local storage, cleanup, billing, and limits.
 - `progress.md`: recorded the final tested task and rollback procedure.
 - Rollback point: `74850777`; run `git revert $(git log --format=%H --grep='^docs: explain leo async video workbench$' -n 1)` from the repository root.
+
+## 2026-07-19 - Task: Add admin video generation menu switch
+### What was done
+- Added the `video_generation_enabled` system setting with a default-enabled, explicit-false opt-out policy across admin, public settings, and frontend injection.
+- Added an administrator toggle under System Settings > Feature Flags and wired the user sidebar video generation entry to the shared feature flag registry.
+- Kept the switch limited to sidebar visibility; the `/video-generation` route and Leo APIs remain available.
+### Testing
+- `backend: go test -tags unit ./internal/service ./internal/handler/dto ./internal/server -run 'VideoGenerationMenuSwitch|PublicSettingsInjectionPayload|TestAPIContracts' -count=1`: passed.
+- `backend: go test ./... -count=1`: passed.
+- `backend: go vet ./...`: passed.
+- `frontend: .\\node_modules\\.bin\\vitest.cmd run --exclude src/i18n/__tests__/localesMessageCompile.spec.ts --reporter=dot`: passed; the excluded existing test requires the missing `@intlify/message-compiler` dependency.
+- `frontend: .\\node_modules\\.bin\\vitest.cmd run src/components/layout/__tests__/AppSidebar.spec.ts src/views/admin/__tests__/SettingsView.spec.ts`: passed (34 tests).
+- `frontend: .\\node_modules\\.bin\\vue-tsc.cmd --noEmit`: passed.
+- `frontend: .\\node_modules\\.bin\\vite.cmd build`: passed with existing dynamic-import and chunk-size warnings.
+- Targeted ESLint could not start because the existing workspace dependency `vue-eslint-parser` is missing; no dependency was added in this task.
+- `git diff --check`: passed; Git reported LF-to-CRLF working-copy notices for `docs/LEO_VIDEO_CHANNEL.md` and `progress.md`.
+### Notes
+- `backend/internal/handler/admin/setting_handler.go`: returned the video menu setting from the administrator settings endpoint.
+- `backend/internal/handler/admin/setting_handler_audit.go`: included video menu changes in administrator setting audit diffs.
+- `backend/internal/handler/admin/setting_handler_update.go`: accepted, preserved, and returned the optional video menu setting during updates.
+- `backend/internal/handler/dto/settings.go`: added the video menu field to admin and public response DTOs.
+- `backend/internal/handler/setting_handler.go`: returned the setting from the public settings endpoint.
+- `backend/internal/server/api_contract_test.go`: updated administrator settings response contracts with the default-enabled field.
+- `backend/internal/service/domain_constants.go`: defined the `video_generation_enabled` setting key and its boundary.
+- `backend/internal/service/setting_parse.go`: initialized and parsed the default-enabled setting.
+- `backend/internal/service/setting_public.go`: loaded and injected the public video menu setting.
+- `backend/internal/service/setting_service_public_test.go`: covered the absent-setting default and explicit disable behavior.
+- `backend/internal/service/setting_service_update_test.go`: covered persistence of an explicit false value.
+- `backend/internal/service/setting_update.go`: persisted the setting in system setting updates.
+- `backend/internal/service/settings_view.go`: exposed the field in service-level admin and public settings views.
+- `docs/LEO_VIDEO_CHANNEL.md`: documented the administrator switch, default, and non-authorization boundary.
+- `frontend/src/api/admin/settings.ts`: added administrator read and update typings.
+- `frontend/src/components/layout/AppSidebar.vue`: attached the video generation entry to the shared opt-out flag.
+- `frontend/src/components/layout/__tests__/AppSidebar.spec.ts`: verified registry wiring plus unloaded, missing, disabled, and enabled runtime states.
+- `frontend/src/i18n/locales/en/admin/settings.ts`: added English administrator labels and boundary text.
+- `frontend/src/i18n/locales/zh/admin/settings.ts`: added Chinese administrator labels and boundary text.
+- `frontend/src/stores/__tests__/app.spec.ts`: updated the complete public settings fixture with the default-enabled field.
+- `frontend/src/stores/app.ts`: preserved the default-enabled behavior in the API fallback payload.
+- `frontend/src/types/index.ts`: added the field to public settings typings.
+- `frontend/src/utils/featureFlags.ts`: registered the video menu as an opt-out feature flag.
+- `frontend/src/views/admin/SettingsView.vue`: added the toggle, default form value, and save payload field.
+- `frontend/src/views/admin/__tests__/SettingsView.spec.ts`: verified loading and submitting the video menu toggle.
+- `progress.md`: recorded this tested task and rollback procedure.
+- Rollback point: `8067ef3c`; run `git revert $(git log --format=%H --grep='^feat: add video generation menu setting$' -n 1)` from the repository root after the task commit is created.

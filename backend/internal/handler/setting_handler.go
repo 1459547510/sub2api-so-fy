@@ -98,6 +98,8 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 
 		AvailableChannelsEnabled: settings.AvailableChannelsEnabled,
 
+		VideoGenerationEnabled: settings.VideoGenerationEnabled,
+
 		AffiliateEnabled: settings.AffiliateEnabled,
 
 		TokenIncentiveEnabled: settings.TokenIncentiveEnabled,

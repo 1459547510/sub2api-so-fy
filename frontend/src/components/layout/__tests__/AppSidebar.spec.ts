@@ -2,7 +2,12 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
+
+import { useAppStore } from '@/stores/app'
+import type { PublicSettings } from '@/types'
+import { FeatureFlags, makeSidebarFlag } from '@/utils/featureFlags'
 
 const componentPath = resolve(dirname(fileURLToPath(import.meta.url)), '../AppSidebar.vue')
 const componentSource = readFileSync(componentPath, 'utf8')
@@ -39,6 +44,37 @@ describe('AppSidebar scroll position persistence', () => {
     expect(componentSource).toContain('onMounted')
     expect(componentSource).toContain('appStore.sidebarScrollTop')
     expect(componentSource).toContain('nextTick')
+  })
+})
+
+describe('AppSidebar video generation feature switch', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('uses the shared opt-out feature flag for the video generation menu', () => {
+    expect(FeatureFlags.videoGeneration).toMatchObject({
+      key: 'video_generation_enabled',
+      mode: 'opt-out',
+    })
+    expect(componentSource).toContain(
+      'const flagVideoGeneration = makeSidebarFlag(FeatureFlags.videoGeneration)',
+    )
+    expect(componentSource).toMatch(
+      /path: '\/video-generation',[^\n]*featureFlag: flagVideoGeneration/,
+    )
+  })
+
+  it.each([
+    ['settings not loaded', null, true],
+    ['field missing', {}, true],
+    ['explicitly disabled', { video_generation_enabled: false }, false],
+    ['explicitly enabled', { video_generation_enabled: true }, true],
+  ])('resolves %s to %s', (_label, settings, expected) => {
+    const appStore = useAppStore()
+    appStore.cachedPublicSettings = settings as PublicSettings | null
+
+    expect(makeSidebarFlag(FeatureFlags.videoGeneration)()).toBe(expected)
   })
 })
 

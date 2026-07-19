@@ -185,6 +185,9 @@ type SystemSettings struct {
 	// Available Channels feature (user-facing aggregate view)
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
 
+	// Video generation menu feature
+	VideoGenerationEnabled bool `json:"video_generation_enabled"`
+
 	// Claude Code version check
 	MinClaudeCodeVersion string
 	MaxClaudeCodeVersion string
@@ -333,6 +336,9 @@ type PublicSettings struct {
 
 	// Available Channels feature (user-facing aggregate view)
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
+
+	// Video generation menu feature
+	VideoGenerationEnabled bool `json:"video_generation_enabled"`
 
 	// Affiliate (邀请返利) feature toggle
 	AffiliateEnabled      bool `json:"affiliate_enabled"`

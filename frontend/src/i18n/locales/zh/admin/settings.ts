@@ -30,6 +30,12 @@ export default {
           enabled: '启用可用渠道',
           enabledHint: '关闭后用户端侧边栏入口隐藏，接口返回空数组。',
         },
+        videoGeneration: {
+          title: '视频生成',
+          description: '控制用户端“视频生成”菜单入口是否显示。',
+          enabled: '显示视频生成菜单',
+          enabledHint: '关闭后仅隐藏侧边栏菜单，不禁用页面路由或 Leo API。',
+        },
         riskControl: {
           title: '风控中心',
           description: '启用内容审计菜单和全端点请求审核入口。默认关闭。',

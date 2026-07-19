@@ -307,6 +307,9 @@ type UpdateSettingsRequest struct {
 	// Available Channels feature switch (user-facing)
 	AvailableChannelsEnabled *bool `json:"available_channels_enabled"`
 
+	// Video generation menu feature switch
+	VideoGenerationEnabled *bool `json:"video_generation_enabled"`
+
 	// Affiliate (邀请返利) feature switch
 	AffiliateEnabled *bool `json:"affiliate_enabled"`
 
@@ -1601,6 +1604,12 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.AvailableChannelsEnabled
 		}(),
+		VideoGenerationEnabled: func() bool {
+			if req.VideoGenerationEnabled != nil {
+				return *req.VideoGenerationEnabled
+			}
+			return previousSettings.VideoGenerationEnabled
+		}(),
 		AffiliateEnabled: func() bool {
 			if req.AffiliateEnabled != nil {
 				return *req.AffiliateEnabled
@@ -1999,6 +2008,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
 
 		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
+
+		VideoGenerationEnabled: updatedSettings.VideoGenerationEnabled,
 
 		AffiliateEnabled: updatedSettings.AffiliateEnabled,
 

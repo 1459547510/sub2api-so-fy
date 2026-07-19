@@ -220,6 +220,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyChannelMonitorEnabled,
 		SettingKeyChannelMonitorDefaultIntervalSeconds,
 		SettingKeyAvailableChannelsEnabled,
+		SettingKeyVideoGenerationEnabled,
 		SettingKeyAffiliateEnabled,
 		SettingKeyTokenIncentiveEnabled,
 		SettingKeyRiskControlEnabled,
@@ -332,6 +333,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		ChannelMonitorDefaultIntervalSeconds: parseChannelMonitorInterval(settings[SettingKeyChannelMonitorDefaultIntervalSeconds]),
 
 		AvailableChannelsEnabled: settings[SettingKeyAvailableChannelsEnabled] == "true",
+
+		VideoGenerationEnabled: !isFalseSettingValue(settings[SettingKeyVideoGenerationEnabled]),
 
 		AffiliateEnabled: settings[SettingKeyAffiliateEnabled] == "true",
 
@@ -497,6 +500,7 @@ type PublicSettingsInjectionPayload struct {
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 	AvailableChannelsEnabled             bool `json:"available_channels_enabled"`
+	VideoGenerationEnabled               bool `json:"video_generation_enabled"`
 	AffiliateEnabled                     bool `json:"affiliate_enabled"`
 	TokenIncentiveEnabled                bool `json:"token_incentive_enabled"`
 	RiskControlEnabled                   bool `json:"risk_control_enabled"`
@@ -563,6 +567,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 		AvailableChannelsEnabled:             settings.AvailableChannelsEnabled,
+		VideoGenerationEnabled:               settings.VideoGenerationEnabled,
 		AffiliateEnabled:                     settings.AffiliateEnabled,
 		TokenIncentiveEnabled:                settings.TokenIncentiveEnabled,
 		RiskControlEnabled:                   settings.RiskControlEnabled,

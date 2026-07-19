@@ -30,6 +30,12 @@ export default {
           enabled: 'Enable Available Channels',
           enabledHint: 'When off, the sidebar entry is hidden and the endpoint returns an empty list.',
         },
+        videoGeneration: {
+          title: 'Video Generation',
+          description: 'Control whether the Video Generation entry appears in the user sidebar.',
+          enabled: 'Show Video Generation menu',
+          enabledHint: 'Turning this off only hides the sidebar entry; it does not disable the route or Leo API.',
+        },
         riskControl: {
           title: 'Risk Control',
           description: 'Enable the content moderation menu and gateway audit entry point. Disabled by default.',

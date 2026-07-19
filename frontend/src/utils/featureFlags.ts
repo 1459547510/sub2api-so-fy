@@ -104,6 +104,11 @@ export const FeatureFlags = {
     mode: 'opt-in',
     label: 'Available Channels',
   }),
+  videoGeneration: defineFlag({
+    key: 'video_generation_enabled',
+    mode: 'opt-out',
+    label: 'Video Generation',
+  }),
   payment: defineFlag({
     key: 'payment_enabled',
     mode: 'opt-out',

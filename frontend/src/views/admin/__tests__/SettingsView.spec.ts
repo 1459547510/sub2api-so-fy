@@ -486,6 +486,7 @@ const baseSettingsResponse = {
   subscription_expiry_notify_enabled: true,
   account_quota_notify_enabled: false,
   account_quota_notify_emails: [],
+  video_generation_enabled: true,
   // 平台限额嵌套字段（新后端契约）
   default_platform_quotas: {
     anthropic:   { daily: null, weekly: null, monthly: null },
@@ -709,6 +710,29 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(updateSettings).toHaveBeenCalledWith(
       expect.objectContaining({
         affiliate_admin_recharge_enabled: true,
+      }),
+    );
+  });
+
+  it("loads and submits the video generation menu setting", async () => {
+    getSettings.mockResolvedValueOnce({
+      ...baseSettingsResponse,
+      video_generation_enabled: false,
+    });
+
+    const wrapper = mountView();
+
+    await flushPromises();
+    const toggle = wrapper.get('[data-testid="video-generation-enabled"]');
+    expect((toggle.element as HTMLInputElement).checked).toBe(false);
+
+    await toggle.setValue(true);
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        video_generation_enabled: true,
       }),
     );
   });
