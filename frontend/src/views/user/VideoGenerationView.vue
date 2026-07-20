@@ -13,6 +13,8 @@
         </div>
       </header>
 
+      <VideoSectionTabs />
+
       <div class="grid min-w-0 gap-4 xl:grid-cols-[400px_minmax(0,1fr)]">
         <section class="card min-w-0 p-5" data-testid="video-settings">
           <div class="flex items-center justify-between gap-3 border-b border-gray-100 pb-4 dark:border-dark-700">
@@ -198,6 +200,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import VideoSectionTabs from '@/components/video/VideoSectionTabs.vue'
 import { keysAPI } from '@/api'
 import type { ApiKey } from '@/types'
 import { useAppStore } from '@/stores/app'
@@ -307,7 +310,17 @@ async function submitJob() {
       aspect_ratio: aspectRatio.value,
       audio: audio.value,
     }
-    if (selectedImageUrls.length) payload.image_urls = selectedImageUrls
+    if (selectedImageUrls.length === 1) {
+      payload.image_url = selectedImageUrls[0]
+    } else if (selectedImageUrls.length > 1) {
+      payload.guidances = {
+        image_reference: selectedImageUrls.map((url, order) => ({
+          image: { url, type: 'UPLOADED' },
+          strength: 'MID',
+          order,
+        })),
+      }
+    }
     const accepted = await createVideoJob(selectedKey.value.key, payload)
     const now = new Date().toISOString()
     const job: VideoJob = { ...accepted, model: accepted.model || model.value, prompt: accepted.prompt || payload.prompt, created_at: accepted.created_at || now, updated_at: accepted.updated_at || now }

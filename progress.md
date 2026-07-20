@@ -2129,3 +2129,61 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - The preceding multi-image guidance task entry lists all 13 implementation and documentation files changed by the feature commit.
 - `progress.md`: recorded final-branch compatibility checks, complete verification, exclusions, release target, and rollback procedure.
 - Rollback point: deploy `v0.1.161-fy.3`; for source rollback after release, revert the `v0.1.161-fy.3..v0.1.161-fy.4` commit range without applying or deleting unrelated worktrees or stashes.
+
+## 2026-07-20 - Task: Fix Leo video reference submission and provider error exposure
+### What was done
+- Restored the user workbench's verified single-image `image_url` start-frame submission and changed multi-image submissions to explicit ordered `guidances.image_reference` entries.
+- Unified asynchronous video errors under the public `Video provider` label across immediate failures, persisted jobs, runtime failures, and legacy failed-job reads.
+- Kept the existing external `image_urls` API compatibility and all unrelated channel-pricing worktree changes untouched.
+### Testing
+- `go test ./internal/service ./internal/handler -run 'LeoVideo|VideoJob|SanitizeVideoProvider' -count=1`: passed.
+- `go test ./internal/service ./internal/handler -count=1`: passed.
+- `vitest run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed, 11 tests.
+- Targeted ESLint for the changed video view and tests passed; `vue-tsc --noEmit` passed.
+- Direct `vite build` passed with existing dynamic-import and chunk-size warnings.
+- `git diff --check`: passed before this progress append.
+- No production deployment or live credit-consuming video request was performed.
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: chooses the verified single-image contract and ordered multi-image guidance contract.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers single remote image and ordered remote/local multi-image payloads.
+- `backend/internal/service/leo_video_async.go`: centralizes provider-name sanitization and uses provider-neutral asynchronous error messages.
+- `backend/internal/service/leo_video_async_test.go`: verifies all named upstream aliases are hidden.
+- `backend/internal/service/video_job_service.go`: sanitizes failed creation messages before persistence.
+- `backend/internal/service/video_job_runtime.go`: sanitizes upstream terminal job errors before persistence.
+- `backend/internal/handler/leo_video_async.go`: sanitizes immediate responses and legacy persisted errors at the user API boundary.
+- `backend/internal/handler/leo_video_async_test.go`: verifies failed-job responses do not expose upstream names.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the single/multi-image workbench contract and provider-neutral errors.
+- `progress.md`: records this implementation, verification evidence, exclusions, and rollback command.
+- Rollback point: `a5fb54df6f5860b91f2f5947bac504eb9d604471`; run `git restore --source=a5fb54df6f5860b91f2f5947bac504eb9d604471 -- backend/internal/handler/leo_video_async.go backend/internal/handler/leo_video_async_test.go backend/internal/service/leo_video_async.go backend/internal/service/leo_video_async_test.go backend/internal/service/video_job_runtime.go backend/internal/service/video_job_service.go docs/LEO_VIDEO_CHANNEL.md frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md` from the Sub2API repository root.
+
+## 2026-07-20 - Task: Add a dedicated video API integration documentation page
+### What was done
+- Added the authenticated `/video-generation/api-docs` subpage and shared workbench/API documentation tabs without adding another sidebar item.
+- Documented Bearer authentication, local image upload, asynchronous video creation, single- and multi-image request bodies, job operations, lifecycle states, common errors, and provider privacy boundaries in Chinese and English.
+- Added copyable API examples and responsive layouts whose code blocks and request table scroll within their own containers on narrow screens.
+### Testing
+- `vitest run src/components/video/__tests__/ApiCodeBlock.spec.ts src/components/video/__tests__/VideoSectionTabs.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts --reporter=dot`: passed, 4 files and 10 tests.
+- Targeted ESLint for the new video documentation components, views, tests, route, and locale files: passed.
+- `vue-tsc --noEmit`: passed.
+- Direct `vite build`: passed with the existing dynamic-import and chunk-size warnings.
+- In-app browser checks at `1440x1000` and `390x844`: passed with no page-level horizontal overflow, significant overlap, or malformed curl continuation markers; code blocks and the field table retained internal scrolling on mobile.
+- Browser console contained no application errors; the temporary isolated preview only reported expected warnings for routes intentionally omitted from its minimal router.
+- `git diff --check`: passed before this progress append; the temporary preview files were removed and the preview server was stopped.
+- No production deployment or credit-consuming video request was performed.
+### Notes
+- `frontend/src/components/video/ApiCodeBlock.vue`: provides labeled, scrollable API examples with a clipboard action.
+- `frontend/src/components/video/EndpointTitle.vue`: renders compact HTTP method and path headings.
+- `frontend/src/components/video/SectionHeading.vue`: keeps documentation section headings consistent.
+- `frontend/src/components/video/VideoSectionTabs.vue`: links the generation workbench and API documentation subpage.
+- `frontend/src/components/video/__tests__/ApiCodeBlock.spec.ts`: verifies copied content and feedback state.
+- `frontend/src/components/video/__tests__/VideoSectionTabs.spec.ts`: verifies both links and active-tab semantics.
+- `frontend/src/views/user/VideoApiDocsView.vue`: implements the complete independent API integration documentation page and executable examples.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: covers the documented endpoint surface, image contracts, privacy boundary, and curl formatting.
+- `frontend/src/views/user/VideoGenerationView.vue`: displays the shared video-page tabs above the existing workbench.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: stubs the shared tabs while retaining the workbench submission regression coverage.
+- `frontend/src/router/index.ts`: registers the authenticated API documentation route.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English tab and API documentation copy.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese tab and API documentation copy.
+- `docs/LEO_VIDEO_CHANNEL.md`: records the new subpage scope and its privacy boundary.
+- `progress.md`: records the documentation implementation, verification evidence, changed files, and rollback point.
+- Rollback point for the complete Leo video fix and API documentation sequence: `a5fb54df6f5860b91f2f5947bac504eb9d604471`. After committing this documentation task separately, use `git revert <api-docs-task-commit>` for an API-docs-only rollback.

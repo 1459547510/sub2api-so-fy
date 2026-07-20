@@ -250,12 +250,12 @@ func accountMappedModel(account *Account, requested string) string {
 func videoJobFailureMessage(err error) string {
 	var upstreamErr *LeoAsyncUpstreamError
 	if errors.As(err, &upstreamErr) && strings.TrimSpace(upstreamErr.Message) != "" {
-		return upstreamErr.Message
+		return SanitizeVideoProviderMessage(upstreamErr.Message)
 	}
 	if err != nil && strings.TrimSpace(err.Error()) != "" {
-		return err.Error()
+		return SanitizeVideoProviderMessage(err.Error())
 	}
-	return "LeoStudio request failed"
+	return "Video provider request failed"
 }
 
 // OpenAIGatewayService implements account selection for the durable video service.

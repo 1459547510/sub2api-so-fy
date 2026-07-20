@@ -177,11 +177,12 @@ func (r *VideoJobRuntime) processJob(ctx context.Context, job *VideoJob) error {
 			message = strings.TrimSpace(upstream.Error.Message)
 		}
 		if message == "" {
-			message = "LeoStudio video job failed"
+			message = "Video provider video job failed"
 		}
 		if apiKey := account.GetLeoAPIKey(); apiKey != "" {
 			message = strings.ReplaceAll(message, apiKey, "***")
 		}
+		message = SanitizeVideoProviderMessage(message)
 		if err := r.Billing.SettleWithoutCharge(ctx, job); err != nil {
 			return err
 		}

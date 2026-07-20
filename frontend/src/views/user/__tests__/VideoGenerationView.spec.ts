@@ -53,6 +53,7 @@ function mountView() {
       stubs: {
         AppLayout: { template: '<div><slot /></div>' },
         Icon: { template: '<span />' },
+        VideoSectionTabs: { template: '<nav data-testid="video-section-tabs" />' },
       },
     },
   })
@@ -93,7 +94,28 @@ describe('VideoGenerationView', () => {
     expect(wrapper.text()).toContain('vidjob-text')
   })
 
-  it('submits multiple remote reference image URLs', async () => {
+  it('submits one remote reference image as a start frame', async () => {
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-remote-single', status: 'pending', status_url: '/v1/videos/jobs/vidjob-remote-single',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mode-url"]').trigger('click')
+    await wrapper.get('[data-testid="video-image-url"]').setValue('https://example.com/start.png')
+    await wrapper.get('[data-testid="video-prompt"]').setValue('Animate this frame')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', expect.objectContaining({
+      image_url: 'https://example.com/start.png',
+    }))
+    const payload = vi.mocked(createVideoJob).mock.calls[0][1]
+    expect(payload.image_urls).toBeUndefined()
+    expect(payload.guidances).toBeUndefined()
+  })
+
+  it('submits multiple remote reference image URLs with explicit order', async () => {
     vi.mocked(createVideoJob).mockResolvedValue({
       job_id: 'vidjob-remote', status: 'pending', status_url: '/v1/videos/jobs/vidjob-remote',
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -106,9 +128,13 @@ describe('VideoGenerationView', () => {
     await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
     await flushPromises()
 
-    expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', expect.objectContaining({
-      image_urls: ['https://example.com/ref-1.png', 'https://example.com/ref-2.png'],
-    }))
+    const payload = vi.mocked(createVideoJob).mock.calls[0][1]
+    expect(payload.image_url).toBeUndefined()
+    expect(payload.image_urls).toBeUndefined()
+    expect(payload.guidances).toEqual({ image_reference: [
+      { image: { url: 'https://example.com/ref-1.png', type: 'UPLOADED' }, strength: 'MID', order: 0 },
+      { image: { url: 'https://example.com/ref-2.png', type: 'UPLOADED' }, strength: 'MID', order: 1 },
+    ] })
   })
 
   it('uploads multiple local reference images before creating the job', async () => {
@@ -137,12 +163,12 @@ describe('VideoGenerationView', () => {
     await flushPromises()
 
     expect(uploadVideoInput).toHaveBeenCalledTimes(2)
-    expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', expect.objectContaining({
-      image_urls: [
-        'http://127.0.0.1/internal/video-inputs/ref-1.png',
-        'http://127.0.0.1/internal/video-inputs/ref-2.jpg',
-      ],
-    }))
+    const payload = vi.mocked(createVideoJob).mock.calls[0][1]
+    expect(payload.image_urls).toBeUndefined()
+    expect(payload.guidances).toEqual({ image_reference: [
+      { image: { url: 'http://127.0.0.1/internal/video-inputs/ref-1.png', type: 'UPLOADED' }, strength: 'MID', order: 0 },
+      { image: { url: 'http://127.0.0.1/internal/video-inputs/ref-2.jpg', type: 'UPLOADED' }, strength: 'MID', order: 1 },
+    ] })
   })
 
   it('cancels pending jobs and renders completed video output', async () => {

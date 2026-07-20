@@ -61,6 +61,8 @@ seedance-2.0-fast -> seedance-2.0-fast
 
 图片 URL 必须是 LeoStudio 服务端可以访问的绝对 `http`/`https` URL。接口不接受 data URL、Base64 或 multipart 视频生成请求；本地图片应先调用 Sub2 的 `/v1/videos/uploads`，再把返回 URL 放入上述字段。
 
+用户工作台提交单张图片时使用兼容性已验证的 `image_url` 首帧链路；提交 2 到 4 张图片时使用 `guidances.image_reference`，并按数组位置显式写入从 `0` 开始的连续 `order`。外部 API 仍兼容 `image_urls`，但调用方应优先使用上述两种明确语义。
+
 ## 用户端菜单开关
 
 管理员可在“系统设置 > 功能开关 > 视频生成”控制用户侧边栏中的“视频生成”菜单。设置键为 `video_generation_enabled`，默认开启；只有明确保存为 `false` 时才隐藏菜单，升级后无需重新开启。
@@ -94,6 +96,7 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 - Leo、OpenAI 和 Grok 账号分别调度，不会混选。
 - `400` 和 `422` 视为请求错误，不切换账号，也不计费。
 - `401`、`403`、`429`、`5xx` 和传输错误会尝试切换到其他可用 Leo 账号。
+- 用户接口和任务记录中的错误统一使用 `Video provider`，不暴露 LeoStudio 或其底层供应商名称。
 - 优先使用响应中的 `provider.resolution` 和 `provider.duration` 计费；缺失时回退到请求值。
 - 费用为“对应分辨率 USD/秒价格 x 实际时长 x 视频倍率”。
 
@@ -122,6 +125,8 @@ Content-Type: application/json
 ```
 
 Sub2API 返回 `202` 和自己的 `job_id`，后台协调器再轮询固定的 LeoStudio 账号。页面刷新后通过 `GET /v1/videos/jobs?limit=50` 恢复任务，不需要保持长连接。
+
+工作台顶部提供“生成工作台 / API 对接文档”页签。独立子页面 `/video-generation/api-docs` 记录 Bearer 鉴权、本地图片上传、异步创建、单图与多图请求、任务列表和详情、取消、成品下载、状态流转及常见 HTTP 错误；它不增加侧边栏一级菜单，也不展示供应商凭据、账号标识或供应商任务编号。
 
 ## 本地图片生命周期
 

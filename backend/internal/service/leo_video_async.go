@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -39,11 +40,17 @@ type LeoAsyncUpstreamError struct {
 	Ambiguous  bool
 }
 
+var videoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio)\b`)
+
+func SanitizeVideoProviderMessage(message string) string {
+	return videoProviderNamePattern.ReplaceAllString(message, "Video provider")
+}
+
 func (e *LeoAsyncUpstreamError) Error() string {
 	if e == nil || strings.TrimSpace(e.Message) == "" {
-		return "LeoStudio request failed"
+		return "Video provider request failed"
 	}
-	return e.Message
+	return SanitizeVideoProviderMessage(e.Message)
 }
 
 func PrefersLeoRespondAsync(header http.Header) bool {
@@ -81,7 +88,7 @@ func (s *OpenAIGatewayService) CreateLeoAsyncVideo(ctx context.Context, account 
 	}
 	var accepted LeoAsyncAccepted
 	if err := json.Unmarshal(responseBody, &accepted); err != nil || accepted.JobID <= 0 || strings.TrimSpace(accepted.Status) == "" {
-		return nil, &LeoAsyncUpstreamError{StatusCode: http.StatusAccepted, Message: "LeoStudio returned an invalid job response", Ambiguous: true}
+		return nil, &LeoAsyncUpstreamError{StatusCode: http.StatusAccepted, Message: "Video provider returned an invalid job response", Ambiguous: true}
 	}
 	return &accepted, nil
 }
@@ -112,7 +119,7 @@ func (s *OpenAIGatewayService) readLeoAsyncVideo(ctx context.Context, account *A
 	}
 	var job LeoAsyncJob
 	if err := json.Unmarshal(responseBody, &job); err != nil || job.JobID <= 0 || strings.TrimSpace(job.Status) == "" {
-		return nil, &LeoAsyncUpstreamError{StatusCode: http.StatusOK, Message: "LeoStudio returned an invalid job response", Retryable: true}
+		return nil, &LeoAsyncUpstreamError{StatusCode: http.StatusOK, Message: "Video provider returned an invalid job response", Retryable: true}
 	}
 	return &job, nil
 }
@@ -149,15 +156,15 @@ func (s *OpenAIGatewayService) doLeoAsyncRequest(
 	}
 	response, err := s.httpUpstream.Do(request, proxyURL, account.ID, account.Concurrency)
 	if err != nil {
-		return nil, &LeoAsyncUpstreamError{Message: "LeoStudio request failed", Retryable: retryTransport, Ambiguous: !retryTransport}
+		return nil, &LeoAsyncUpstreamError{Message: "Video provider request failed", Retryable: retryTransport, Ambiguous: !retryTransport}
 	}
 	if response == nil || response.Body == nil {
-		return nil, &LeoAsyncUpstreamError{Message: "LeoStudio returned an empty response", Retryable: retryTransport, Ambiguous: !retryTransport}
+		return nil, &LeoAsyncUpstreamError{Message: "Video provider returned an empty response", Retryable: retryTransport, Ambiguous: !retryTransport}
 	}
 	defer func() { _ = response.Body.Close() }()
 	responseBody, err := ReadUpstreamResponseBody(response.Body, s.cfg, nil, nil)
 	if err != nil {
-		return nil, &LeoAsyncUpstreamError{StatusCode: response.StatusCode, Message: "LeoStudio response could not be read", Retryable: retryTransport, Ambiguous: !retryTransport}
+		return nil, &LeoAsyncUpstreamError{StatusCode: response.StatusCode, Message: "Video provider response could not be read", Retryable: retryTransport, Ambiguous: !retryTransport}
 	}
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
 		message := sanitizeLeoAsyncErrorMessage(responseBody, apiKey, response.StatusCode)
@@ -176,7 +183,7 @@ func sanitizeLeoAsyncErrorMessage(body []byte, apiKey string, statusCode int) st
 		message = strings.ReplaceAll(message, apiKey, "***")
 	}
 	if message == "" {
-		return fmt.Sprintf("LeoStudio request failed with HTTP %d", statusCode)
+		return fmt.Sprintf("Video provider request failed with HTTP %d", statusCode)
 	}
-	return message
+	return SanitizeVideoProviderMessage(message)
 }

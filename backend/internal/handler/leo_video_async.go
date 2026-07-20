@@ -84,7 +84,7 @@ func (h *OpenAIGatewayHandler) LeoVideoAsyncGeneration(c *gin.Context) {
 		} else if strings.Contains(err.Error(), "required") || strings.Contains(err.Error(), "valid JSON") {
 			status, code = http.StatusBadRequest, "invalid_request_error"
 		}
-		h.errorResponse(c, status, code, err.Error())
+		h.errorResponse(c, status, code, service.SanitizeVideoProviderMessage(err.Error()))
 		return
 	}
 	statusURL := "/v1/videos/jobs/" + job.JobID
@@ -223,7 +223,7 @@ func publicLeoVideoJob(job *service.VideoJob) leoVideoJobResponse {
 		response.Result = append(json.RawMessage(nil), job.Result...)
 	}
 	if job.Status == service.VideoJobFailed && strings.TrimSpace(job.ErrorMessage) != "" {
-		response.Error = &leoVideoJobErr{Message: job.ErrorMessage}
+		response.Error = &leoVideoJobErr{Message: service.SanitizeVideoProviderMessage(job.ErrorMessage)}
 	}
 	return response
 }

@@ -186,6 +186,27 @@ func TestLeoVideoAsyncJobEndpointsStayAPIKeyScoped(t *testing.T) {
 	}
 }
 
+func TestLeoVideoAsyncJobHidesLegacyProviderNames(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &handlerVideoJobRepo{job: &service.VideoJob{
+		JobID: "vidjob_failed", APIKeyID: 2, Status: service.VideoJobFailed,
+		ErrorMessage: "Leonardo.ai request rejected by LeoStudio",
+	}}
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(repo)}
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/videos/jobs/vidjob_failed", nil)
+	c.Params = gin.Params{{Key: "job_id", Value: "vidjob_failed"}}
+	setHandlerVideoAuth(c)
+
+	h.LeoVideoJob(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Contains(t, recorder.Body.String(), "Video provider request rejected by Video provider")
+	require.NotContains(t, recorder.Body.String(), "Leonardo")
+	require.NotContains(t, recorder.Body.String(), "LeoStudio")
+}
+
 func TestLeoVideoJobContentStaysAPIKeyScopedAndServesMP4(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	video := []byte{0, 0, 0, 16, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm', 0, 0, 0, 0}

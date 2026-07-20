@@ -240,6 +240,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/video-generation/api-docs',
+    name: 'VideoApiDocs',
+    component: () => import('@/views/user/VideoApiDocsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Video API Documentation',
+      titleKey: 'video.apiDocs.title',
+      descriptionKey: 'video.apiDocs.description'
+    }
+  },
+  {
     path: '/usage',
     name: 'Usage',
     component: () => import('@/views/user/UsageView.vue'),
