@@ -2109,3 +2109,23 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: recorded the protocol synchronization, verification evidence, file list, and rollback point.
 - External reference checkout: `C:\Users\feiyu\.codex\tmp\leostudio-admin-review-083180d3` is clean at upstream commit `7af385af` and has no Sub2-specific edits.
 - Rollback point: `0a4a064f`; after creating the task commit, run `git revert <task-commit-hash>` from the repository root.
+
+## 2026-07-20 - Task: Integrate Leo multi-image guidance into the v0.1.161 release branch
+### What was done
+- Integrated the reviewed LeoStudio `7af385af` guidance and multi-image compatibility changes into the active fork release branch.
+- Confirmed legacy `image_url`, synchronous video forwarding, asynchronous jobs, local input cleanup, local output persistence, menu gating, and v0.1.161 security wiring remain present.
+- Kept Baota daily-report commits, homepage preview worktrees, stashes, and `.superpowers/` outside this release.
+- Confirmed this change reuses the existing `video_jobs.local_input_name` field and requires no database migration.
+### Testing
+- Final-branch targeted backend Leo video, multi-input, job, route, and prompt-audit coverage tests passed.
+- Final-branch targeted frontend multi-image workbench, video API, and sidebar tests passed.
+- `go test -p 2 -tags=unit -timeout 10m ./...`: passed for all backend packages.
+- `pnpm run test:run`: passed for the complete frontend Vitest suite.
+- `pnpm run lint:check`, `pnpm run typecheck`, and `pnpm run build`: passed.
+- `..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues`.
+- `go build -o ..\\.codex-run\\sub2api-v0.1.161-fy.4.exe ./cmd/server` and `--version`: passed and reported `Sub2API 0.1.161`.
+- `git diff --check`: passed before this final progress append; final staged checks follow.
+### Notes
+- The preceding multi-image guidance task entry lists all 13 implementation and documentation files changed by the feature commit.
+- `progress.md`: recorded final-branch compatibility checks, complete verification, exclusions, release target, and rollback procedure.
+- Rollback point: deploy `v0.1.161-fy.3`; for source rollback after release, revert the `v0.1.161-fy.3..v0.1.161-fy.4` commit range without applying or deleting unrelated worktrees or stashes.
