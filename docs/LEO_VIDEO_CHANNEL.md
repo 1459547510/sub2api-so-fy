@@ -137,6 +137,8 @@ Sub2API 返回 `202` 和自己的 `job_id`，后台协调器再轮询固定的 L
 
 内部读取接口只接受真实 loopback `RemoteAddr`，不信任 `X-Forwarded-For`，也不返回目录列表或服务器路径。Sub2 会识别 `image_url`、首尾帧、`image_urls` 和嵌套图片 guidance 中的全部本地 token。任务完成、失败或取消后，关联图片会一起标记为终态并至少保留 1 小时；没有关联任务的孤儿文件保留 24 小时。后台 runtime 启动时执行一次扫描，之后每天最多执行一次清理，删除失败会在下一轮重试。
 
+使用 `embed` 标签构建内嵌前端时，`/internal/video-inputs/` 必须在 SPA fallback 之前交给后端路由处理；否则内部图片请求会收到 `200 text/html` 的前端页面，LeoStudio 会把 HTML 当作图片上传并导致视频创建失败。发布验收至少应确认：不存在的 token 返回 `404`，有效 token 返回实际图片 MIME，且响应大小与 SHA256 和上传源一致。
+
 ## 本地视频成品
 
 LeoStudio 报告任务完成后，Sub2API 会先从结果中的 `source_url`、`mp4_url`、`video_url` 或 `url` 下载第一个视频。文件先写入临时文件，限制为最大 512 MiB，并校验 MP4 文件头 `ftyp`；校验通过后再原子移动到现有数据目录的 `video-outputs/<job_id>.mp4`。已存在且校验有效的文件会直接复用，服务重启后的结算重试不会重复下载。

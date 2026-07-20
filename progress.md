@@ -2339,3 +2339,49 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: tests custom Keys, Key isolation, single-image, multi-image, upload, cancel, and download flows.
 - `progress.md`: records this release integration and verification evidence.
 - Rollback point: redeploy `v0.1.161-fy.4`; for source rollback after this release commit, run `git revert <release-commit-hash>` from the repository root.
+
+## 2026-07-20 - Task: Fix embedded Leo local-image routing and verify production video generation
+### What was done
+- Fixed the embedded frontend middleware so `/internal/video-inputs/:token` reaches the loopback-only image handler instead of the SPA fallback.
+- Added a regression test that requires the internal route to return the backend `image/jpeg` response unchanged.
+- Deployed `0.1.161-fy.5-hotfix.2` to `api.fflink.top` with a timestamped binary backup and automatic rollback, then verified an uploaded JPEG byte-for-byte and completed one real 4-second Seedance video job.
+- Confirmed the existing `/video-generation/api-docs` child page and workbench/API-docs tabs remain deployed and cover the complete public asynchronous workflow.
+### Testing
+- `backend: go test -p 2 -tags=unit -timeout 10m ./...`: passed.
+- `backend: go test -tags=embed ./internal/web ./internal/handler ./internal/server/routes -count=1`: passed.
+- `backend: go vet -tags=embed ./internal/web ./internal/handler ./internal/server/routes`: passed.
+- `frontend: .\\node_modules\\.bin\\vite.cmd build`: passed with existing warnings.
+- `frontend: .\\node_modules\\.bin\\vitest.cmd run src\\views\\user\\__tests__\\VideoApiDocsView.spec.ts src\\components\\video\\__tests__\\VideoSectionTabs.spec.ts --reporter=dot`: passed, 2 files and 2 tests.
+- Production missing-token checks returned `404` locally and through `https://api.fflink.top`; `/health` returned `200`.
+- Production upload `yMre6R-bQw2aboHEPQS6l1zfjWKHrR2Y` returned `image/jpeg`; source and downloaded sizes were `101224` bytes and both SHA256 values were `de90b579d2fd84dfad51c4dee7789f2832ce1f6eaacbf8a50167e5ddc8fefed5`.
+- Production job `vidjob_iUSug795Mygsu-Kbvu_nZ6HyE-hhd9iv` transitioned `pending -> running -> completed`; authenticated content download returned `video/mp4`, `797507` bytes, SHA256 `227fd36d942aa815abc3a6c94ab5f96cad3789d5f993a678a0a8a9804000634f`, and settled at actual cost `0.3200000000`.
+- Deployed binary SHA256 is `5fa793a1d01397514e03ffb6d4875e81492af67a9f76efe81427cb9ccdc814f8`; `git diff --check` passed before this log append.
+### Notes
+- `backend/internal/web/embed_on.go`: bypasses the embedded SPA for the internal video-input route.
+- `backend/internal/web/embed_test.go`: covers backend image response preservation through the embedded middleware.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the embed bypass requirement and production acceptance checks.
+- `progress.md`: records implementation, local verification, production deployment, real-task evidence, and rollback instructions.
+- The first `hotfix.1` candidate was automatically rolled back because a Windows CRLF migration payload did not match the existing database checksum; no migration or database checksum was changed. `hotfix.2` was built from a Git-archived LF source tree and matched the database migration checksum.
+- The existing API Key initially returned `GROUP_NOT_ALLOWED`; the operator changed the Leo group from exclusive to public before the successful real test. This task did not modify authentication or group configuration.
+- Production rollback: `install -m 0755 /opt/sub2api/sub2api.backup-before-video-input-hotfix.20260720T085733Z /opt/sub2api/sub2api && systemctl restart sub2api`.
+- Source rollback point: `02561d62c5fd24c897685ed98ed6c94a0a3ec48c`; run `git restore --source=02561d62c5fd24c897685ed98ed6c94a0a3ec48c --worktree -- backend/internal/web/embed_on.go backend/internal/web/embed_test.go docs/LEO_VIDEO_CHANNEL.md progress.md` from the repository root.
+
+## 2026-07-20 - Task: Prepare the embedded video-input hotfix release v0.1.161-fy.6
+### What was done
+- Re-audited the embedded frontend bypass and regression test, confirmed the change is limited to local video-input routing, and selected `v0.1.161-fy.6` as the next release.
+- Confirmed the release contains no database, migration, authentication, homepage, Baota report, or unrelated worktree changes.
+- Rebuilt the embedded application and verified the local release candidate reports `Sub2API 0.1.161-fy.6`.
+### Testing
+- `backend: go test -tags=embed ./internal/web ./internal/handler ./internal/server/routes -count=1`: passed.
+- `backend: go vet -tags=embed ./internal/web ./internal/handler ./internal/server/routes`: passed.
+- `backend: go test -p 2 -tags=unit -timeout 10m ./...`: passed for all backend packages.
+- `frontend: .\\node_modules\\.bin\\vite.cmd build`: passed with existing dynamic-import and chunk-size warnings.
+- `backend: go build -tags embed -trimpath -ldflags "-s -w -X main.Version=0.1.161-fy.6" -o ..\\.codex-run\\sub2api-v0.1.161-fy.6.exe ./cmd/server` and `--version`: passed.
+- `backend: ..\\.codex-run\\bin\\golangci-lint.exe run --build-tags embed --concurrency 2 ./internal/web/...`: reported three pre-existing `errcheck` findings at `embed_on.go:246-248`; `git blame` attributes all three unchanged lines to `500f241692`, and this task does not modify them.
+- `git diff --check`: passed before this progress append; final staged check follows.
+### Notes
+- `backend/internal/web/embed_on.go`: bypasses the embedded SPA for `/internal/video-inputs/`.
+- `backend/internal/web/embed_test.go`: verifies backend image MIME and bytes survive embedded middleware routing.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the embed routing requirement and production acceptance checks.
+- `progress.md`: records the implementation, production evidence, release verification, residual lint gap, and rollback point.
+- Rollback point: deploy `v0.1.161-fy.5`; for source rollback after release, run `git revert <v0.1.161-fy.6-commit>` from the repository root.
