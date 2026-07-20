@@ -2385,3 +2385,36 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_CHANNEL.md`: documents the embed routing requirement and production acceptance checks.
 - `progress.md`: records the implementation, production evidence, release verification, residual lint gap, and rollback point.
 - Rollback point: deploy `v0.1.161-fy.5`; for source rollback after release, run `git revert <v0.1.161-fy.6-commit>` from the repository root.
+
+## 2026-07-20 - Task: Merge upstream v0.1.162 and release v0.1.162-fy.1
+### What was done
+- Merged the upstream `v0.1.162` release tag into the fork without taking post-release commits, and synchronized the embedded application base version to `0.1.162`.
+- Resolved seven merge conflicts while preserving the fork's Telemetry homepage, token incentive settings, fork-aware update checks, in-app update/restart path, video generation and pricing, local video input handling, Prompt Audit behavior, and authentication cache behavior.
+- Integrated upstream configurable client-IP handling, image-storage settings, Grok count-token estimation and cache behavior, updater lifecycle fixes, subscription display changes, and related frontend/deployment updates.
+- Preserved both updater credentials: the fork's configured GitHub token remains available for private release downloads, while `UPDATE_GITHUB_TOKEN` remains an API-only fallback with redirect leakage protection.
+- Added the missing Viper default for `update.github_token`, updated rollback API timeout expectations, regenerated Wire output, and aligned embedded static-resource tests with the upstream SVG logo migration.
+### Testing
+- `backend: go test -p 2 -tags=unit -timeout 10m ./...`: passed for all packages.
+- `backend: go test ./internal/repository -run 'GitHubRelease' -count=1`: passed.
+- `backend: go test ./internal/service -run 'TokenIncentive|SettingService|UpdateService|Video|ImageStorage|Grok.*CountTokens' -count=1`: passed.
+- `backend: go test ./internal/handler ./internal/server/routes ./internal/server -run 'Leo|Video|CountTokens|Update|PromptAudit|APIContract|Forwarded|TokenIncentive' -count=1`: passed.
+- `backend: go test -tags=embed ./internal/web ./internal/handler ./internal/server/routes -count=1`: passed.
+- `backend: go vet -tags=embed ./internal/web ./internal/handler ./internal/server/routes`: passed.
+- `backend: ..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues`.
+- Frontend full Vitest suite, ESLint, `vue-tsc --noEmit`, and Vite production build: passed; Vite reported only the existing dynamic-import and large-chunk warnings.
+- `backend: go build -tags embed -trimpath -ldflags "-s -w -X main.Version=0.1.162-fy.1" -o ..\\.codex-run\\sub2api-v0.1.162-fy.1.exe ./cmd/server` and `--version`: passed and reported `0.1.162-fy.1`.
+- `git diff --check`, `git diff --cached --check`, merge-marker scan, and unmerged-path scan: passed before this log append.
+### Notes
+- `README.md`, `README_JA.md`: retain fork attribution and second-development notices while adopting the upstream SVG logo.
+- `frontend/src/views/HomeView.vue`: retains the fork's Telemetry homepage instead of restoring the removed upstream homepage implementation.
+- `backend/internal/repository/github_release_service.go`: combines fork/upstream release checks and credential handling without exposing API credentials across redirects.
+- `backend/internal/server/routes/gateway.go`: combines the fork's Leo routing policy with upstream Grok local token estimation.
+- `backend/internal/service/setting_service_update_test.go`: retains token-incentive coverage and adds upstream forwarded-client-IP coverage.
+- `backend/internal/service/wire.go`, `backend/cmd/server/wire_gen.go`: retain video providers and add upstream image-storage settings providers.
+- `backend/internal/config/config.go`: makes `UPDATE_GITHUB_TOKEN` reachable through Viper while retaining all upstream v0.1.162 configuration changes.
+- `frontend/src/api/__tests__/admin.system.rollback.spec.ts`: verifies the upstream 15-minute update and rollback request timeout.
+- `backend/internal/web/embed_test.go`: requests the shipped `logo.svg` asset and verifies its SVG content type.
+- All remaining changed source, test, frontend, deployment, asset, and documentation paths are the staged upstream `v0.1.162` release delta; the authoritative per-file list is available with `git diff --name-status v0.1.161-fy.6..v0.1.162-fy.1` after tagging.
+- `progress.md`: records the merge decisions, verification evidence, release target, and rollback point.
+- No database migration file is included in this release delta.
+- Rollback point: redeploy `v0.1.161-fy.6`; for source rollback after release, run `git revert -m 1 <v0.1.162-fy.1-merge-commit>` from the repository root.
