@@ -85,6 +85,21 @@ func TestForwardLeoVideoFallsBackToRequestMetadata(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 }
 
+func TestForwardLeoVideoRejectsSuccessfulResponseWithoutVideo(t *testing.T) {
+	for _, responseBody := range []string{`{"data":[]}`, `{"data":[{"status":"completed"}]}`} {
+		upstream := &leoVideoHTTPUpstream{response: leoVideoResponse(http.StatusOK, responseBody)}
+		svc := &OpenAIGatewayService{httpUpstream: upstream}
+		recorder, c := newLeoVideoTestContext()
+
+		result, err := svc.ForwardLeoVideo(context.Background(), c, newLeoVideoTestAccount(), []byte(`{"model":"seedance","prompt":"city"}`))
+
+		require.Error(t, err)
+		require.Nil(t, result)
+		require.False(t, c.Writer.Written())
+		require.Empty(t, recorder.Body.String())
+	}
+}
+
 func TestForwardLeoVideoRejectsInvalidJSONBeforeTransport(t *testing.T) {
 	upstream := &leoVideoHTTPUpstream{}
 	svc := &OpenAIGatewayService{httpUpstream: upstream}

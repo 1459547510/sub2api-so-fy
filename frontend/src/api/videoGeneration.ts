@@ -112,6 +112,14 @@ export async function getVideoJob(apiKey: string, jobId: string): Promise<VideoJ
   return response.json()
 }
 
+export async function downloadVideoOutput(apiKey: string, jobId: string): Promise<Blob> {
+  const response = await fetch(buildGatewayUrl(`/v1/videos/jobs/${encodeURIComponent(jobId)}/content`), {
+    headers: authHeaders(apiKey),
+  })
+  if (!response.ok) throw await parseVideoError(response)
+  return response.blob()
+}
+
 export async function cancelVideoJob(apiKey: string, jobId: string): Promise<VideoJob> {
   const response = await fetch(buildGatewayUrl(`/v1/videos/jobs/${encodeURIComponent(jobId)}`), {
     method: 'DELETE',

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ type VideoJobRuntime struct {
 	Client       VideoJobAsyncClient
 	Billing      *VideoJobBillingService
 	InputStore   *VideoInputStore
+	OutputStore  *VideoOutputStore
 	PollInterval time.Duration
 
 	mu               sync.Mutex
@@ -23,6 +25,8 @@ type VideoJobRuntime struct {
 	inputCleanupMu   sync.Mutex
 	lastInputCleanup time.Time
 }
+
+const videoOutputSaveMaxAttempts = 3
 
 func (r *VideoJobRuntime) Start(ctx context.Context) {
 	if r == nil {
@@ -82,7 +86,7 @@ func (r *VideoJobRuntime) Stop() {
 }
 
 func (r *VideoJobRuntime) RunOnce(ctx context.Context) error {
-	if r == nil || r.Repo == nil || r.Accounts == nil || r.Client == nil || r.Billing == nil {
+	if r == nil || r.Repo == nil || r.Accounts == nil || r.Client == nil || r.Billing == nil || r.OutputStore == nil {
 		return errors.New("video job runtime is not configured")
 	}
 	if err := r.cleanupInputs(time.Now()); err != nil {
@@ -196,15 +200,57 @@ func (r *VideoJobRuntime) processJob(ctx context.Context, job *VideoJob) error {
 }
 
 func (r *VideoJobRuntime) settleCompleted(ctx context.Context, job *VideoJob, result json.RawMessage) error {
-	if err := r.Billing.SettleCompleted(ctx, job, result); err != nil {
+	savedResult, err := r.OutputStore.Save(ctx, job.JobID, result)
+	if err != nil {
+		if errors.Is(err, ErrVideoOutputURLMissing) {
+			return r.failJob(ctx, job, err)
+		}
+		retryResult, attempts, retryErr := recordVideoOutputSaveAttempt(result)
+		if retryErr != nil {
+			return r.failJob(ctx, job, err)
+		}
+		if attempts >= videoOutputSaveMaxAttempts {
+			return r.failJob(ctx, job, fmt.Errorf("save generated video after %d attempts: %w", attempts, err))
+		}
+		if transitionErr := r.Repo.TransitionVideoJob(ctx, job.JobID, []string{VideoJobSettling}, VideoJobSettling, VideoJobTransition{Result: retryResult}); transitionErr != nil {
+			return transitionErr
+		}
+		job.Result = retryResult
+		return nil
+	}
+	if err := r.Repo.TransitionVideoJob(ctx, job.JobID, []string{VideoJobSettling}, VideoJobSettling, VideoJobTransition{Result: savedResult}); err != nil {
+		return err
+	}
+	job.Result = savedResult
+	if err := r.Billing.SettleCompleted(ctx, job, savedResult); err != nil {
 		return nil
 	}
 	finished := time.Now()
-	transition := VideoJobTransition{Result: result, ActualCost: job.ActualCost, FinishedAt: &finished, SettledAt: job.SettledAt}
+	transition := VideoJobTransition{Result: savedResult, ActualCost: job.ActualCost, FinishedAt: &finished, SettledAt: job.SettledAt}
 	if err := r.Repo.TransitionVideoJob(ctx, job.JobID, []string{VideoJobSettling}, VideoJobCompleted, transition); err != nil {
 		return err
 	}
 	return r.markInputTerminal(job, finished)
+}
+
+func recordVideoOutputSaveAttempt(result json.RawMessage) (json.RawMessage, int, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(result, &payload); err != nil {
+		return nil, 0, err
+	}
+	provider, _ := payload["provider"].(map[string]any)
+	if provider == nil {
+		provider = make(map[string]any)
+		payload["provider"] = provider
+	}
+	attempts := 0
+	if current, ok := provider["local_save_attempts"].(float64); ok && current > 0 {
+		attempts = int(current)
+	}
+	attempts++
+	provider["local_save_attempts"] = attempts
+	rewritten, err := json.Marshal(payload)
+	return rewritten, attempts, err
 }
 
 func (r *VideoJobRuntime) failJob(ctx context.Context, job *VideoJob, err error) error {

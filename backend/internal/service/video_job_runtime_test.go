@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 type runtimeVideoClient struct {
@@ -65,26 +68,41 @@ func newRuntimeJob(status string) *VideoJob {
 		BillingSnapshot: snapshot, HoldAmount: f64p(0.8), RequestHash: "runtime-hash"}
 }
 
+func newRuntimeOutputStore(t *testing.T) *VideoOutputStore {
+	t.Helper()
+	return NewVideoOutputStore(t.TempDir())
+}
+
 func TestVideoJobRuntimeReconcilesCompletedJobThroughSettling(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(minimalMP4)
+	}))
+	defer server.Close()
 	repo := &fakeVideoJobServiceRepo{job: newRuntimeJob(VideoJobPending)}
-	client := &runtimeVideoClient{job: &LeoAsyncJob{JobID: 42, Status: VideoJobCompleted, Result: json.RawMessage(`{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"RESOLUTION_720","duration":8}}`)}}
+	client := &runtimeVideoClient{job: &LeoAsyncJob{JobID: 42, Status: VideoJobCompleted, Result: json.RawMessage(`{"data":[{"url":"` + server.URL + `/video.mp4"}],"provider":{"resolution":"RESOLUTION_720","duration":8}}`)}}
 	selector := &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}
 	billing := newRuntimeBilling()
-	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, PollInterval: time.Hour}
+	outputStore := newRuntimeOutputStore(t)
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, OutputStore: outputStore, PollInterval: time.Hour}
 
 	require.NoError(t, runtime.RunOnce(context.Background()))
 	require.Equal(t, VideoJobCompleted, repo.job.Status)
 	require.NotNil(t, repo.job.SettledAt)
 	require.GreaterOrEqual(t, len(repo.transitions), 2)
 	require.Equal(t, VideoJobSettling, repo.transitions[0].to)
-	require.Equal(t, VideoJobCompleted, repo.transitions[1].to)
+	require.Equal(t, VideoJobSettling, repo.transitions[1].to)
+	require.Equal(t, VideoJobCompleted, repo.transitions[2].to)
+	require.Equal(t, VideoOutputURL(repo.job.JobID), gjson.GetBytes(repo.job.Result, "data.0.mp4_url").String())
+	file, err := outputStore.Open(repo.job.JobID)
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
 }
 
 func TestVideoJobRuntimeReleasesFailedAndLeavesTransientErrorsPending(t *testing.T) {
 	repo := &fakeVideoJobServiceRepo{job: newRuntimeJob(VideoJobRunning)}
 	client := &runtimeVideoClient{job: &LeoAsyncJob{JobID: 42, Status: VideoJobFailed, Error: &LeoAsyncJobError{Message: "generation failed"}}}
 	selector := &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}
-	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling()}
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling(), OutputStore: newRuntimeOutputStore(t)}
 
 	require.NoError(t, runtime.RunOnce(context.Background()))
 	require.Equal(t, VideoJobFailed, repo.job.Status)
@@ -92,7 +110,7 @@ func TestVideoJobRuntimeReleasesFailedAndLeavesTransientErrorsPending(t *testing
 
 	repo = &fakeVideoJobServiceRepo{job: newRuntimeJob(VideoJobPending)}
 	client = &runtimeVideoClient{err: &LeoAsyncUpstreamError{Message: "temporary", Retryable: true}}
-	runtime = &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling()}
+	runtime = &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling(), OutputStore: newRuntimeOutputStore(t)}
 	require.NoError(t, runtime.RunOnce(context.Background()))
 	require.Equal(t, VideoJobPending, repo.job.Status)
 }
@@ -103,7 +121,7 @@ func TestVideoJobRuntimeStartRecoversAfterRestartAndStopWaitsForPoll(t *testing.
 	continueC := make(chan struct{})
 	client := &runtimeVideoClient{job: &LeoAsyncJob{JobID: 42, Status: VideoJobPending}, started: started, continueC: continueC}
 	selector := &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}
-	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling(), PollInterval: time.Millisecond}
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling(), OutputStore: newRuntimeOutputStore(t), PollInterval: time.Millisecond}
 	runtime.Start(context.Background())
 	select {
 	case <-started:
@@ -137,7 +155,7 @@ func TestVideoJobRuntimeMarksLocalInputsTerminalForDelayedCleanup(t *testing.T) 
 	repo.job.LocalInputName = input.Token
 	client := &runtimeVideoClient{job: &LeoAsyncJob{JobID: 42, Status: VideoJobFailed, Error: &LeoAsyncJobError{Message: "failed"}}}
 	selector := &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}
-	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling(), InputStore: store}
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: newRuntimeBilling(), InputStore: store, OutputStore: newRuntimeOutputStore(t)}
 
 	require.NoError(t, runtime.RunOnce(context.Background()))
 	removed, err := store.Cleanup(time.Now().Add(30 * time.Minute))
@@ -146,4 +164,40 @@ func TestVideoJobRuntimeMarksLocalInputsTerminalForDelayedCleanup(t *testing.T) 
 	removed, err = store.Cleanup(time.Now().Add(2 * time.Hour))
 	require.NoError(t, err)
 	require.Equal(t, 1, removed)
+}
+
+func TestVideoJobRuntimeFailsEmptyCompletedResultWithoutCharging(t *testing.T) {
+	repo := &fakeVideoJobServiceRepo{job: newRuntimeJob(VideoJobPending)}
+	client := &runtimeVideoClient{job: &LeoAsyncJob{JobID: 42, Status: VideoJobCompleted, Result: json.RawMessage(`{"data":[]}`)}}
+	selector := &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}
+	billing := newRuntimeBilling()
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, OutputStore: newRuntimeOutputStore(t)}
+
+	require.NoError(t, runtime.RunOnce(context.Background()))
+	require.Equal(t, VideoJobFailed, repo.job.Status)
+	require.NotNil(t, repo.job.SettledAt)
+	require.Empty(t, billing.UsageRecorder.(*fakeVideoUsageRecorder).inputs)
+	require.Len(t, billing.BillingRepo.(*fakeVideoJobBalanceRepo).releases, 1)
+}
+
+func TestVideoJobRuntimeRetriesInvalidOutputThenReleasesHold(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("not-an-mp4"))
+	}))
+	defer server.Close()
+	repo := &fakeVideoJobServiceRepo{job: newRuntimeJob(VideoJobPending)}
+	client := &runtimeVideoClient{job: &LeoAsyncJob{JobID: 42, Status: VideoJobCompleted, Result: json.RawMessage(`{"data":[{"url":"` + server.URL + `/video"}]}`)}}
+	selector := &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}
+	billing := newRuntimeBilling()
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, OutputStore: newRuntimeOutputStore(t)}
+
+	require.NoError(t, runtime.RunOnce(context.Background()))
+	require.Equal(t, VideoJobSettling, repo.job.Status)
+	require.Equal(t, int64(1), gjson.GetBytes(repo.job.Result, "provider.local_save_attempts").Int())
+	require.NoError(t, runtime.RunOnce(context.Background()))
+	require.Equal(t, VideoJobSettling, repo.job.Status)
+	require.NoError(t, runtime.RunOnce(context.Background()))
+	require.Equal(t, VideoJobFailed, repo.job.Status)
+	require.Empty(t, billing.UsageRecorder.(*fakeVideoUsageRecorder).inputs)
+	require.Len(t, billing.BillingRepo.(*fakeVideoJobBalanceRepo).releases, 1)
 }

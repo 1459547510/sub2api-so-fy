@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -76,6 +77,12 @@ func (r *fakeVideoJobServiceRepo) TransitionVideoJob(_ context.Context, jobID st
 		}
 		if transition.ErrorMessage != nil {
 			r.job.ErrorMessage = *transition.ErrorMessage
+		}
+		if len(transition.Result) != 0 {
+			r.job.Result = append(json.RawMessage(nil), transition.Result...)
+		}
+		if transition.ActualCost != nil {
+			r.job.ActualCost = transition.ActualCost
 		}
 	}
 	return nil

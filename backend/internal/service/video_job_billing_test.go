@@ -126,3 +126,17 @@ func TestVideoJobFailureOnlyReleasesHold(t *testing.T) {
 	require.Len(t, balance.releases, 1)
 	require.NotNil(t, job.SettledAt)
 }
+
+func TestVideoJobSettlementRejectsEmptyResult(t *testing.T) {
+	recorder := &fakeVideoUsageRecorder{}
+	snapshot, err := json.Marshal(VideoJobBillingSnapshot{BillingType: BillingTypeBalance, Price720P: 0.1, RateMultiplier: 1})
+	require.NoError(t, err)
+	job := &VideoJob{JobID: "vidjob_empty", BillingSnapshot: snapshot}
+	service := &VideoJobBillingService{UsageRecorder: recorder}
+
+	err = service.SettleCompleted(context.Background(), job, json.RawMessage(`{"data":[]}`))
+
+	require.ErrorIs(t, err, ErrVideoOutputURLMissing)
+	require.Empty(t, recorder.inputs)
+	require.Nil(t, job.SettledAt)
+}

@@ -65,6 +65,14 @@ func ProvideVideoInputStore(cfg *config.Config) *VideoInputStore {
 	return NewVideoInputStore(dataDir, port)
 }
 
+func ProvideVideoOutputStore(cfg *config.Config) *VideoOutputStore {
+	dataDir := "./data"
+	if cfg != nil && cfg.Pricing.DataDir != "" {
+		dataDir = cfg.Pricing.DataDir
+	}
+	return NewVideoOutputStore(dataDir)
+}
+
 func ProvideVideoJobService(
 	repo VideoJobRepository,
 	selector VideoJobAccountSelector,
@@ -97,8 +105,9 @@ func ProvideVideoJobRuntime(
 	client VideoJobAsyncClient,
 	billing *VideoJobBillingService,
 	inputs *VideoInputStore,
+	outputs *VideoOutputStore,
 ) *VideoJobRuntime {
-	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, InputStore: inputs, PollInterval: 2 * time.Second}
+	runtime := &VideoJobRuntime{Repo: repo, Accounts: selector, Client: client, Billing: billing, InputStore: inputs, OutputStore: outputs, PollInterval: 2 * time.Second}
 	runtime.Start(context.Background())
 	return runtime
 }
@@ -742,6 +751,7 @@ var ProviderSet = wire.NewSet(
 	ProvideImageTaskService,
 	ProvideBatchImageModelPricingResolver,
 	ProvideVideoInputStore,
+	ProvideVideoOutputStore,
 	NewBatchImagePublicService,
 	NewBatchImageDownloadService,
 	ProvideBatchImageCleanupService,

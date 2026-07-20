@@ -5,6 +5,7 @@ import { keysAPI } from '@/api'
 import {
   cancelVideoJob,
   createVideoJob,
+  downloadVideoOutput,
   listVideoJobs,
   uploadVideoInput,
 } from '@/api/videoGeneration'
@@ -16,6 +17,7 @@ vi.mock('@/api', () => ({
 vi.mock('@/api/videoGeneration', () => ({
   cancelVideoJob: vi.fn(),
   createVideoJob: vi.fn(),
+  downloadVideoOutput: vi.fn(),
   listVideoJobs: vi.fn(),
   uploadVideoInput: vi.fn(),
 }))
@@ -59,6 +61,8 @@ function mountView() {
 describe('VideoGenerationView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:local-video') })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
     vi.mocked(keysAPI.list).mockResolvedValue({ items: [leoKey, grokKey] } as any)
     vi.mocked(listVideoJobs).mockResolvedValue({ data: [] })
   })
@@ -108,6 +112,7 @@ describe('VideoGenerationView', () => {
   })
 
   it('cancels pending jobs and renders completed video output', async () => {
+    vi.mocked(downloadVideoOutput).mockResolvedValue(new Blob(['mp4'], { type: 'video/mp4' }))
     vi.mocked(listVideoJobs).mockResolvedValue({ data: [
       { job_id: 'vidjob-done', status: 'completed', status_url: '', model: 'seedance-2.0', prompt: 'done', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), result: { data: [{ mp4_url: 'https://cdn.example/done.mp4' }] } },
       { job_id: 'vidjob-pending', status: 'pending', status_url: '', model: 'seedance-2.0', prompt: 'wait', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -116,10 +121,13 @@ describe('VideoGenerationView', () => {
     const wrapper = mountView()
     await flushPromises()
 
-    expect(wrapper.find('video').attributes('src')).toBe('https://cdn.example/done.mp4')
+    expect(downloadVideoOutput).toHaveBeenCalledWith('sub2-leo-key', 'vidjob-done')
+    expect(wrapper.find('video').attributes('src')).toBe('blob:local-video')
     await wrapper.get('[data-testid="cancel-vidjob-pending"]').trigger('click')
     await flushPromises()
     expect(cancelVideoJob).toHaveBeenCalledWith('sub2-leo-key', 'vidjob-pending')
+    wrapper.unmount()
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:local-video')
   })
 
   it('shows a useful empty state when no Leo key is available', async () => {

@@ -125,12 +125,13 @@ func ProvideOpenAIGatewayHandler(
 	coordinator *securityaudit.Coordinator,
 	videoJobs *service.VideoJobService,
 	videoInput *VideoInputHandler,
+	videoOutput *service.VideoOutputStore,
 ) *OpenAIGatewayHandler {
 	h := NewOpenAIGatewayHandler(gatewayService, concurrencyService, billingCacheService, apiKeyService,
 		usageRecordWorkerPool, errorPassthroughService, contentModerationService, opsService, cfg)
 	h.securityAuditCoordinator = coordinator
 	h.grokMediaEligibilityProber = grokQuotaService
-	h.SetVideoServices(videoJobs, videoInput)
+	h.SetVideoServices(videoJobs, videoInput, videoOutput)
 	return h
 }
 

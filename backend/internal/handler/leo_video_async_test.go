@@ -138,6 +138,36 @@ func TestLeoVideoAsyncJobEndpointsStayAPIKeyScoped(t *testing.T) {
 	}
 }
 
+func TestLeoVideoJobContentStaysAPIKeyScopedAndServesMP4(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	video := []byte{0, 0, 0, 16, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm', 0, 0, 0, 0}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(video)
+	}))
+	defer server.Close()
+	store := service.NewVideoOutputStore(t.TempDir())
+	_, err := store.Save(context.Background(), "vidjob_content", json.RawMessage(`{"data":[{"url":"`+server.URL+`/video.mp4"}]}`))
+	require.NoError(t, err)
+	repo := &handlerVideoJobRepo{job: &service.VideoJob{JobID: "vidjob_content", APIKeyID: 2, Status: service.VideoJobCompleted}}
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(repo), videoOutputStore: store}
+
+	for _, apiKeyID := range []int64{999, 2} {
+		recorder := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(recorder)
+		c.Request = httptest.NewRequest(http.MethodGet, "/v1/videos/jobs/vidjob_content/content", nil)
+		c.Params = gin.Params{{Key: "job_id", Value: "vidjob_content"}}
+		setHandlerVideoAuthWithKey(c, apiKeyID)
+		h.LeoVideoJobContent(c)
+		if apiKeyID == 999 {
+			require.Equal(t, http.StatusNotFound, recorder.Code)
+		} else {
+			require.Equal(t, http.StatusOK, recorder.Code)
+			require.Equal(t, "video/mp4", recorder.Header().Get("Content-Type"))
+			require.Equal(t, video, recorder.Body.Bytes())
+		}
+	}
+}
+
 func setHandlerVideoAuth(c *gin.Context) { setHandlerVideoAuthWithKey(c, 2) }
 
 func setHandlerVideoAuthWithKey(c *gin.Context, apiKeyID int64) {

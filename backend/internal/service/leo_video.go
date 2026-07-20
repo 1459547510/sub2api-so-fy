@@ -98,6 +98,9 @@ func (s *OpenAIGatewayService) ForwardLeoVideo(
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return s.handleLeoVideoErrorResponse(ctx, c, account, resp, responseBody)
 	}
+	if _, _, _, err := parseVideoOutputResult(responseBody); err != nil {
+		return nil, fmt.Errorf("LeoStudio returned no usable video output")
+	}
 
 	writeOpenAIPassthroughResponseHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))

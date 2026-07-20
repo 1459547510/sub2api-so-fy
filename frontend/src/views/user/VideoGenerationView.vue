@@ -151,7 +151,7 @@
             </div>
             <div v-if="selectedJob" class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-dark-400">
               <span class="truncate">{{ selectedJob.prompt }}</span>
-              <a v-if="selectedVideoUrl" :href="selectedVideoUrl" download class="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-700 dark:text-primary-300" :title="t('video.download')">
+              <a v-if="selectedVideoUrl" :href="selectedVideoUrl" :download="`${selectedJob.job_id}.mp4`" class="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-700 dark:text-primary-300" :title="t('video.download')">
                 <Icon name="download" size="sm" />
                 {{ t('video.download') }}
               </a>
@@ -180,9 +180,9 @@
               <button v-if="job.status === 'pending'" type="button" class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-200 hover:text-red-600 dark:text-dark-300 dark:hover:bg-dark-700 dark:hover:text-red-300" :title="t('video.cancel')" :data-testid="`cancel-${job.job_id}`" @click.stop="cancelJob(job)">
                 <Icon name="x" size="sm" />
               </button>
-              <a v-else-if="videoUrl(job)" :href="videoUrl(job)" target="_blank" rel="noreferrer" class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-200 hover:text-primary-600 dark:text-dark-300 dark:hover:bg-dark-700 dark:hover:text-primary-300" :title="t('video.open')" @click.stop>
-                <Icon name="externalLink" size="sm" />
-              </a>
+              <span v-else-if="job.status === 'completed'" class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center text-primary-600 dark:text-primary-300">
+                <Icon name="play" size="sm" />
+              </span>
             </article>
           </div>
         </section>
@@ -202,6 +202,7 @@ import { useAppStore } from '@/stores/app'
 import {
   cancelVideoJob,
   createVideoJob,
+  downloadVideoOutput,
   listVideoJobs,
   uploadVideoInput,
   type VideoGenerationRequest,
@@ -228,7 +229,9 @@ const loadingKeys = ref(false)
 const loadingJobs = ref(false)
 const submitting = ref(false)
 const uploading = ref(false)
+const selectedVideoUrl = ref('')
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let videoOutputRequest = 0
 
 const modelOptions = ['seedance-2.0', 'seedance-2.0-fast']
 const aspectRatioOptions = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '9:21']
@@ -242,7 +245,6 @@ const leoKeys = computed(() => keys.value.filter((key) => key.status === 'active
 const selectedKey = computed(() => leoKeys.value.find((key) => key.id === selectedKeyId.value) || null)
 const activeJobs = computed(() => jobs.value.filter((job) => ['pending', 'running', 'settling'].includes(job.status)))
 const selectedJob = computed(() => jobs.value.find((job) => job.job_id === selectedJobId.value) || jobs.value[0] || null)
-const selectedVideoUrl = computed(() => (selectedJob.value ? videoUrl(selectedJob.value) : ''))
 const canSubmit = computed(() => Boolean(selectedKey.value && prompt.value.trim() && model.value && duration.value >= 4 && duration.value <= 15 && (imageMode.value !== 'url' || /^https?:\/\/\S+$/i.test(imageUrl.value.trim()))))
 
 async function loadKeys() {
@@ -347,16 +349,24 @@ function removeLocalImage() {
   localFile.value = null
 }
 
-function videoUrl(job: VideoJob): string {
-  const result = job.result
-  const first = result?.data?.[0]
-  if (first) {
-    for (const key of ['mp4_url', 'video_url', 'url']) {
-      if (typeof first[key] === 'string' && first[key]) return first[key] as string
-    }
+function clearSelectedVideo() {
+  if (selectedVideoUrl.value) URL.revokeObjectURL(selectedVideoUrl.value)
+  selectedVideoUrl.value = ''
+}
+
+async function loadSelectedVideo() {
+  const request = ++videoOutputRequest
+  clearSelectedVideo()
+  const job = selectedJob.value
+  const key = selectedKey.value
+  if (!job || !key || job.status !== 'completed') return
+  try {
+    const blob = await downloadVideoOutput(key.key, job.job_id)
+    if (request !== videoOutputRequest) return
+    selectedVideoUrl.value = URL.createObjectURL(blob)
+  } catch (error) {
+    if (request === videoOutputRequest) appStore.showError(errorMessage(error))
   }
-  if (result && typeof result.url === 'string') return result.url
-  return ''
 }
 
 function statusLabel(status: string) {
@@ -395,6 +405,7 @@ function errorMessage(error: unknown) {
 
 watch(selectedKeyId, () => void loadJobs())
 watch(activeJobs, updatePolling)
+watch(() => [selectedKeyId.value, selectedJob.value?.job_id, selectedJob.value?.status], () => void loadSelectedVideo())
 
 onMounted(async () => {
   await loadKeys()
@@ -402,7 +413,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  videoOutputRequest++
   stopPolling()
+  clearSelectedVideo()
   removeLocalImage()
 })
 </script>

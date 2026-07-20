@@ -2008,3 +2008,45 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/server/routes/prompt_audit_route_coverage_test.go`: classified the image-upload-only route while preserving prompt-audit enforcement for video generation submissions.
 - `progress.md`: recorded the v0.1.161 integration, conflict resolution, verification evidence, release target, and rollback procedure.
 - Rollback point: deploy `v0.1.161-fy.1`; for source rollback, run `git revert --no-commit v0.1.161-fy.1..HEAD`, review the staged reversal, and commit it without applying or deleting the homepage stash or `.superpowers/`.
+
+## 2026-07-19 - Task: Settle Leo video billing only after local output is saved
+### What was done
+- Added durable local MP4 download, size and `ftyp` validation, atomic publication, and restart-safe reuse under `pricing.data_dir/video-outputs/`.
+- Changed async settlement so a completed upstream job is charged only after its first video is saved locally; empty results fail immediately, save failures retry up to three times, and every terminal failure releases the frozen balance without creating usage.
+- Added an API Key-scoped content endpoint with Range support and changed the user workbench to fetch the saved video with Bearer authentication and play a Blob URL instead of the upstream CDN URL.
+- Rejected synchronous HTTP-success responses that contain no usable video URL, preventing empty success responses from being billed.
+### Testing
+- `backend: go generate ./cmd/server`: passed and regenerated Wire output.
+- `backend: go test ./internal/service ./internal/handler -count=1`: passed.
+- `backend: go test ./... -count=1`: passed.
+- `backend: go vet ./...`: passed.
+- `frontend: .\node_modules\.bin\vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed (9 tests).
+- `frontend: .\node_modules\.bin\vitest.cmd run --exclude src/i18n/__tests__/localesMessageCompile.spec.ts --reporter=dot`: passed; the excluded existing test requires the missing `@intlify/message-compiler` dependency.
+- `frontend: .\node_modules\.bin\vue-tsc.cmd --noEmit`: passed.
+- `frontend: .\node_modules\.bin\eslint.cmd src/api/videoGeneration.ts src/api/__tests__/videoGeneration.spec.ts src/views/user/VideoGenerationView.vue src/views/user/__tests__/VideoGenerationView.spec.ts`: passed.
+- `frontend: .\node_modules\.bin\vite.cmd build`: passed with existing dynamic-import and chunk-size warnings.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/service/video_output_store.go`: added local MP4 download, validation, result rewriting, idempotent reuse, and file opening.
+- `backend/internal/service/video_output_store_test.go`: covered valid download, invalid MP4, missing URL, and idempotent reuse.
+- `backend/internal/service/video_job_runtime.go`: required local save before settlement and added bounded save retries with failure release.
+- `backend/internal/service/video_job_runtime_test.go`: verified save-before-charge, empty-result release, retry exhaustion, and persisted local output.
+- `backend/internal/service/video_job_billing.go`: stopped treating empty result data as one billable video.
+- `backend/internal/service/video_job_billing_test.go`: verified empty results cannot create a settlement.
+- `backend/internal/service/video_job_service_test.go`: persisted transition result and actual cost in the shared repository test double.
+- `backend/internal/service/leo_video.go`: rejected synchronous successful responses without a usable video URL before committing the response.
+- `backend/internal/service/leo_video_test.go`: covered synchronous empty-success rejection.
+- `backend/internal/service/wire.go`: provided the shared output store and injected it into the video runtime.
+- `backend/internal/handler/leo_video_async.go`: added API Key ownership checks and authenticated MP4 serving.
+- `backend/internal/handler/leo_video_async_test.go`: verified content ownership isolation and MP4 delivery.
+- `backend/internal/handler/openai_gateway_handler.go`: attached the shared output store to the gateway handler.
+- `backend/internal/handler/wire.go`: injected the shared output store into the gateway handler.
+- `backend/internal/server/routes/gateway.go`: registered the authenticated video content route in both gateway route layouts.
+- `backend/cmd/server/wire_gen.go`: regenerated application wiring for the shared output store.
+- `frontend/src/api/videoGeneration.ts`: added Bearer-authenticated saved-video download.
+- `frontend/src/api/__tests__/videoGeneration.spec.ts`: verified the content URL and Authorization header.
+- `frontend/src/views/user/VideoGenerationView.vue`: switched preview and download to managed Blob URLs and revoked them on selection changes and unmount.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verified local Blob playback and URL cleanup instead of CDN playback.
+- `docs/LEO_VIDEO_CHANNEL.md`: documented local output storage, authenticated access, settlement order, retries, and deployment limits.
+- `progress.md`: recorded this implementation, verification evidence, file list, and rollback point.
+- Rollback point: `74c877d5`; after creating the task commit, run `git revert <task-commit-hash>` from the repository root.

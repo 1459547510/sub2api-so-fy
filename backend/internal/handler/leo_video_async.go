@@ -135,6 +135,50 @@ func (h *OpenAIGatewayHandler) LeoVideoJob(c *gin.Context) {
 	c.JSON(http.StatusOK, publicLeoVideoJob(job))
 }
 
+func (h *OpenAIGatewayHandler) LeoVideoJobContent(c *gin.Context) {
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	if !ok || apiKey == nil {
+		h.errorResponse(c, http.StatusUnauthorized, "authentication_error", "Invalid API key")
+		return
+	}
+	if h.videoJobService == nil || h.videoOutputStore == nil {
+		h.errorResponse(c, http.StatusServiceUnavailable, "api_error", "Video service is not configured")
+		return
+	}
+	job, err := h.videoJobService.Get(c.Request.Context(), c.Param("job_id"), apiKey.ID)
+	if errors.Is(err, service.ErrVideoJobNotFound) {
+		h.errorResponse(c, http.StatusNotFound, "not_found_error", "Video job not found")
+		return
+	}
+	if err != nil {
+		h.errorResponse(c, http.StatusInternalServerError, "api_error", "Video job unavailable")
+		return
+	}
+	if job.Status != service.VideoJobCompleted {
+		h.errorResponse(c, http.StatusConflict, "conflict_error", "Video output is not available")
+		return
+	}
+	file, err := h.videoOutputStore.Open(job.JobID)
+	if errors.Is(err, service.ErrVideoOutputNotFound) {
+		h.errorResponse(c, http.StatusNotFound, "not_found_error", "Video output not found")
+		return
+	}
+	if err != nil {
+		h.errorResponse(c, http.StatusInternalServerError, "api_error", "Video output unavailable")
+		return
+	}
+	defer func() { _ = file.Close() }()
+	info, err := file.Stat()
+	if err != nil {
+		h.errorResponse(c, http.StatusInternalServerError, "api_error", "Video output unavailable")
+		return
+	}
+	c.Header("Content-Type", "video/mp4")
+	c.Header("Content-Disposition", `inline; filename="`+job.JobID+`.mp4"`)
+	c.Header("Cache-Control", "private, no-store")
+	http.ServeContent(c.Writer, c.Request, job.JobID+".mp4", info.ModTime(), file)
+}
+
 func (h *OpenAIGatewayHandler) CancelLeoVideoJob(c *gin.Context) {
 	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
 	if !ok || apiKey == nil {

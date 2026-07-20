@@ -98,7 +98,7 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 - PNG、JPEG、WebP 本地图片上传，最大 10 MiB；
 - `pending`、`running`、`settling`、`completed`、`failed`、`canceled` 状态查询；
 - 只有 `pending` 任务可取消，`running` 和终态任务不能取消；
-- 完成任务的视频预览、打开和下载。
+- 完成任务的本地视频预览和下载。
 
 提交工作台任务时，浏览器请求 Sub2API：
 
@@ -117,10 +117,20 @@ Sub2API 返回 `202` 和自己的 `job_id`，后台协调器再轮询固定的 L
 
 内部读取接口只接受真实 loopback `RemoteAddr`，不信任 `X-Forwarded-For`，也不返回目录列表或服务器路径。任务完成、失败或取消后文件会被标记为终态，至少保留 1 小时；没有关联任务的孤儿文件保留 24 小时。后台 runtime 启动时执行一次扫描，之后每天最多执行一次清理，删除失败会在下一轮重试。
 
+## 本地视频成品
+
+LeoStudio 报告任务完成后，Sub2API 会先从结果中的 `source_url`、`mp4_url`、`video_url` 或 `url` 下载第一个视频。文件先写入临时文件，限制为最大 512 MiB，并校验 MP4 文件头 `ftyp`；校验通过后再原子移动到现有数据目录的 `video-outputs/<job_id>.mp4`。已存在且校验有效的文件会直接复用，服务重启后的结算重试不会重复下载。
+
+任务结果中的原始 CDN 地址保存在 `source_url`，客户端使用的 `mp4_url`、`url` 和 `local_url` 会改写为 `/v1/videos/jobs/<job_id>/content`。该内容接口要求 `Authorization: Bearer <sub2_api_key>`，只允许创建该任务的 API Key 读取已完成任务，并通过 HTTP Range 返回 `video/mp4`。浏览器工作台先带 Bearer 下载 Blob，再使用本地 Blob URL 播放和下载，不直接播放 LeoStudio CDN 地址。
+
+当前不会自动清理 `video-outputs/` 中的成品；部署时应把 `pricing.data_dir` 所在磁盘容量纳入监控和备份策略。多实例部署必须共享同一数据目录，否则任务记录所在实例可能读取不到成品。
+
 ## 异步计费
 
-任务提交前按请求分辨率、时长和提交时价格快照冻结预计余额。完成任务按 LeoStudio 结果里的实际分辨率和时长只结算一次，并释放全部冻结额；失败或取消只释放冻结，不产生用量记录。任务记录和结算标记持久化在 `video_jobs` 表，Sub2API 重启后会继续查询和结算，不依赖浏览器在线。
+任务提交前按请求分辨率、时长和提交时价格快照冻结预计余额。LeoStudio 报告完成后，只有视频下载、MP4 校验和本地保存全部成功，才按结果里的实际分辨率和时长确认一次用量并释放冻结额。结果没有视频 URL 时任务立即失败；下载或校验失败最多尝试 3 次，最终失败后释放冻结且不产生用量记录。上游生成失败或用户取消同样只释放冻结，不产生用量记录。
+
+任务记录和结算标记持久化在 `video_jobs` 表，本地文件路径由 `job_id` 确定，Sub2API 重启后会继续保存和结算，不依赖浏览器在线。同步兼容接口也会拒绝 HTTP 成功但没有有效视频 URL 的上游响应，因此不会为这类空成功响应记录用量；同步接口返回的媒体仍使用 LeoStudio 原始响应，平台工作台使用上述异步本地成品链路。
 
 ## 运维边界
 
-当前实现对应 LeoStudio 上游提交 `f822735629c51f15d115e3e60b161a93ec2e20ff` 的异步协议：`POST /v1/videos/generations`、`GET /v1/videos/jobs/:id` 和 `DELETE /v1/videos/jobs/:id`。第一版不保存生成视频到本地，不提供 Webhook、SSE、WebSocket、编辑、扩展或任务删除功能。
+当前实现对应 LeoStudio 上游提交 `f822735629c51f15d115e3e60b161a93ec2e20ff` 的异步协议：`POST /v1/videos/generations`、`GET /v1/videos/jobs/:id` 和 `DELETE /v1/videos/jobs/:id`。Sub2API 将完成视频保存到本地数据目录并提供 API Key 鉴权读取；不提供 Webhook、SSE、WebSocket、编辑、扩展或任务删除功能。

@@ -43,18 +43,20 @@ type OpenAIGatewayHandler struct {
 	cfg                        *config.Config
 	videoJobService            *service.VideoJobService
 	videoInputHandler          *VideoInputHandler
+	videoOutputStore           *service.VideoOutputStore
 }
 
 type grokMediaEligibilityProber interface {
 	ProbeMediaEligibility(ctx context.Context, accountID int64) (bool, string, error)
 }
 
-func (h *OpenAIGatewayHandler) SetVideoServices(videoJobs *service.VideoJobService, videoInput *VideoInputHandler) {
+func (h *OpenAIGatewayHandler) SetVideoServices(videoJobs *service.VideoJobService, videoInput *VideoInputHandler, videoOutput *service.VideoOutputStore) {
 	if h == nil {
 		return
 	}
 	h.videoJobService = videoJobs
 	h.videoInputHandler = videoInput
+	h.videoOutputStore = videoOutput
 }
 
 const maxOpenAIFirstOutputTimeoutSwitches = 1

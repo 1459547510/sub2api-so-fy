@@ -148,7 +148,7 @@ func (s *VideoJobBillingService) SettleCompleted(ctx context.Context, job *Video
 	}
 	videoCount := len(gjson.GetBytes(result, "data").Array())
 	if videoCount <= 0 {
-		videoCount = 1
+		return ErrVideoOutputURLMissing
 	}
 	cost := snapshot.Cost(resolution, duration, videoCount)
 	apiKey, user, account, subscription, err := s.loadUsageContext(ctx, job, snapshot)

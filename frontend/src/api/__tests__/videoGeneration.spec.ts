@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   cancelVideoJob,
   createVideoJob,
+  downloadVideoOutput,
   listVideoJobs,
   uploadVideoInput,
 } from '@/api/videoGeneration'
@@ -56,5 +57,18 @@ describe('video generation API', () => {
     expect(cancelUrl).toContain('/v1/videos/jobs/vidjob-1')
     expect(cancelInit.method).toBe('DELETE')
     expect(cancelInit.headers).toMatchObject({ Authorization: 'Bearer sub2-key' })
+  })
+
+  it('downloads saved video output with the selected API key', async () => {
+    const video = new Blob(['mp4'], { type: 'video/mp4' })
+    const fetchMock = vi.fn().mockResolvedValue(new Response(video, { status: 200, headers: { 'Content-Type': 'video/mp4' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await downloadVideoOutput('sub2-key', 'vidjob-1')
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/v1/videos/jobs/vidjob-1/content')
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer sub2-key' })
+    expect(result.type).toBe('video/mp4')
   })
 })
