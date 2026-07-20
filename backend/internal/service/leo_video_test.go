@@ -139,7 +139,7 @@ func TestForwardLeoVideoRejectsInvalidJSONBeforeTransport(t *testing.T) {
 func TestForwardLeoVideoWritesRequestErrorsWithoutFailover(t *testing.T) {
 	for _, status := range []int{http.StatusBadRequest, http.StatusUnprocessableEntity} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
-			upstream := &leoVideoHTTPUpstream{response: leoVideoResponse(status, `{"error":{"message":"bad prompt"}}`)}
+			upstream := &leoVideoHTTPUpstream{response: leoVideoResponse(status, `{"error":{"message":"Leonardo AI rejected the bad prompt"}}`)}
 			svc := &OpenAIGatewayService{httpUpstream: upstream}
 			rec, c := newLeoVideoTestContext()
 
@@ -149,8 +149,25 @@ func TestForwardLeoVideoWritesRequestErrorsWithoutFailover(t *testing.T) {
 			require.Nil(t, result)
 			require.Equal(t, status, rec.Code)
 			require.Contains(t, rec.Body.String(), "bad prompt")
+			require.NotContains(t, strings.ToLower(rec.Body.String()), "leonardo")
 			require.True(t, c.Writer.Written())
 		})
+	}
+}
+
+func TestPublicVideoErrorMessageHidesProviderNames(t *testing.T) {
+	for _, message := range []string{
+		"Leonardo rejected the request",
+		"LEONARDO AI policy failure",
+		"leonardo.ai is unavailable",
+		"LeoStudio request failed",
+		"Leo Studio response was invalid",
+	} {
+		public := PublicVideoErrorMessage(message)
+		require.NotContains(t, strings.ToLower(public), "leonardo")
+		require.NotContains(t, strings.ToLower(public), "leostudio")
+		require.NotContains(t, strings.ToLower(public), "leo studio")
+		require.Contains(t, public, "video provider")
 	}
 }
 

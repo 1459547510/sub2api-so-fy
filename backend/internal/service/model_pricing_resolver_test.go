@@ -452,6 +452,90 @@ func TestResolve_WithChannelOverride_ImageTierLabels(t *testing.T) {
 	require.InDelta(t, 0.0, r.GetRequestTierPrice(resolved, "8K"), 1e-12) // not found
 }
 
+func TestResolve_WithChannelOverride_Video(t *testing.T) {
+	r := newResolverWithChannel(t, []ChannelModelPricing{{
+		Platform:    "anthropic",
+		Models:      []string{"claude-sonnet-4"},
+		BillingMode: BillingModeVideo,
+		Intervals: []PricingInterval{
+			{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+			{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.08)},
+			{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+		},
+	}})
+
+	resolved := r.Resolve(context.Background(), PricingInput{
+		Model:   "claude-sonnet-4",
+		GroupID: groupIDPtr(),
+	})
+
+	require.NotNil(t, resolved)
+	require.Equal(t, BillingModeVideo, resolved.Mode)
+	require.Equal(t, PricingSourceChannel, resolved.Source)
+	require.Len(t, resolved.RequestTiers, 3)
+	require.InDelta(t, 0.08, r.GetRequestTierPrice(resolved, "720p"), 1e-12)
+}
+
+func TestVideoPriceConfigFromResolvedPricing(t *testing.T) {
+	t.Run("complete config preserves explicit zero", func(t *testing.T) {
+		resolved := &ResolvedPricing{
+			Mode: BillingModeVideo,
+			RequestTiers: []PricingInterval{
+				{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+				{TierLabel: " 480P ", PerRequestPrice: testPtrFloat64(0)},
+				{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.08)},
+			},
+		}
+
+		config, ok := VideoPriceConfigFromResolvedPricing(resolved)
+		require.True(t, ok)
+		require.NotNil(t, config)
+		require.NotNil(t, config.Price480P)
+		require.Zero(t, *config.Price480P)
+		require.InDelta(t, 0.08, *config.Price720P, 1e-12)
+		require.InDelta(t, 0.12, *config.Price1080P, 1e-12)
+	})
+
+	tests := []struct {
+		name     string
+		resolved *ResolvedPricing
+	}{
+		{name: "nil resolved"},
+		{name: "wrong billing mode", resolved: &ResolvedPricing{Mode: BillingModeImage}},
+		{
+			name: "missing tier",
+			resolved: &ResolvedPricing{Mode: BillingModeVideo, RequestTiers: []PricingInterval{
+				{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+				{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.08)},
+			}},
+		},
+		{
+			name: "duplicate tier",
+			resolved: &ResolvedPricing{Mode: BillingModeVideo, RequestTiers: []PricingInterval{
+				{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+				{TierLabel: "480P", PerRequestPrice: testPtrFloat64(0.06)},
+				{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+			}},
+		},
+		{
+			name: "nil price",
+			resolved: &ResolvedPricing{Mode: BillingModeVideo, RequestTiers: []PricingInterval{
+				{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+				{TierLabel: "720p"},
+				{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+			}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config, ok := VideoPriceConfigFromResolvedPricing(tt.resolved)
+			require.False(t, ok)
+			require.Nil(t, config)
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // 4. Source tracking & default mode
 // ---------------------------------------------------------------------------

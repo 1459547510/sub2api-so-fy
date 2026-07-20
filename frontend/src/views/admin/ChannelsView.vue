@@ -447,6 +447,7 @@
                   :key="idx"
                   :entry="entry"
                   :platform="section.platform"
+                  :allow-video="section.platform === 'leo'"
                   @update="updatePricingEntry(sIdx, idx, $event)"
                   @remove="removePricingEntry(sIdx, idx)"
                 />
@@ -632,7 +633,7 @@ import { extractApiErrorMessage } from '@/utils/apiError'
 import { adminAPI } from '@/api/admin'
 import type { Channel, ChannelModelPricing, CreateChannelRequest, UpdateChannelRequest, AccountStatsPricingRule } from '@/api/admin/channels'
 import type { PricingFormEntry } from '@/components/admin/channel/types'
-import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, formIntervalsToAPI, findModelConflict, validateIntervals } from '@/components/admin/channel/types'
+import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, formIntervalsToAPI, findModelConflict, validateIntervals, createPricingFormEntry, createSyncedPricingEntries, getNextLeoVideoModel, normalizeVideoIntervals, validateVideoPricing } from '@/components/admin/channel/types'
 import type { AdminGroup, GroupPlatform } from '@/types'
 import type { Column } from '@/components/common/types'
 import { platformTextClass, platformBadgeLightClass } from '@/utils/platformColors'
@@ -760,7 +761,7 @@ const form = reactive({
 let abortController: AbortController | null = null
 
 // ── Platform config ──
-const platformOrder: GroupPlatform[] = ['anthropic', 'openai', 'gemini', 'antigravity', 'grok']
+const platformOrder: GroupPlatform[] = ['anthropic', 'openai', 'gemini', 'antigravity', 'grok', 'leo']
 
 // ── Helpers ──
 function formatDate(value: string): string {
@@ -848,18 +849,14 @@ function toggleGroupInSection(sectionIdx: number, groupId: number) {
 
 // ── Pricing helpers ──
 function addPricingEntry(sectionIdx: number) {
-  form.platforms[sectionIdx].model_pricing.push({
-    models: [],
-    billing_mode: 'token',
-    input_price: null,
-    output_price: null,
-    cache_write_price: null,
-    cache_read_price: null,
-    image_input_price: null,
-    image_output_price: null,
-    per_request_price: null,
-    intervals: []
-  })
+  const section = form.platforms[sectionIdx]
+  if (section.platform !== 'leo') {
+    section.model_pricing.push(createPricingFormEntry())
+    return
+  }
+
+  const nextModel = getNextLeoVideoModel(section.model_pricing)
+  section.model_pricing.push(createPricingFormEntry(nextModel ? [nextModel] : [], 'video'))
 }
 
 const syncingPlatform = ref<string | null>(null)
@@ -873,26 +870,16 @@ async function syncLatestModels(sectionIdx: number) {
     // Collect all model names already present in this platform's pricing entries
     const existingModels = new Set<string>()
     for (const entry of form.platforms[sectionIdx].model_pricing) {
-      for (const m of entry.models) existingModels.add(m)
+      for (const m of entry.models) existingModels.add(m.toLowerCase())
     }
-    const newModels = result.models.filter(m => !existingModels.has(m))
+    const newModels = result.models.filter(m => !existingModels.has(m.toLowerCase()))
     if (newModels.length === 0) {
       appStore.showSuccess(t('admin.channels.form.syncModelsAlreadyUpToDate'))
       return
     }
-    // Add new models as a single new pricing entry (user fills in prices)
-    form.platforms[sectionIdx].model_pricing.push({
-      models: newModels,
-      billing_mode: 'token',
-      input_price: null,
-      output_price: null,
-      cache_write_price: null,
-      cache_read_price: null,
-      image_input_price: null,
-      image_output_price: null,
-      per_request_price: null,
-      intervals: []
-    })
+    form.platforms[sectionIdx].model_pricing.push(
+      ...createSyncedPricingEntries(platform, newModels)
+    )
     appStore.showSuccess(t('admin.channels.form.syncModelsSuccess', { count: newModels.length }))
   } catch (error) {
     appStore.showError(extractApiErrorMessage(error, t('admin.channels.form.syncModelsError')))
@@ -1202,7 +1189,9 @@ function apiToForm(channel: Channel): PlatformSection[] {
         image_input_price: perTokenToMTok(p.image_input_price),
         image_output_price: perTokenToMTok(p.image_output_price),
         per_request_price: p.per_request_price,
-        intervals: apiIntervalsToForm(p.intervals || [])
+        intervals: p.billing_mode === 'video'
+          ? normalizeVideoIntervals(apiIntervalsToForm(p.intervals || []))
+          : apiIntervalsToForm(p.intervals || [])
       } as PricingFormEntry))
 
     // Read web_search_emulation from features_config
@@ -1452,6 +1441,19 @@ async function handleSubmit() {
         activeTab.value = section.platform
         return
       }
+    }
+  }
+
+  // Video pricing uses one model per entry and fixed resolution prices.
+  for (const section of form.platforms.filter(s => s.enabled)) {
+    for (const entry of section.model_pricing) {
+      const videoPricingError = validateVideoPricing(entry, t)
+      if (!videoPricingError) continue
+      const platformLabel = t('admin.groups.platforms.' + section.platform, section.platform)
+      const modelLabel = entry.models.join(', ') || t('admin.channels.form.unnamed')
+      appStore.showError(`${platformLabel} - ${modelLabel}: ${videoPricingError}`)
+      activeTab.value = section.platform
+      return
     }
   }
 

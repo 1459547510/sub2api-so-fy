@@ -93,7 +93,8 @@ export default {
       billingMode: {
         token: 'Token',
         perRequest: 'Per Request',
-        image: 'Image (Per Request)'
+        image: 'Image (Per Request)',
+        video: 'Video (Per Second)'
       },
       form: {
         name: 'Name',
@@ -132,6 +133,11 @@ export default {
         noPricingRules: 'No pricing rules yet. Click "Add" to create one.',
         perRequestPrice: 'Price per Request',
         perRequestPriceRequired: 'Per-request price or billing tiers required for per-request/image billing mode',
+        videoResolutionPrices: 'Resolution Prices',
+        videoPricePlaceholder: 'USD per second',
+        videoSingleModelRequired: 'Video pricing entries must contain exactly one model',
+        videoPricesRequired: 'Video pricing requires non-negative 480p, 720p, and 1080p prices',
+        second: 'second',
         tierLabel: 'Tier',
         resolution: 'Resolution',
         modelMapping: 'Model Mapping',

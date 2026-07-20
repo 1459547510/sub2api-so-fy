@@ -28,13 +28,18 @@ func VideoReleaseRequestID(jobID string) string {
 }
 
 type VideoJobBillingSnapshot struct {
-	Version        int     `json:"version"`
-	BillingType    int8    `json:"billing_type"`
-	SubscriptionID *int64  `json:"subscription_id,omitempty"`
-	Price480P      float64 `json:"price_480p"`
-	Price720P      float64 `json:"price_720p"`
-	Price1080P     float64 `json:"price_1080p"`
-	RateMultiplier float64 `json:"rate_multiplier"`
+	Version            int     `json:"version"`
+	BillingType        int8    `json:"billing_type"`
+	SubscriptionID     *int64  `json:"subscription_id,omitempty"`
+	Price480P          float64 `json:"price_480p"`
+	Price720P          float64 `json:"price_720p"`
+	Price1080P         float64 `json:"price_1080p"`
+	RateMultiplier     float64 `json:"rate_multiplier"`
+	ChannelID          int64   `json:"channel_id,omitempty"`
+	BillingModel       string  `json:"billing_model,omitempty"`
+	BillingModelSource string  `json:"billing_model_source,omitempty"`
+	ChannelMappedModel string  `json:"channel_mapped_model,omitempty"`
+	PricingSource      string  `json:"pricing_source,omitempty"`
 }
 
 func (s VideoJobBillingSnapshot) Cost(resolution string, durationSeconds, videoCount int) *CostBreakdown {
@@ -79,6 +84,7 @@ type VideoJobBillingService struct {
 	BillingRepo   UsageBillingRepository
 	UsageRecorder VideoJobBillingUsageRecorder
 	Gateway       *OpenAIGatewayService
+	Pricing       *ModelPricingResolver
 	APIKeys       VideoJobBillingAPIKeyLoader
 	Users         VideoJobBillingUserLoader
 	Accounts      VideoJobBillingAccountLoader
@@ -90,17 +96,37 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 		return errors.New("video billing context is incomplete")
 	}
 	group := apiKey.Group
-	if group.VideoPrice480P == nil || group.VideoPrice720P == nil || group.VideoPrice1080P == nil {
-		return errors.New("video pricing is incomplete")
-	}
 	baseMultiplier := group.RateMultiplier
 	if s != nil && s.Gateway != nil {
 		baseMultiplier = s.Gateway.ResolveUserGroupRateMultiplier(ctx, user.ID, group.ID, group.RateMultiplier)
 	}
+	mapping := ChannelMappingResult{MappedModel: job.RequestedModel}
+	if s != nil && s.Gateway != nil {
+		mapping = s.Gateway.ResolveChannelMapping(ctx, group.ID, job.RequestedModel)
+	}
+	channelMappedModel := strings.TrimSpace(mapping.MappedModel)
+	if channelMappedModel == "" {
+		channelMappedModel = job.RequestedModel
+	}
+	billingModel := resolveVideoJobBillingModel(mapping.BillingModelSource, job.RequestedModel, channelMappedModel, job.UpstreamModel)
+	price480P, price720P, price1080P := group.VideoPrice480P, group.VideoPrice720P, group.VideoPrice1080P
+	pricingSource := "group"
+	if s != nil && s.Pricing != nil {
+		resolved := s.Pricing.Resolve(ctx, PricingInput{Model: billingModel, GroupID: &group.ID})
+		if channelPrices, ok := VideoPriceConfigFromResolvedPricing(resolved); ok {
+			price480P, price720P, price1080P = channelPrices.Price480P, channelPrices.Price720P, channelPrices.Price1080P
+			pricingSource = resolved.Source
+		}
+	}
+	if price480P == nil || price720P == nil || price1080P == nil {
+		return errors.New("video pricing is incomplete")
+	}
 	snapshot := VideoJobBillingSnapshot{
-		Version: 1, BillingType: BillingTypeBalance,
-		Price480P: *group.VideoPrice480P, Price720P: *group.VideoPrice720P, Price1080P: *group.VideoPrice1080P,
-		RateMultiplier: resolveVideoRateMultiplier(apiKey, baseMultiplier),
+		Version: 2, BillingType: BillingTypeBalance,
+		Price480P: *price480P, Price720P: *price720P, Price1080P: *price1080P,
+		RateMultiplier: resolveVideoRateMultiplier(apiKey, baseMultiplier), ChannelID: mapping.ChannelID,
+		BillingModel: billingModel, BillingModelSource: mapping.BillingModelSource,
+		ChannelMappedModel: channelMappedModel, PricingSource: pricingSource,
 	}
 	if subscription != nil && group.IsSubscriptionType() {
 		snapshot.BillingType = BillingTypeSubscription
@@ -160,7 +186,7 @@ func (s *VideoJobBillingService) SettleCompleted(ctx context.Context, job *Video
 	}
 	usageResult := &OpenAIForwardResult{
 		RequestID: videoUsageRequestPrefix + job.JobID, Model: job.RequestedModel,
-		BillingModel: job.RequestedModel, UpstreamModel: job.UpstreamModel,
+		BillingModel: videoJobSnapshotBillingModel(snapshot, job), UpstreamModel: job.UpstreamModel,
 		UpstreamEndpoint: "/v1/videos/generations", VideoCount: videoCount,
 		VideoResolution: resolution, VideoDurationSeconds: duration,
 	}
@@ -168,6 +194,7 @@ func (s *VideoJobBillingService) SettleCompleted(ctx context.Context, job *Video
 		Result: usageResult, APIKey: apiKey, User: user, Account: account, Subscription: subscription,
 		InboundEndpoint: "/v1/videos/generations", UpstreamEndpoint: "/v1/videos/generations",
 		RequestPayloadHash: job.RequestHash, QuotaPlatform: PlatformLeo, CostOverride: cost,
+		ChannelUsageFields: videoJobSnapshotChannelUsageFields(snapshot, job),
 	}); err != nil {
 		return err
 	}
@@ -242,6 +269,51 @@ func (s *VideoJobBillingService) loadUsageContext(ctx context.Context, job *Vide
 	apiKeyCopy.Group = group
 	apiKeyCopy.User = user
 	return &apiKeyCopy, user, account, subscription, nil
+}
+
+func resolveVideoJobBillingModel(source, requestedModel, channelMappedModel, upstreamModel string) string {
+	requestedModel = strings.TrimSpace(requestedModel)
+	channelMappedModel = strings.TrimSpace(channelMappedModel)
+	upstreamModel = strings.TrimSpace(upstreamModel)
+	switch source {
+	case BillingModelSourceRequested:
+		return requestedModel
+	case BillingModelSourceUpstream:
+		if upstreamModel != "" {
+			return upstreamModel
+		}
+	case BillingModelSourceChannelMapped:
+		if channelMappedModel != "" {
+			return channelMappedModel
+		}
+	default:
+		if channelMappedModel != "" {
+			return channelMappedModel
+		}
+	}
+	return requestedModel
+}
+
+func videoJobSnapshotBillingModel(snapshot VideoJobBillingSnapshot, job *VideoJob) string {
+	if billingModel := strings.TrimSpace(snapshot.BillingModel); billingModel != "" {
+		return billingModel
+	}
+	return strings.TrimSpace(job.RequestedModel)
+}
+
+func videoJobSnapshotChannelUsageFields(snapshot VideoJobBillingSnapshot, job *VideoJob) ChannelUsageFields {
+	if snapshot.ChannelID <= 0 {
+		return ChannelUsageFields{}
+	}
+	mappedModel := strings.TrimSpace(snapshot.ChannelMappedModel)
+	if mappedModel == "" {
+		mappedModel = job.RequestedModel
+	}
+	mapping := ChannelMappingResult{
+		MappedModel: mappedModel, ChannelID: snapshot.ChannelID,
+		Mapped: mappedModel != job.RequestedModel, BillingModelSource: snapshot.BillingModelSource,
+	}
+	return mapping.ToUsageFields(job.RequestedModel, job.UpstreamModel)
 }
 
 func float64Pointer(value float64) *float64 { return &value }

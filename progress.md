@@ -2187,3 +2187,89 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_CHANNEL.md`: records the new subpage scope and its privacy boundary.
 - `progress.md`: records the documentation implementation, verification evidence, changed files, and rollback point.
 - Rollback point for the complete Leo video fix and API documentation sequence: `a5fb54df6f5860b91f2f5947bac504eb9d604471`. After committing this documentation task separately, use `git revert <api-docs-task-commit>` for an API-docs-only rollback.
+
+## 2026-07-20 - Task: Add custom API Key mode to the video workbench
+### What was done
+- Added saved and custom Sub2 API Key modes to the user video workbench, including an in-memory password input with visibility control.
+- Routed video submission, local reference image upload, job listing, cancellation, preview, and download through the active Key while preventing Key changes during submission.
+- Cleared Key-scoped jobs, polling, and video Blob state when the Key source or custom value changes so results from different Keys cannot be mixed.
+- Kept custom Keys out of browser storage and user account persistence; no backend authentication or database contract changed.
+### Testing
+- `frontend: .\node_modules\.bin\vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed (13 tests).
+- `frontend: .\node_modules\.bin\vitest.cmd run --exclude src/i18n/__tests__/localesMessageCompile.spec.ts --reporter=dot`: passed; the excluded existing test requires the missing `@intlify/message-compiler` dependency.
+- `frontend: .\node_modules\.bin\vue-tsc.cmd --noEmit`: passed.
+- `frontend: .\node_modules\.bin\eslint.cmd src/views/user/VideoGenerationView.vue src/views/user/__tests__/VideoGenerationView.spec.ts src/i18n/locales/en/dashboard.ts src/i18n/locales/zh/dashboard.ts`: passed.
+- `frontend: .\node_modules\.bin\vite.cmd build`: passed with existing dynamic-import and chunk-size warnings.
+- `git diff --check`: passed.
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: added the custom Key controls, effective-Key routing, and Key-scoped state reset behavior.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covered custom-Key submission, upload, listing, cancellation, download, non-persistence, and mode isolation.
+- `frontend/src/i18n/locales/en/dashboard.ts`: added English custom-Key controls and clarified Sub2 API Key wording.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: added Chinese custom-Key controls and clarified Sub2 API Key wording.
+- `docs/LEO_VIDEO_CHANNEL.md`: documented custom-Key memory-only handling and the operations governed by the active Key.
+- `progress.md`: recorded this implementation, verification evidence, file list, and rollback point.
+- Rollback point: `efc132e5`; after creating the task commit, run `git revert <task-commit-hash>` from the repository root.
+
+## 2026-07-20 - Task: Hide upstream provider names from video errors
+### What was done
+- Sanitized synchronous video validation errors, asynchronous submission errors, and failed job responses before returning them to users.
+- Replaced Leonardo and LeoStudio naming variants with the neutral `video provider` label; logs retain the original internal error while user-visible persisted task errors are sanitized.
+- Confirmed and documented that successful local video settlement creates a usage record and that custom-Key usage belongs to the Key owner and group.
+### Testing
+- `backend: go test ./internal/service ./internal/handler -run 'LeoVideo|PublicVideoError' -count=1`: passed.
+- `backend: go test ./... -count=1`: passed.
+- `backend: go vet ./...`: passed.
+- Existing video billing and runtime tests passed within the full suite, including success usage recording and zero-usage failure release paths.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/service/leo_video.go`: added the public video error name sanitizer and applied it to synchronous upstream validation responses.
+- `backend/internal/service/leo_video_test.go`: covered provider-name variants and synchronous validation response sanitization.
+- `backend/internal/handler/leo_video_async.go`: sanitized asynchronous submission and persisted failed-job messages at the user API boundary.
+- `backend/internal/handler/leo_video_async_test.go`: verified submission and failed-job responses do not expose upstream provider names.
+- `backend/internal/handler/openai_gateway_handler.go`: sanitized Leo client messages selected by administrator error-passthrough rules without changing other platforms.
+- `docs/LEO_VIDEO_CHANNEL.md`: documented error-name sanitization and custom-Key usage ownership.
+- `progress.md`: recorded this implementation, verification evidence, file list, and rollback point.
+- Full uncommitted worktree rollback point: `efc132e5`; run `git restore --source=efc132e5 --worktree -- docs/LEO_VIDEO_CHANNEL.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts backend/internal/service/leo_video.go backend/internal/service/leo_video_test.go backend/internal/handler/leo_video_async.go backend/internal/handler/leo_video_async_test.go backend/internal/handler/openai_gateway_handler.go progress.md`.
+
+## 2026-07-20 - Task: Add Seedance channel video pricing
+### What was done
+- Added channel-level per-second video pricing for `seedance-2.0` and `seedance-2.0-fast`, with independent exact-model entries and required 480p, 720p, and 1080p tiers.
+- Made matching channel video pricing override the existing group video prices for both synchronous and asynchronous requests while retaining group prices as the fallback and preserving the group video multiplier.
+- Froze the selected channel, billing model, pricing source, model mapping, three prices, and multiplier in asynchronous billing snapshot v2, and attributed successful usage to the frozen channel mapping.
+- Added Leo channel administration controls, defaults, validation, and localized text without a database migration; explicit zero channel prices remain valid.
+### Testing
+- `backend: go generate ./cmd/server`: passed and regenerated Wire output.
+- `backend: go test ./internal/service ./internal/handler -run 'Channel|Pricing|Video|Leo' -count=1`: passed.
+- `backend: go test -tags=unit ./internal/service -count=1`: passed.
+- `backend: go test ./... -count=1`: passed.
+- `backend: go vet ./...`: passed.
+- `frontend: .\node_modules\.bin\vitest.cmd run src/components/admin/channel/__tests__/types.spec.ts src/components/admin/channel/__tests__/PricingEntryCard.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed (28 tests).
+- `frontend: .\node_modules\.bin\vue-tsc.cmd --noEmit`: passed.
+- Targeted frontend ESLint for every changed source and test file passed.
+- `frontend: .\node_modules\.bin\vite.cmd build`: passed with existing dynamic-import and chunk-size warnings.
+- `git diff --check`: passed.
+### Notes
+- `backend/cmd/server/wire_gen.go`: regenerated dependency wiring for the model pricing resolver in asynchronous video billing.
+- `backend/internal/handler/leo_video.go`: attached resolved channel mapping fields to synchronous Leo video usage.
+- `backend/internal/service/channel.go`: enabled video billing mode and resolution-tier interval validation.
+- `backend/internal/service/channel_service.go`: required exact one-model video entries with complete non-negative resolution prices and rejected video mode in account statistics rules.
+- `backend/internal/service/channel_service_test.go`: covered valid and invalid channel video pricing plus account statistics restrictions.
+- `backend/internal/service/channel_test.go`: covered video billing mode and interval acceptance.
+- `backend/internal/service/model_pricing_resolver.go`: resolved video tiers from channel pricing and converted complete tiers into video price configuration.
+- `backend/internal/service/model_pricing_resolver_test.go`: covered channel video resolution and explicit zero prices.
+- `backend/internal/service/openai_gateway_usage.go`: gave channel video prices precedence in synchronous cost calculation.
+- `backend/internal/service/openai_gateway_record_usage_test.go`: verified synchronous channel price precedence and video multiplier behavior.
+- `backend/internal/service/video_job_billing.go`: added channel price resolution, snapshot v2 freezing, group fallback, and frozen channel usage attribution for asynchronous jobs.
+- `backend/internal/service/video_job_billing_test.go`: covered billing model sources, channel precedence, group fallback, zero pricing, and settlement attribution.
+- `backend/internal/service/wire.go`: injected the shared model pricing resolver into asynchronous video billing.
+- `frontend/src/constants/channel.ts`: registered video billing mode, Seedance model defaults, and supported resolutions.
+- `frontend/src/components/admin/channel/PricingEntryCard.vue`: added the fixed three-tier USD-per-second editor for Leo model pricing.
+- `frontend/src/components/admin/channel/types.ts`: added video pricing form defaults, normalization, model splitting, and validation.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: covered video form serialization, defaults, syncing, and validation.
+- `frontend/src/components/admin/channel/__tests__/PricingEntryCard.spec.ts`: covered Leo-only video mode visibility and price editing.
+- `frontend/src/views/admin/ChannelsView.vue`: exposed Leo channel pricing and created independent Seedance video entries.
+- `frontend/src/i18n/locales/en/admin/channels.ts`: added English video pricing labels and validation messages.
+- `frontend/src/i18n/locales/zh/admin/channels.ts`: added Chinese video pricing labels and validation messages.
+- `docs/LEO_VIDEO_CHANNEL.md`: documented configuration, exact-model rules, pricing precedence, formula, snapshot freezing, and usage attribution.
+- `progress.md`: recorded implementation, verification evidence, changed files, and rollback guidance.
+- Rollback point: `efc132e5`; after creating the task commit, run `git revert <task-commit-hash>` from the repository root.

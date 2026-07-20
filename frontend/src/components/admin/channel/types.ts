@@ -1,4 +1,5 @@
 import type { BillingMode, PricingInterval } from '@/api/admin/channels'
+import { LEO_VIDEO_MODELS, VIDEO_PRICING_RESOLUTIONS } from '@/constants/channel'
 
 type TranslateFn = (key: string, params?: Record<string, unknown>) => string
 
@@ -77,6 +78,70 @@ export function formIntervalsToAPI(intervals: IntervalFormEntry[]): PricingInter
   }))
 }
 
+export function normalizeVideoIntervals(intervals: IntervalFormEntry[] = []): IntervalFormEntry[] {
+  return VIDEO_PRICING_RESOLUTIONS.map((resolution, index) => {
+    const existing = intervals.find(iv => iv.tier_label.toLowerCase() === resolution)
+    return {
+      min_tokens: 0,
+      max_tokens: null,
+      tier_label: resolution,
+      input_price: null,
+      output_price: null,
+      cache_write_price: null,
+      cache_read_price: null,
+      per_request_price: existing?.per_request_price ?? null,
+      sort_order: index,
+    }
+  })
+}
+
+export function createPricingFormEntry(
+  models: string[] = [],
+  billingMode: BillingMode = 'token',
+): PricingFormEntry {
+  return {
+    models,
+    billing_mode: billingMode,
+    input_price: null,
+    output_price: null,
+    cache_write_price: null,
+    cache_read_price: null,
+    image_input_price: null,
+    image_output_price: null,
+    per_request_price: null,
+    intervals: billingMode === 'video' ? normalizeVideoIntervals() : [],
+  }
+}
+
+export function getNextLeoVideoModel(entries: PricingFormEntry[]): string | undefined {
+  const existingModels = new Set(
+    entries.flatMap(entry => entry.models.map(model => model.toLowerCase()))
+  )
+  return LEO_VIDEO_MODELS.find(model => !existingModels.has(model))
+}
+
+export function createSyncedPricingEntries(platform: string, models: string[]): PricingFormEntry[] {
+  if (platform === 'leo') {
+    return models.map(model => createPricingFormEntry([model], 'video'))
+  }
+  return [createPricingFormEntry(models)]
+}
+
+export function validateVideoPricing(entry: PricingFormEntry, t: TranslateFn): string | null {
+  if (entry.billing_mode !== 'video') return null
+  if (entry.models.length !== 1) {
+    return t('admin.channels.form.videoSingleModelRequired')
+  }
+
+  const intervals = normalizeVideoIntervals(entry.intervals)
+  const allPricesValid = intervals.every(iv => {
+    if (iv.per_request_price == null || iv.per_request_price === '') return false
+    const price = Number(iv.per_request_price)
+    return Number.isFinite(price) && price >= 0
+  })
+  return allPricesValid ? null : t('admin.channels.form.videoPricesRequired')
+}
+
 // ── 模型模式冲突检测 ──────────────────────────────────────
 
 interface ModelPattern {
@@ -122,7 +187,7 @@ export function findModelConflict(models: string[]): [string, string] | null {
  *
  * mode 决定区间语义：
  * - token：区间是上下文 token 数分段 (min, max]，不能重叠，无上限段必须放最后
- * - per_request / image：区间是按 tier_label 分层（1K/2K/4K 等），后端按 label
+ * - per_request / image / video：区间是按 tier_label 分层（1K/2K/4K、480p/720p/1080p 等），后端按 label
  *   匹配，不依赖 min/max，因此跳过重叠 / last-unlimited 校验
  */
 export function validateIntervals(
@@ -140,7 +205,7 @@ export function validateIntervals(
     if (err) return err
   }
 
-  // per_request / image 模式按 tier_label 匹配，不做 token 区间重叠校验
+  // 非 token 模式按 tier_label 匹配，不做 token 区间重叠校验
   if (mode !== 'token') return null
   return checkIntervalOverlap(sorted, t)
 }

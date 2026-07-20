@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"strings"
 )
 
 // PricingSource 定价来源标识
@@ -23,7 +24,7 @@ type ResolvedPricing struct {
 	// Token 模式：区间定价列表（如有，覆盖 BasePricing 中的对应字段）
 	Intervals []PricingInterval
 
-	// 按次/图片模式：分层定价
+	// 按次/图片/视频模式：分层定价；视频模式的 PerRequestPrice 表示 USD/秒
 	RequestTiers []PricingInterval
 
 	// 按次/图片模式：默认价格（未命中层级时使用）
@@ -72,7 +73,7 @@ func (r *ModelPricingResolver) Resolve(ctx context.Context, input PricingInput) 
 			if mode == "" {
 				mode = BillingModeToken
 			}
-			if mode == BillingModePerRequest || mode == BillingModeImage {
+			if mode == BillingModePerRequest || mode == BillingModeImage || mode == BillingModeVideo {
 				resolved := &ResolvedPricing{
 					Mode:           mode,
 					Source:         PricingSourceChannel,
@@ -134,7 +135,7 @@ func (r *ModelPricingResolver) applyChannelOverrides(ctx context.Context, groupI
 	switch resolved.Mode {
 	case BillingModeToken:
 		r.applyTokenOverrides(chPricing, resolved)
-	case BillingModePerRequest, BillingModeImage:
+	case BillingModePerRequest, BillingModeImage, BillingModeVideo:
 		r.applyRequestTierOverrides(chPricing, resolved)
 	}
 }
@@ -306,4 +307,41 @@ func (r *ModelPricingResolver) GetRequestTierPriceByContext(resolved *ResolvedPr
 		return *iv.PerRequestPrice
 	}
 	return 0
+}
+
+// VideoPriceConfigFromResolvedPricing extracts a complete channel video price configuration.
+// The bool is true only when all three resolution tiers are present with non-negative prices;
+// explicit zero prices remain valid through the returned non-nil pointers.
+func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPriceConfig, bool) {
+	if resolved == nil || resolved.Mode != BillingModeVideo || len(resolved.RequestTiers) != 3 {
+		return nil, false
+	}
+
+	var price480P, price720P, price1080P float64
+	seen := make(map[string]bool, 3)
+	for _, tier := range resolved.RequestTiers {
+		label := strings.ToLower(strings.TrimSpace(tier.TierLabel))
+		if seen[label] || tier.PerRequestPrice == nil || *tier.PerRequestPrice < 0 {
+			return nil, false
+		}
+		switch label {
+		case VideoBillingResolution480P:
+			price480P = *tier.PerRequestPrice
+		case VideoBillingResolution720P:
+			price720P = *tier.PerRequestPrice
+		case VideoBillingResolution1080P:
+			price1080P = *tier.PerRequestPrice
+		default:
+			return nil, false
+		}
+		seen[label] = true
+	}
+	if !seen[VideoBillingResolution480P] || !seen[VideoBillingResolution720P] || !seen[VideoBillingResolution1080P] {
+		return nil, false
+	}
+	return &VideoPriceConfig{
+		Price480P:  &price480P,
+		Price720P:  &price720P,
+		Price1080P: &price1080P,
+	}, true
 }

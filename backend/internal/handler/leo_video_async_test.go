@@ -79,7 +79,7 @@ func (handlerVideoClient) CancelLeoAsyncVideo(context.Context, *service.Account,
 type handlerRejectingVideoClient struct{ handlerVideoClient }
 
 func (handlerRejectingVideoClient) CreateLeoAsyncVideo(context.Context, *service.Account, []byte) (*service.LeoAsyncAccepted, error) {
-	return nil, &service.LeoAsyncUpstreamError{StatusCode: http.StatusBadRequest, Message: "guidances.image_reference supports at most 4 items"}
+	return nil, &service.LeoAsyncUpstreamError{StatusCode: http.StatusBadRequest, Message: "Leonardo: guidances.image_reference supports at most 4 items"}
 }
 
 type handlerVideoBillingRepo struct{ service.UsageBillingRepository }
@@ -163,6 +163,35 @@ func TestLeoVideoAsyncGenerationPreservesNewUpstreamValidationErrors(t *testing.
 
 	require.Equal(t, http.StatusBadRequest, recorder.Code)
 	require.Contains(t, recorder.Body.String(), "guidances.image_reference supports at most 4 items")
+	require.NotContains(t, strings.ToLower(recorder.Body.String()), "leonardo")
+}
+
+func TestLeoVideoJobErrorsHideUpstreamProviderName(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &handlerVideoJobRepo{job: &service.VideoJob{
+		JobID: "vidjob_failed", APIKeyID: 2, Status: service.VideoJobFailed,
+		ErrorMessage: "LeoStudio failed after Leonardo.ai rejected the request",
+	}}
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(repo)}
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/videos/jobs/vidjob_failed", nil)
+	c.Params = gin.Params{{Key: "job_id", Value: "vidjob_failed"}}
+	setHandlerVideoAuth(c)
+
+	h.LeoVideoJob(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Contains(t, recorder.Body.String(), "video provider")
+	require.NotContains(t, strings.ToLower(recorder.Body.String()), "leonardo")
+	require.NotContains(t, strings.ToLower(recorder.Body.String()), "leostudio")
+}
+
+func TestLeoVideoPassthroughMessagesHideUpstreamProviderName(t *testing.T) {
+	message := "Leonardo.ai rejected the request through LeoStudio"
+
+	require.Equal(t, "video provider rejected the request through video provider", publicUpstreamErrorMessage(service.PlatformLeo, message))
+	require.Equal(t, message, publicUpstreamErrorMessage(service.PlatformOpenAI, message))
 }
 
 func TestLeoVideoAsyncJobEndpointsStayAPIKeyScoped(t *testing.T) {

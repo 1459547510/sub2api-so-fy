@@ -93,7 +93,8 @@ export default {
       billingMode: {
         token: 'Token',
         perRequest: '按次',
-        image: '图片（按次）'
+        image: '图片（按次）',
+        video: '视频（按秒）'
       },
       form: {
         name: '名称',
@@ -132,6 +133,11 @@ export default {
         noPricingRules: '暂无定价规则，点击"添加"创建',
         perRequestPrice: '单次价格',
         perRequestPriceRequired: '按次/图片计费模式必须设置默认价格或至少一个计费层级',
+        videoResolutionPrices: '分辨率单价',
+        videoPricePlaceholder: '每秒美元价格',
+        videoSingleModelRequired: '每条视频定价只能配置一个模型',
+        videoPricesRequired: '视频定价必须填写非负的 480p、720p、1080p 三档价格',
+        second: '秒',
         tierLabel: '层级',
         resolution: '分辨率',
         modelMapping: '模型映射',

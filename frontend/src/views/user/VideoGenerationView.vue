@@ -25,23 +25,37 @@
             <Icon name="sparkles" size="lg" class="text-primary-500" />
           </div>
 
-          <div v-if="!leoKeys.length && !loadingKeys" class="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-900/20 dark:text-amber-200" data-testid="video-no-key">
-            <div class="flex items-start gap-3">
-              <Icon name="key" size="md" class="mt-0.5 flex-shrink-0" />
-              <div>
-                <p class="font-medium">{{ t('video.noKey') }}</p>
-                <p class="mt-1 text-xs opacity-80">{{ t('video.noKeyHint') }}</p>
-              </div>
-            </div>
-          </div>
-
           <form class="mt-5 space-y-4" @submit.prevent="submitJob">
-            <label class="block">
+            <div class="space-y-2">
               <span class="input-label">{{ t('video.apiKey') }}</span>
-              <select v-model="selectedKeyId" class="input" :disabled="loadingKeys || !leoKeys.length" data-testid="video-api-key">
+              <div class="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 dark:bg-dark-800" role="tablist">
+                <button type="button" class="rounded-md px-3 py-2 text-xs font-medium transition-colors" :class="apiKeyMode === 'saved' ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-600 dark:text-primary-200' : 'text-gray-500 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'" :disabled="submitting || uploading" data-testid="key-mode-saved" @click="apiKeyMode = 'saved'">
+                  {{ t('video.savedApiKey') }}
+                </button>
+                <button type="button" class="rounded-md px-3 py-2 text-xs font-medium transition-colors" :class="apiKeyMode === 'custom' ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-600 dark:text-primary-200' : 'text-gray-500 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'" :disabled="submitting || uploading" data-testid="key-mode-custom" @click="apiKeyMode = 'custom'">
+                  {{ t('video.customApiKey') }}
+                </button>
+              </div>
+              <select v-if="apiKeyMode === 'saved'" v-model="selectedKeyId" class="input" :disabled="loadingKeys || !leoKeys.length || submitting || uploading" data-testid="video-api-key">
                 <option v-for="key in leoKeys" :key="key.id" :value="key.id">{{ key.name || `API Key #${key.id}` }}</option>
               </select>
-            </label>
+              <div v-else class="relative">
+                <input v-model="customApiKey" :type="showCustomApiKey ? 'text' : 'password'" class="input pr-11" :placeholder="t('video.customApiKeyPlaceholder')" autocomplete="off" spellcheck="false" :disabled="submitting || uploading" data-testid="video-custom-api-key" />
+                <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-dark-300" :title="showCustomApiKey ? t('video.hideApiKey') : t('video.showApiKey')" :disabled="submitting || uploading" data-testid="toggle-custom-api-key" @click="showCustomApiKey = !showCustomApiKey">
+                  <Icon :name="showCustomApiKey ? 'eyeOff' : 'eye'" size="md" />
+                </button>
+              </div>
+            </div>
+
+            <div v-if="apiKeyMode === 'saved' && !leoKeys.length && !loadingKeys" class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-900/20 dark:text-amber-200" data-testid="video-no-key">
+              <div class="flex items-start gap-3">
+                <Icon name="key" size="md" class="mt-0.5 flex-shrink-0" />
+                <div>
+                  <p class="font-medium">{{ t('video.noKey') }}</p>
+                  <p class="mt-1 text-xs opacity-80">{{ t('video.noKeyHint') }}</p>
+                </div>
+              </div>
+            </div>
 
             <label class="block">
               <span class="input-label">{{ t('video.prompt') }}</span>
@@ -138,7 +152,7 @@
                 <h2 class="text-base font-semibold text-gray-900 dark:text-white">{{ t('video.results') }}</h2>
                 <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('video.resultsHint') }}</p>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" :disabled="loadingJobs || !selectedKey" :title="t('common.refresh')" @click="loadJobs">
+              <button type="button" class="btn btn-secondary btn-sm" :disabled="loadingJobs || !effectiveApiKey" :title="t('common.refresh')" data-testid="refresh-video-jobs" @click="loadJobs">
                 <Icon name="refresh" size="sm" :class="loadingJobs ? 'animate-spin' : ''" />
               </button>
             </div>
@@ -218,6 +232,9 @@ const { t } = useI18n()
 const appStore = useAppStore()
 const keys = ref<ApiKey[]>([])
 const selectedKeyId = ref<number | null>(null)
+const apiKeyMode = ref<'saved' | 'custom'>('saved')
+const customApiKey = ref('')
+const showCustomApiKey = ref(false)
 const jobs = ref<VideoJob[]>([])
 const selectedJobId = ref('')
 const prompt = ref('')
@@ -237,6 +254,7 @@ const uploading = ref(false)
 const selectedVideoUrl = ref('')
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let videoOutputRequest = 0
+let jobsRequest = 0
 
 const modelOptions = ['seedance-2.0', 'seedance-2.0-fast']
 const aspectRatioOptions = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '9:21']
@@ -248,11 +266,12 @@ const imageModes = [
 
 const leoKeys = computed(() => keys.value.filter((key) => key.status === 'active' && key.group?.platform === 'leo' && key.group?.allow_image_generation === true))
 const selectedKey = computed(() => leoKeys.value.find((key) => key.id === selectedKeyId.value) || null)
+const effectiveApiKey = computed(() => apiKeyMode.value === 'custom' ? customApiKey.value.trim() : selectedKey.value?.key || '')
 const activeJobs = computed(() => jobs.value.filter((job) => ['pending', 'running', 'settling'].includes(job.status)))
 const selectedJob = computed(() => jobs.value.find((job) => job.job_id === selectedJobId.value) || jobs.value[0] || null)
 const remoteImageUrls = computed(() => imageUrlText.value.split(/[\r\n,]+/).map((value) => value.trim()).filter(Boolean))
 const canSubmit = computed(() => Boolean(
-  selectedKey.value && prompt.value.trim() && model.value && duration.value >= 4 && duration.value <= 15 &&
+  effectiveApiKey.value && prompt.value.trim() && model.value && duration.value >= 4 && duration.value <= 15 &&
   (imageMode.value !== 'url' || (remoteImageUrls.value.length > 0 && remoteImageUrls.value.length <= 4 && remoteImageUrls.value.every((value) => /^https?:\/\/\S+$/i.test(value))))
 ))
 
@@ -270,32 +289,35 @@ async function loadKeys() {
 }
 
 async function loadJobs() {
-  if (!selectedKey.value) {
+  const apiKey = effectiveApiKey.value
+  if (!apiKey) {
     jobs.value = []
     stopPolling()
     return
   }
+  const request = ++jobsRequest
   loadingJobs.value = true
   try {
-    const result = await listVideoJobs(selectedKey.value.key, { limit: 50 })
+    const result = await listVideoJobs(apiKey, { limit: 50 })
+    if (request !== jobsRequest || apiKey !== effectiveApiKey.value) return
     jobs.value = result.data || []
     if (!selectedJobId.value || !jobs.value.some((job) => job.job_id === selectedJobId.value)) selectedJobId.value = jobs.value[0]?.job_id || ''
     updatePolling()
   } catch (error) {
-    appStore.showError(errorMessage(error))
+    if (request === jobsRequest) appStore.showError(errorMessage(error))
   } finally {
-    loadingJobs.value = false
+    if (request === jobsRequest) loadingJobs.value = false
   }
 }
 
 async function submitJob() {
-  if (!canSubmit.value || !selectedKey.value || submitting.value || uploading.value) return
+  const apiKey = effectiveApiKey.value
+  if (!canSubmit.value || !apiKey || submitting.value || uploading.value) return
   submitting.value = true
   try {
     let selectedImageUrls: string[] = []
     if (imageMode.value === 'local' && localFiles.value.length) {
       uploading.value = true
-      const apiKey = selectedKey.value.key
       const uploaded = await Promise.all(localFiles.value.map((file) => uploadVideoInput(apiKey, file)))
       selectedImageUrls = uploaded.map((item) => item.image_url)
       uploading.value = false
@@ -321,7 +343,7 @@ async function submitJob() {
         })),
       }
     }
-    const accepted = await createVideoJob(selectedKey.value.key, payload)
+    const accepted = await createVideoJob(apiKey, payload)
     const now = new Date().toISOString()
     const job: VideoJob = { ...accepted, model: accepted.model || model.value, prompt: accepted.prompt || payload.prompt, created_at: accepted.created_at || now, updated_at: accepted.updated_at || now }
     jobs.value = [job, ...jobs.value.filter((item) => item.job_id !== job.job_id)].slice(0, 50)
@@ -338,9 +360,11 @@ async function submitJob() {
 }
 
 async function cancelJob(job: VideoJob) {
-  if (!selectedKey.value || job.status !== 'pending') return
+  const apiKey = effectiveApiKey.value
+  if (!apiKey || job.status !== 'pending') return
   try {
-    const canceled = await cancelVideoJob(selectedKey.value.key, job.job_id)
+    const canceled = await cancelVideoJob(apiKey, job.job_id)
+    if (apiKey !== effectiveApiKey.value) return
     const index = jobs.value.findIndex((item) => item.job_id === job.job_id)
     if (index >= 0) jobs.value[index] = { ...jobs.value[index], ...canceled }
     updatePolling()
@@ -390,10 +414,10 @@ async function loadSelectedVideo() {
   const request = ++videoOutputRequest
   clearSelectedVideo()
   const job = selectedJob.value
-  const key = selectedKey.value
-  if (!job || !key || job.status !== 'completed') return
+  const apiKey = effectiveApiKey.value
+  if (!job || !apiKey || job.status !== 'completed') return
   try {
-    const blob = await downloadVideoOutput(key.key, job.job_id)
+    const blob = await downloadVideoOutput(apiKey, job.job_id)
     if (request !== videoOutputRequest) return
     selectedVideoUrl.value = URL.createObjectURL(blob)
   } catch (error) {
@@ -431,17 +455,37 @@ function stopPolling() {
   pollTimer = null
 }
 
+function resetKeyScopedState() {
+  jobsRequest++
+  videoOutputRequest++
+  loadingJobs.value = false
+  jobs.value = []
+  selectedJobId.value = ''
+  stopPolling()
+  clearSelectedVideo()
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error && error.message ? error.message : t('common.error')
 }
 
-watch(selectedKeyId, () => void loadJobs())
+watch(selectedKeyId, () => {
+  if (apiKeyMode.value !== 'saved') return
+  resetKeyScopedState()
+  if (effectiveApiKey.value) void loadJobs()
+})
+watch(apiKeyMode, () => {
+  resetKeyScopedState()
+  if (apiKeyMode.value === 'saved' && effectiveApiKey.value) void loadJobs()
+})
+watch(customApiKey, () => {
+  if (apiKeyMode.value === 'custom') resetKeyScopedState()
+})
 watch(activeJobs, updatePolling)
-watch(() => [selectedKeyId.value, selectedJob.value?.job_id, selectedJob.value?.status], () => void loadSelectedVideo())
+watch(() => [effectiveApiKey.value, selectedJob.value?.job_id, selectedJob.value?.status], () => void loadSelectedVideo())
 
 onMounted(async () => {
   await loadKeys()
-  await loadJobs()
 })
 
 onBeforeUnmount(() => {

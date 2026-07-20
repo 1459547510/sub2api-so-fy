@@ -608,7 +608,25 @@ func validatePricingEntries(pricing []ChannelModelPricing) error {
 	return validatePricingBillingMode(pricing)
 }
 
-// validatePricingBillingMode 校验计费模式配置：按次/图片模式必须配价格或区间，所有价格字段不能为负，区间至少有一个价格字段。
+func validateAccountStatsPricingRules(rules []AccountStatsPricingRule) error {
+	for i, rule := range rules {
+		for _, pricing := range rule.Pricing {
+			if pricing.BillingMode == BillingModeVideo {
+				return fmt.Errorf("account stats pricing rule #%d: %w", i+1, infraerrors.BadRequest(
+					"ACCOUNT_STATS_VIDEO_PRICING_UNSUPPORTED",
+					"video billing mode is not supported in account stats pricing rules",
+				))
+			}
+		}
+		if err := validatePricingEntries(rule.Pricing); err != nil {
+			return fmt.Errorf("account stats pricing rule #%d: %w", i+1, err)
+		}
+	}
+	return nil
+}
+
+// validatePricingBillingMode 校验计费模式配置：按次/图片模式必须配价格或区间，
+// 视频模式必须按单模型配置完整的分辨率每秒价格，所有价格字段不能为负，区间至少有一个价格字段。
 func validatePricingBillingMode(pricing []ChannelModelPricing) error {
 	for _, p := range pricing {
 		if err := checkBillingModeRequirements(p); err != nil {
@@ -625,6 +643,9 @@ func validatePricingBillingMode(pricing []ChannelModelPricing) error {
 }
 
 func checkBillingModeRequirements(p ChannelModelPricing) error {
+	if p.BillingMode == BillingModeVideo {
+		return checkVideoBillingModeRequirements(p)
+	}
 	if p.BillingMode == BillingModePerRequest || p.BillingMode == BillingModeImage {
 		if p.PerRequestPrice == nil && len(p.Intervals) == 0 {
 			return infraerrors.BadRequest(
@@ -632,6 +653,69 @@ func checkBillingModeRequirements(p ChannelModelPricing) error {
 				"per-request price or intervals required for per_request/image billing mode",
 			)
 		}
+	}
+	return nil
+}
+
+func checkVideoBillingModeRequirements(p ChannelModelPricing) error {
+	if len(p.Models) != 1 || strings.TrimSpace(p.Models[0]) == "" {
+		return infraerrors.BadRequest(
+			"VIDEO_PRICING_REQUIRES_SINGLE_MODEL",
+			"video pricing must bind exactly one model",
+		)
+	}
+	if _, wildcard := splitWildcardSuffix(strings.TrimSpace(p.Models[0])); wildcard {
+		return infraerrors.BadRequest(
+			"VIDEO_PRICING_WILDCARD_NOT_ALLOWED",
+			"video pricing must bind an exact model and cannot use wildcards",
+		)
+	}
+	if p.PerRequestPrice != nil {
+		return infraerrors.BadRequest(
+			"VIDEO_PRICING_DEFAULT_NOT_ALLOWED",
+			"video pricing must configure per-second prices through resolution intervals",
+		)
+	}
+	if len(p.Intervals) != 3 {
+		return infraerrors.BadRequest(
+			"VIDEO_PRICING_INVALID_TIERS",
+			"video pricing requires exactly 480p, 720p, and 1080p intervals",
+		)
+	}
+
+	required := map[string]bool{
+		VideoBillingResolution480P:  false,
+		VideoBillingResolution720P:  false,
+		VideoBillingResolution1080P: false,
+	}
+	for _, interval := range p.Intervals {
+		label := strings.ToLower(strings.TrimSpace(interval.TierLabel))
+		seen, ok := required[label]
+		if !ok {
+			return infraerrors.BadRequest(
+				"VIDEO_PRICING_INVALID_TIER",
+				fmt.Sprintf("unsupported video pricing tier %q; expected 480p, 720p, or 1080p", interval.TierLabel),
+			)
+		}
+		if seen {
+			return infraerrors.BadRequest(
+				"VIDEO_PRICING_DUPLICATE_TIER",
+				fmt.Sprintf("duplicate video pricing tier %q", interval.TierLabel),
+			)
+		}
+		if interval.PerRequestPrice == nil {
+			return infraerrors.BadRequest(
+				"VIDEO_PRICING_MISSING_PRICE",
+				fmt.Sprintf("video pricing tier %q requires per_request_price in USD per second", interval.TierLabel),
+			)
+		}
+		if *interval.PerRequestPrice < 0 {
+			return infraerrors.BadRequest(
+				"NEGATIVE_PRICE",
+				fmt.Sprintf("video pricing tier %q per_request_price must be >= 0", interval.TierLabel),
+			)
+		}
+		required[label] = true
 	}
 	return nil
 }
@@ -714,10 +798,8 @@ func (s *ChannelService) Create(ctx context.Context, input *CreateChannelInput) 
 	if err := validateChannelConfig(channel.ModelPricing, channel.ModelMapping); err != nil {
 		return nil, err
 	}
-	for i, rule := range channel.AccountStatsPricingRules {
-		if err := validatePricingEntries(rule.Pricing); err != nil {
-			return nil, fmt.Errorf("account stats pricing rule #%d: %w", i+1, err)
-		}
+	if err := validateAccountStatsPricingRules(channel.AccountStatsPricingRules); err != nil {
+		return nil, err
 	}
 
 	if err := s.repo.Create(ctx, channel); err != nil {
@@ -758,10 +840,8 @@ func (s *ChannelService) Update(ctx context.Context, id int64, input *UpdateChan
 	if err := validateChannelConfig(channel.ModelPricing, channel.ModelMapping); err != nil {
 		return nil, err
 	}
-	for i, rule := range channel.AccountStatsPricingRules {
-		if err := validatePricingEntries(rule.Pricing); err != nil {
-			return nil, fmt.Errorf("account stats pricing rule #%d: %w", i+1, err)
-		}
+	if err := validateAccountStatsPricingRules(channel.AccountStatsPricingRules); err != nil {
+		return nil, err
 	}
 
 	oldGroupIDs := s.getOldGroupIDs(ctx, id)

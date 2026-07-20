@@ -87,7 +87,7 @@
             </label>
             <Select
               :modelValue="entry.billing_mode"
-              @update:modelValue="emit('update', { ...entry, billing_mode: $event as BillingMode, intervals: [] })"
+              @update:modelValue="onBillingModeUpdate($event as BillingMode)"
               :options="billingModeOptions"
               class="mt-1"
             />
@@ -226,6 +226,29 @@
             />
           </div>
         </div>
+
+        <!-- Video mode -->
+        <div v-else-if="props.allowVideo && entry.billing_mode === 'video'">
+          <label class="mt-3 block text-xs font-medium text-gray-500 dark:text-gray-400">
+            {{ t('admin.channels.form.videoResolutionPrices') }}
+            <span class="ml-1 font-normal text-gray-400">USD / {{ t('admin.channels.form.second') }}</span>
+          </label>
+          <div class="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div v-for="resolution in VIDEO_PRICING_RESOLUTIONS" :key="resolution">
+              <label class="text-xs text-gray-400">{{ resolution }}</label>
+              <input
+                :value="getVideoPrice(resolution)"
+                @input="updateVideoPrice(resolution, ($event.target as HTMLInputElement).value)"
+                :data-testid="`video-price-${resolution}`"
+                type="number"
+                step="any"
+                min="0"
+                class="input mt-0.5 text-sm"
+                :placeholder="t('admin.channels.form.videoPricePlaceholder')"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -239,8 +262,9 @@ import Icon from '@/components/icons/Icon.vue'
 import IntervalRow from './IntervalRow.vue'
 import ModelTagInput from './ModelTagInput.vue'
 import type { PricingFormEntry, IntervalFormEntry } from './types'
-import { perTokenToMTok, getPlatformTagClass } from './types'
+import { perTokenToMTok, getPlatformTagClass, normalizeVideoIntervals } from './types'
 import type { BillingMode } from '@/api/admin/channels'
+import { VIDEO_PRICING_RESOLUTIONS } from '@/constants/channel'
 import channelsAPI from '@/api/admin/channels'
 
 const { t } = useI18n()
@@ -248,6 +272,7 @@ const { t } = useI18n()
 const props = defineProps<{
   entry: PricingFormEntry
   platform?: string
+  allowVideo?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -261,7 +286,10 @@ const collapsed = ref(props.entry.models.length > 0)
 const billingModeOptions = computed(() => [
   { value: 'token', label: t('admin.channels.billingMode.token') },
   { value: 'per_request', label: t('admin.channels.billingMode.perRequest') },
-  { value: 'image', label: t('admin.channels.billingMode.image') }
+  { value: 'image', label: t('admin.channels.billingMode.image') },
+  ...(props.allowVideo
+    ? [{ value: 'video', label: t('admin.channels.billingMode.video') }]
+    : []),
 ])
 
 const billingModeLabel = computed(() => {
@@ -271,6 +299,28 @@ const billingModeLabel = computed(() => {
 
 function emitField(field: keyof PricingFormEntry, value: string) {
   emit('update', { ...props.entry, [field]: value === '' ? null : value })
+}
+
+function onBillingModeUpdate(mode: BillingMode) {
+  emit('update', {
+    ...props.entry,
+    billing_mode: mode,
+    intervals: mode === 'video' ? normalizeVideoIntervals(props.entry.intervals) : [],
+  })
+}
+
+function getVideoPrice(resolution: string): number | string | null {
+  return props.entry.intervals.find(iv => iv.tier_label === resolution)?.per_request_price ?? null
+}
+
+function updateVideoPrice(resolution: string, value: string) {
+  const intervals = normalizeVideoIntervals(props.entry.intervals)
+  const index = intervals.findIndex(iv => iv.tier_label === resolution)
+  intervals[index] = {
+    ...intervals[index],
+    per_request_price: value === '' ? null : value,
+  }
+  emit('update', { ...props.entry, intervals })
 }
 
 function addInterval() {

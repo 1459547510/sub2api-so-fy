@@ -2205,6 +2205,47 @@ func TestOpenAIGatewayServiceRecordUsage_GroupVideoPriceOverridesChannelImagePri
 	require.Equal(t, string(BillingModeVideo), *usageRepo.lastLog.BillingMode)
 }
 
+func TestOpenAIGatewayServiceRecordUsage_ChannelVideoPriceOverridesGroupPrice(t *testing.T) {
+	groupID := int64(1281)
+	groupVideoPrice720P := 0.037
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{}, &openAIRecordUsageSubRepoStub{}, nil)
+	svc.resolver = newOpenAIVideoChannelPricingResolverForTest(t, groupID, "seedance-2.0", 0.05, 0.12, 0.24)
+
+	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:            "resp_seedance_channel_price",
+			Model:                "seedance-2.0",
+			BillingModel:         "seedance-2.0",
+			VideoCount:           1,
+			VideoResolution:      VideoBillingResolution720P,
+			VideoDurationSeconds: 5,
+			Duration:             time.Second,
+		},
+		APIKey: &APIKey{
+			ID:      101281,
+			GroupID: i64p(groupID),
+			Group: &Group{
+				ID:                   groupID,
+				Platform:             PlatformLeo,
+				RateMultiplier:       1,
+				VideoRateIndependent: true,
+				VideoRateMultiplier:  0.5,
+				VideoPrice720P:       &groupVideoPrice720P,
+			},
+		},
+		User:    &User{ID: 201281},
+		Account: &Account{ID: 301281, Platform: PlatformLeo},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, usageRepo.lastLog)
+	require.InDelta(t, 0.6, usageRepo.lastLog.TotalCost, 1e-12)
+	require.InDelta(t, 0.3, usageRepo.lastLog.ActualCost, 1e-12)
+	require.InDelta(t, 0.5, usageRepo.lastLog.RateMultiplier, 1e-12)
+	require.Equal(t, string(BillingModeVideo), *usageRepo.lastLog.BillingMode)
+}
+
 func TestOpenAIGatewayServiceRecordUsage_HydratesGroupImagePriceWhenAuthSnapshotOmitsIt(t *testing.T) {
 	groupID := int64(130)
 	groupImagePrice2K := 0.021
@@ -2434,6 +2475,25 @@ func newOpenAIImageChannelPricingResolverForTest(t *testing.T, groupID int64, mo
 	}
 	cache.channelByGroupID[groupID] = &Channel{ID: groupID, Status: StatusActive}
 	cache.groupPlatform[groupID] = ""
+	cache.loadedAt = time.Now()
+	cs := &ChannelService{}
+	cs.cache.Store(cache)
+	return NewModelPricingResolver(cs, NewBillingService(&config.Config{}, nil))
+}
+
+func newOpenAIVideoChannelPricingResolverForTest(t *testing.T, groupID int64, model string, price480P, price720P, price1080P float64) *ModelPricingResolver {
+	t.Helper()
+	cache := newEmptyChannelCache()
+	cache.pricingByGroupModel[channelModelKey{groupID: groupID, platform: PlatformLeo, model: model}] = &ChannelModelPricing{
+		BillingMode: BillingModeVideo,
+		Intervals: []PricingInterval{
+			{TierLabel: VideoBillingResolution480P, PerRequestPrice: &price480P},
+			{TierLabel: VideoBillingResolution720P, PerRequestPrice: &price720P},
+			{TierLabel: VideoBillingResolution1080P, PerRequestPrice: &price1080P},
+		},
+	}
+	cache.channelByGroupID[groupID] = &Channel{ID: groupID, Status: StatusActive}
+	cache.groupPlatform[groupID] = PlatformLeo
 	cache.loadedAt = time.Now()
 	cs := &ChannelService{}
 	cs.cache.Store(cache)

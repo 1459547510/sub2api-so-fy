@@ -62,6 +62,7 @@ function mountView() {
 describe('VideoGenerationView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    window.localStorage.clear()
     let imageIndex = 0
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn((blob: Blob) => blob.type === 'video/mp4' ? 'blob:local-video' : `blob:local-image-${++imageIndex}`) })
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
@@ -115,6 +116,28 @@ describe('VideoGenerationView', () => {
     expect(payload.guidances).toBeUndefined()
   })
 
+  it('submits with an in-memory custom API Key when no saved Leo key exists', async () => {
+    vi.mocked(keysAPI.list).mockResolvedValue({ items: [grokKey] } as any)
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-custom', status: 'pending', status_url: '/v1/videos/jobs/vidjob-custom',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="key-mode-custom"]').trigger('click')
+    await wrapper.get('[data-testid="video-custom-api-key"]').setValue(' custom-sub2-key ')
+    await wrapper.get('[data-testid="video-prompt"]').setValue('A train crossing a snowy valley')
+    expect(wrapper.get('[data-testid="submit-video"]').attributes('disabled')).toBeUndefined()
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    expect(createVideoJob).toHaveBeenCalledWith('custom-sub2-key', expect.objectContaining({
+      prompt: 'A train crossing a snowy valley',
+    }))
+    expect(window.localStorage.length).toBe(0)
+  })
+
   it('submits multiple remote reference image URLs with explicit order', async () => {
     vi.mocked(createVideoJob).mockResolvedValue({
       job_id: 'vidjob-remote', status: 'pending', status_url: '/v1/videos/jobs/vidjob-remote',
@@ -150,6 +173,8 @@ describe('VideoGenerationView', () => {
     })
     const wrapper = mountView()
     await flushPromises()
+    await wrapper.get('[data-testid="key-mode-custom"]').trigger('click')
+    await wrapper.get('[data-testid="video-custom-api-key"]').setValue('custom-upload-key')
     await wrapper.get('[data-testid="mode-local"]').trigger('click')
     const input = wrapper.get('[data-testid="video-image-file"]')
     const files = [
@@ -163,6 +188,9 @@ describe('VideoGenerationView', () => {
     await flushPromises()
 
     expect(uploadVideoInput).toHaveBeenCalledTimes(2)
+    expect(uploadVideoInput).toHaveBeenNthCalledWith(1, 'custom-upload-key', files[0])
+    expect(uploadVideoInput).toHaveBeenNthCalledWith(2, 'custom-upload-key', files[1])
+    expect(createVideoJob).toHaveBeenCalledWith('custom-upload-key', expect.any(Object))
     const payload = vi.mocked(createVideoJob).mock.calls[0][1]
     expect(payload.image_urls).toBeUndefined()
     expect(payload.guidances).toEqual({ image_reference: [
@@ -188,6 +216,44 @@ describe('VideoGenerationView', () => {
     expect(cancelVideoJob).toHaveBeenCalledWith('sub2-leo-key', 'vidjob-pending')
     wrapper.unmount()
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:local-video')
+  })
+
+  it('uses the custom API Key to list, cancel, and download jobs', async () => {
+    vi.mocked(keysAPI.list).mockResolvedValue({ items: [grokKey] } as any)
+    vi.mocked(downloadVideoOutput).mockResolvedValue(new Blob(['mp4'], { type: 'video/mp4' }))
+    vi.mocked(listVideoJobs).mockResolvedValue({ data: [
+      { job_id: 'vidjob-custom-done', status: 'completed', status_url: '', model: 'seedance-2.0', prompt: 'done', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), result: { data: [{ mp4_url: '/v1/videos/jobs/vidjob-custom-done/content' }] } },
+      { job_id: 'vidjob-custom-pending', status: 'pending', status_url: '', model: 'seedance-2.0', prompt: 'wait', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    ] })
+    vi.mocked(cancelVideoJob).mockResolvedValue({ job_id: 'vidjob-custom-pending', status: 'canceled', status_url: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="key-mode-custom"]').trigger('click')
+    await wrapper.get('[data-testid="video-custom-api-key"]').setValue('custom-history-key')
+    await wrapper.get('[data-testid="refresh-video-jobs"]').trigger('click')
+    await flushPromises()
+
+    expect(listVideoJobs).toHaveBeenCalledWith('custom-history-key', { limit: 50 })
+    expect(downloadVideoOutput).toHaveBeenCalledWith('custom-history-key', 'vidjob-custom-done')
+    await wrapper.get('[data-testid="cancel-vidjob-custom-pending"]').trigger('click')
+    await flushPromises()
+    expect(cancelVideoJob).toHaveBeenCalledWith('custom-history-key', 'vidjob-custom-pending')
+  })
+
+  it('clears jobs from the previous Key when switching modes', async () => {
+    vi.mocked(listVideoJobs).mockResolvedValue({ data: [
+      { job_id: 'vidjob-saved-only', status: 'pending', status_url: '', model: 'seedance-2.0', prompt: 'saved key job', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    ] })
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).toContain('vidjob-saved-only')
+
+    await wrapper.get('[data-testid="key-mode-custom"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('vidjob-saved-only')
+    expect(listVideoJobs).toHaveBeenCalledTimes(1)
   })
 
   it('shows a useful empty state when no Leo key is available', async () => {

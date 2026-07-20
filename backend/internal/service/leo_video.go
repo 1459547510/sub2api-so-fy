@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -22,6 +23,12 @@ type LeoVideoRequestInfo struct {
 	ImageURLs       []string
 	AspectRatio     string
 	Audio           bool
+}
+
+var publicVideoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio)\b`)
+
+func PublicVideoErrorMessage(message string) string {
+	return strings.TrimSpace(publicVideoProviderNamePattern.ReplaceAllString(message, "video provider"))
 }
 
 func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
@@ -189,9 +196,9 @@ func (s *OpenAIGatewayService) handleLeoVideoErrorResponse(
 		}
 	}
 
-	message := sanitizeUpstreamErrorMessage(strings.TrimSpace(extractUpstreamErrorMessage(body)))
+	message := PublicVideoErrorMessage(sanitizeUpstreamErrorMessage(strings.TrimSpace(extractUpstreamErrorMessage(body))))
 	if message == "" {
-		message = fmt.Sprintf("LeoStudio rejected the request with HTTP %d", resp.StatusCode)
+		message = fmt.Sprintf("Video provider rejected the request with HTTP %d", resp.StatusCode)
 	}
 	writeOpenAIPassthroughResponseHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 	c.JSON(resp.StatusCode, gin.H{

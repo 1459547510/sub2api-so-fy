@@ -57,6 +57,20 @@ func (l fakeVideoBillingSubscriptionLoader) GetByID(context.Context, int64) (*Us
 	return l.subscription, nil
 }
 
+type fakeVideoBillingChannelRepository struct {
+	ChannelRepository
+	channels       []Channel
+	groupPlatforms map[int64]string
+}
+
+func (r *fakeVideoBillingChannelRepository) ListAll(context.Context) ([]Channel, error) {
+	return r.channels, nil
+}
+
+func (r *fakeVideoBillingChannelRepository) GetGroupPlatforms(context.Context, []int64) (map[int64]string, error) {
+	return r.groupPlatforms, nil
+}
+
 func TestVideoJobBillingPrepareReservesSnapshotCost(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	service := &VideoJobBillingService{BillingRepo: balance}
@@ -78,6 +92,91 @@ func TestVideoJobBillingPrepareReservesSnapshotCost(t *testing.T) {
 	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
 	require.InDelta(t, 0.1, snapshot.Price720P, 1e-12)
 	require.InDelta(t, 1.5, snapshot.RateMultiplier, 1e-12)
+	require.Equal(t, "group", snapshot.PricingSource)
+}
+
+func TestVideoJobBillingPrepareUsesChannelVideoPricingByBillingModelSource(t *testing.T) {
+	tests := []struct {
+		name               string
+		billingModelSource string
+		pricingModel       string
+		wantBillingModel   string
+	}{
+		{name: "requested", billingModelSource: BillingModelSourceRequested, pricingModel: "seedance-public", wantBillingModel: "seedance-public"},
+		{name: "channel_mapped", billingModelSource: BillingModelSourceChannelMapped, pricingModel: "seedance-channel", wantBillingModel: "seedance-channel"},
+		{name: "upstream", billingModelSource: BillingModelSourceUpstream, pricingModel: "seedance-upstream", wantBillingModel: "seedance-upstream"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			balance := &fakeVideoJobBalanceRepo{}
+			gateway, pricing := newVideoJobChannelPricingServices(t, tt.billingModelSource, tt.pricingModel, 0.01, 0.02, 0.03)
+			svc := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
+			groupID := int64(100)
+			job := &VideoJob{
+				JobID: "vidjob_channel_" + tt.name, UserID: 1, APIKeyID: 2, GroupID: groupID,
+				RequestedModel: "seedance-public", UpstreamModel: "seedance-upstream", Resolution: "720p", DurationSeconds: 5,
+			}
+			apiKey := newVideoJobBillingAPIKey(groupID)
+
+			require.NoError(t, svc.Prepare(context.Background(), job, apiKey, &User{ID: 1}, nil))
+			require.NotNil(t, job.HoldAmount)
+			require.InDelta(t, 0.1, *job.HoldAmount, 1e-12)
+			require.Len(t, balance.reserves, 1)
+
+			var snapshot VideoJobBillingSnapshot
+			require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
+			require.Equal(t, 2, snapshot.Version)
+			require.Equal(t, int64(77), snapshot.ChannelID)
+			require.Equal(t, tt.wantBillingModel, snapshot.BillingModel)
+			require.Equal(t, tt.billingModelSource, snapshot.BillingModelSource)
+			require.Equal(t, "seedance-channel", snapshot.ChannelMappedModel)
+			require.Equal(t, PricingSourceChannel, snapshot.PricingSource)
+			require.InDelta(t, 0.02, snapshot.Price720P, 1e-12)
+		})
+	}
+}
+
+func TestVideoJobBillingPrepareFallsBackToGroupVideoPricing(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{}
+	gateway, pricing := newVideoJobChannelPricingServices(t, BillingModelSourceRequested, "another-model", 0.01, 0.02, 0.03)
+	svc := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
+	groupID := int64(100)
+	job := &VideoJob{
+		JobID: "vidjob_group_fallback", UserID: 1, APIKeyID: 2, GroupID: groupID,
+		RequestedModel: "seedance-public", UpstreamModel: "seedance-upstream", Resolution: "720p", DurationSeconds: 5,
+	}
+
+	require.NoError(t, svc.Prepare(context.Background(), job, newVideoJobBillingAPIKey(groupID), &User{ID: 1}, nil))
+	require.NotNil(t, job.HoldAmount)
+	require.InDelta(t, 0.5, *job.HoldAmount, 1e-12)
+
+	var snapshot VideoJobBillingSnapshot
+	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
+	require.Equal(t, "group", snapshot.PricingSource)
+	require.InDelta(t, 0.1, snapshot.Price720P, 1e-12)
+	require.Equal(t, int64(77), snapshot.ChannelID)
+}
+
+func TestVideoJobBillingPreparePreservesExplicitZeroChannelPrice(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{}
+	gateway, pricing := newVideoJobChannelPricingServices(t, BillingModelSourceRequested, "seedance-public", 0, 0, 0)
+	svc := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
+	groupID := int64(100)
+	job := &VideoJob{
+		JobID: "vidjob_channel_zero", UserID: 1, APIKeyID: 2, GroupID: groupID,
+		RequestedModel: "seedance-public", UpstreamModel: "seedance-upstream", Resolution: "720p", DurationSeconds: 5,
+	}
+
+	require.NoError(t, svc.Prepare(context.Background(), job, newVideoJobBillingAPIKey(groupID), &User{ID: 1}, nil))
+	require.Nil(t, job.HoldAmount)
+	require.Empty(t, balance.reserves)
+
+	var snapshot VideoJobBillingSnapshot
+	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
+	require.Equal(t, PricingSourceChannel, snapshot.PricingSource)
+	require.Zero(t, snapshot.Price480P)
+	require.Zero(t, snapshot.Price720P)
+	require.Zero(t, snapshot.Price1080P)
 }
 
 func TestVideoJobSettlementIsIdempotent(t *testing.T) {
@@ -115,6 +214,38 @@ func TestVideoJobSettlementIsIdempotent(t *testing.T) {
 	require.InDelta(t, 1.8, *job.ActualCost, 1e-12)
 }
 
+func TestVideoJobSettlementRecordsFrozenChannelUsageFields(t *testing.T) {
+	recorder := &fakeVideoUsageRecorder{}
+	snapshot, err := json.Marshal(VideoJobBillingSnapshot{
+		Version: 2, BillingType: BillingTypeBalance, Price480P: 0.01, Price720P: 0.02, Price1080P: 0.03, RateMultiplier: 1,
+		ChannelID: 77, BillingModel: "seedance-channel", BillingModelSource: BillingModelSourceChannelMapped,
+		ChannelMappedModel: "seedance-channel", PricingSource: PricingSourceChannel,
+	})
+	require.NoError(t, err)
+	job := &VideoJob{
+		JobID: "vidjob_channel_settle", UserID: 1, APIKeyID: 2, GroupID: 100, AccountID: 9,
+		RequestedModel: "seedance-public", UpstreamModel: "seedance-upstream", Resolution: "720p",
+		DurationSeconds: 5, BillingSnapshot: snapshot, RequestHash: "request-hash",
+	}
+	svc := &VideoJobBillingService{
+		UsageRecorder: recorder,
+		APIKeys:       fakeVideoBillingAPIKeyLoader{apiKey: &APIKey{ID: 2}},
+		Users:         fakeVideoBillingUserLoader{user: &User{ID: 1}},
+		Accounts:      fakeVideoBillingAccountLoader{account: &Account{ID: 9, Type: AccountTypeAPIKey}},
+		Subscriptions: fakeVideoBillingSubscriptionLoader{},
+	}
+
+	require.NoError(t, svc.SettleCompleted(context.Background(), job, json.RawMessage(`{"data":[{"url":"https://cdn.example/video.mp4"}]}`)))
+	require.Len(t, recorder.inputs, 1)
+	input := recorder.inputs[0]
+	require.Equal(t, "seedance-channel", input.Result.BillingModel)
+	require.Equal(t, int64(77), input.ChannelID)
+	require.Equal(t, "seedance-public", input.OriginalModel)
+	require.Equal(t, "seedance-channel", input.ChannelMappedModel)
+	require.Equal(t, BillingModelSourceChannelMapped, input.BillingModelSource)
+	require.NotEmpty(t, input.ModelMappingChain)
+}
+
 func TestVideoJobFailureOnlyReleasesHold(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	recorder := &fakeVideoUsageRecorder{}
@@ -139,4 +270,40 @@ func TestVideoJobSettlementRejectsEmptyResult(t *testing.T) {
 	require.ErrorIs(t, err, ErrVideoOutputURLMissing)
 	require.Empty(t, recorder.inputs)
 	require.Nil(t, job.SettledAt)
+}
+
+func newVideoJobBillingAPIKey(groupID int64) *APIKey {
+	return &APIKey{ID: 2, GroupID: &groupID, Group: &Group{
+		ID: groupID, Platform: PlatformLeo, RateMultiplier: 1,
+		VideoPrice480P: f64p(0.05), VideoPrice720P: f64p(0.1), VideoPrice1080P: f64p(0.2),
+	}}
+}
+
+func newVideoJobChannelPricingServices(
+	t *testing.T,
+	billingModelSource string,
+	pricingModel string,
+	price480P, price720P, price1080P float64,
+) (*OpenAIGatewayService, *ModelPricingResolver) {
+	t.Helper()
+	const groupID int64 = 100
+	repo := &fakeVideoBillingChannelRepository{
+		channels: []Channel{{
+			ID: 77, Name: "leo-video", Status: StatusActive, GroupIDs: []int64{groupID},
+			BillingModelSource: billingModelSource,
+			ModelMapping:       map[string]map[string]string{PlatformLeo: {"seedance-public": "seedance-channel"}},
+			ModelPricing: []ChannelModelPricing{{
+				Platform: PlatformLeo, Models: []string{pricingModel}, BillingMode: BillingModeVideo,
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: f64p(price480P)},
+					{TierLabel: "720p", PerRequestPrice: f64p(price720P)},
+					{TierLabel: "1080p", PerRequestPrice: f64p(price1080P)},
+				},
+			}},
+		}},
+		groupPlatforms: map[int64]string{groupID: PlatformLeo},
+	}
+	channelService := NewChannelService(repo, nil, nil, nil)
+	resolver := NewModelPricingResolver(channelService, &BillingService{fallbackPrices: map[string]*ModelPricing{}})
+	return &OpenAIGatewayService{channelService: channelService}, resolver
 }

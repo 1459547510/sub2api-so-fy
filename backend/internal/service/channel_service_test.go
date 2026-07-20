@@ -1431,6 +1431,25 @@ func TestCreate_InvalidPricingIntervals(t *testing.T) {
 	require.Contains(t, err.Error(), "overlap")
 }
 
+func TestCreate_RejectsVideoAccountStatsPricing(t *testing.T) {
+	repo := &mockChannelRepository{}
+	svc := newTestChannelService(repo)
+
+	_, err := svc.Create(context.Background(), &CreateChannelInput{
+		Name: "test",
+		AccountStatsPricingRules: []AccountStatsPricingRule{{
+			Name: "unsupported-video-rule",
+			Pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0"},
+			}},
+		}},
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "video billing mode is not supported in account stats pricing rules")
+}
+
 func TestCreate_DefaultBillingModelSource(t *testing.T) {
 	var capturedChannel *Channel
 	repo := &mockChannelRepository{
@@ -1651,6 +1670,29 @@ func TestUpdate_InvalidPricingIntervals(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "INVALID_PRICING_INTERVALS")
 	require.Contains(t, err.Error(), "unbounded")
+}
+
+func TestUpdate_RejectsVideoAccountStatsPricing(t *testing.T) {
+	repo := &mockChannelRepository{
+		getByIDFn: func(_ context.Context, _ int64) (*Channel, error) {
+			return &Channel{ID: 1, Name: "test", Status: StatusActive}, nil
+		},
+	}
+	svc := newTestChannelService(repo)
+	rules := []AccountStatsPricingRule{{
+		Name: "unsupported-video-rule",
+		Pricing: []ChannelModelPricing{{
+			BillingMode: BillingModeVideo,
+			Models:      []string{"seedance-2.0"},
+		}},
+	}}
+
+	_, err := svc.Update(context.Background(), 1, &UpdateChannelInput{
+		AccountStatsPricingRules: &rules,
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "video billing mode is not supported in account stats pricing rules")
 }
 
 func TestUpdate_InvalidatesChannelCache(t *testing.T) {
@@ -2314,6 +2356,106 @@ func TestValidatePricingBillingMode(t *testing.T) {
 			pricing: []ChannelModelPricing{{BillingMode: BillingModeImage}},
 			wantErr: true,
 			errMsg:  "per-request price or intervals required",
+		},
+		{
+			name: "video complete resolution tiers - valid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0"},
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0)},
+					{TierLabel: "720P", PerRequestPrice: testPtrFloat64(0.08)},
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+				},
+			}},
+		},
+		{
+			name: "video multiple models - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0", "seedance-2.0-fast"},
+			}},
+			wantErr: true,
+			errMsg:  "must bind exactly one model",
+		},
+		{
+			name: "video wildcard model - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-*"},
+			}},
+			wantErr: true,
+			errMsg:  "cannot use wildcards",
+		},
+		{
+			name: "video flat price - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode:     BillingModeVideo,
+				Models:          []string{"seedance-2.0"},
+				PerRequestPrice: testPtrFloat64(0.08),
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.08)},
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+				},
+			}},
+			wantErr: true,
+			errMsg:  "must configure per-second prices through resolution intervals",
+		},
+		{
+			name: "video missing tier - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0"},
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.08)},
+				},
+			}},
+			wantErr: true,
+			errMsg:  "requires exactly 480p, 720p, and 1080p",
+		},
+		{
+			name: "video duplicate tier - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0"},
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+					{TierLabel: "480P", PerRequestPrice: testPtrFloat64(0.06)},
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+				},
+			}},
+			wantErr: true,
+			errMsg:  "duplicate video pricing tier",
+		},
+		{
+			name: "video tier missing price - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0"},
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+					{TierLabel: "720p"},
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+				},
+			}},
+			wantErr: true,
+			errMsg:  "requires per_request_price in USD per second",
+		},
+		{
+			name: "video negative tier price - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0"},
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
+					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(-0.01)},
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.12)},
+				},
+			}},
+			wantErr: true,
+			errMsg:  "per_request_price must be >= 0",
 		},
 		{
 			name:    "empty list - valid",

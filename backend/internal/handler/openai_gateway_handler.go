@@ -2179,6 +2179,7 @@ func (h *OpenAIGatewayHandler) handleFailoverExhausted(c *gin.Context, failoverE
 			if !rule.PassthroughBody && rule.CustomMessage != nil {
 				msg = *rule.CustomMessage
 			}
+			msg = publicUpstreamErrorMessage(platform, msg)
 
 			if rule.SkipMonitoring {
 				c.Set(service.OpsSkipPassthroughKey, true)
@@ -2196,6 +2197,13 @@ func (h *OpenAIGatewayHandler) handleFailoverExhausted(c *gin.Context, failoverE
 	// 使用默认的错误映射
 	status, errType, errMsg := h.mapUpstreamError(statusCode)
 	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
+}
+
+func publicUpstreamErrorMessage(platform, message string) string {
+	if strings.EqualFold(strings.TrimSpace(platform), service.PlatformLeo) {
+		return service.PublicVideoErrorMessage(message)
+	}
+	return message
 }
 
 func credentialFailoverClientResponse(failoverErr *service.UpstreamFailoverError) (int, string) {

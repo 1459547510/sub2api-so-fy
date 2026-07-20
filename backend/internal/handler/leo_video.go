@@ -266,9 +266,10 @@ func recordLeoVideoUsage(
 	requestModel string,
 	body []byte,
 ) {
-	channelUsageFields := service.ChannelUsageFields{
-		OriginalModel:      requestModel,
-		ChannelMappedModel: requestModel,
+	channelUsageFields := service.ChannelUsageFields{OriginalModel: requestModel, ChannelMappedModel: requestModel}
+	if apiKey.GroupID != nil {
+		mapping := h.gatewayService.ResolveChannelMapping(c.Request.Context(), *apiKey.GroupID, requestModel)
+		channelUsageFields = mapping.ToUsageFields(requestModel, result.UpstreamModel)
 	}
 	inboundEndpoint := GetInboundEndpoint(c)
 	userAgent := c.GetHeader("User-Agent")

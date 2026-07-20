@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { validateIntervals, type IntervalFormEntry } from '../types'
+import {
+  createPricingFormEntry,
+  createSyncedPricingEntries,
+  formIntervalsToAPI,
+  getNextLeoVideoModel,
+  normalizeVideoIntervals,
+  validateIntervals,
+  validateVideoPricing,
+  type IntervalFormEntry,
+} from '../types'
 
 function makeInterval(over: Partial<IntervalFormEntry>): IntervalFormEntry {
   return {
@@ -79,5 +88,69 @@ describe('validateIntervals', () => {
       ]
       expect(validateIntervals(intervals, 'image', t)).toContain('maxGreaterThanMin')
     })
+  })
+})
+
+describe('video pricing', () => {
+  it('creates fixed video resolution intervals serialized as per-request prices', () => {
+    const entry = createPricingFormEntry(['seedance-2.0'], 'video')
+    entry.intervals[0].per_request_price = '0.01'
+    entry.intervals[1].per_request_price = '0.02'
+    entry.intervals[2].per_request_price = '0.03'
+
+    expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['480p', '720p', '1080p'])
+    expect(formIntervalsToAPI(entry.intervals).map(iv => iv.per_request_price)).toEqual([0.01, 0.02, 0.03])
+  })
+
+  it('normalizes existing video intervals to the supported resolutions and order', () => {
+    const intervals = normalizeVideoIntervals([
+      makeInterval({ tier_label: '1080P', per_request_price: 0.3 }),
+      makeInterval({ tier_label: 'custom', per_request_price: 9 }),
+      makeInterval({ tier_label: '480p', per_request_price: 0.1 }),
+    ])
+
+    expect(intervals.map(iv => [iv.tier_label, iv.per_request_price])).toEqual([
+      ['480p', 0.1],
+      ['720p', null],
+      ['1080p', 0.3],
+    ])
+  })
+
+  it('prefills Leo video models in order without duplicating existing models', () => {
+    expect(getNextLeoVideoModel([])).toBe('seedance-2.0')
+    expect(getNextLeoVideoModel([
+      createPricingFormEntry(['SEEDANCE-2.0'], 'video'),
+    ])).toBe('seedance-2.0-fast')
+    expect(getNextLeoVideoModel([
+      createPricingFormEntry(['seedance-2.0'], 'video'),
+      createPricingFormEntry(['seedance-2.0-fast'], 'video'),
+    ])).toBeUndefined()
+  })
+
+  it('splits synchronized Leo models into independent video entries', () => {
+    const entries = createSyncedPricingEntries('leo', ['seedance-2.0', 'seedance-2.0-fast'])
+
+    expect(entries.map(entry => [entry.models, entry.billing_mode])).toEqual([
+      [['seedance-2.0'], 'video'],
+      [['seedance-2.0-fast'], 'video'],
+    ])
+    expect(createSyncedPricingEntries('openai', ['gpt-a', 'gpt-b'])).toHaveLength(1)
+  })
+
+  it('requires one model and all three non-negative prices', () => {
+    const entry = createPricingFormEntry(['seedance-2.0'], 'video')
+    expect(validateVideoPricing(entry, t)).toContain('videoPricesRequired')
+
+    entry.intervals.forEach((interval, index) => {
+      interval.per_request_price = index / 100
+    })
+    expect(validateVideoPricing(entry, t)).toBeNull()
+
+    entry.models.push('seedance-2.0-fast')
+    expect(validateVideoPricing(entry, t)).toContain('videoSingleModelRequired')
+
+    entry.models.pop()
+    entry.intervals[2].per_request_price = -1
+    expect(validateVideoPricing(entry, t)).toContain('videoPricesRequired')
   })
 })
