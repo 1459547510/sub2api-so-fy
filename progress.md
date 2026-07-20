@@ -2050,3 +2050,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_CHANNEL.md`: documented local output storage, authenticated access, settlement order, retries, and deployment limits.
 - `progress.md`: recorded this implementation, verification evidence, file list, and rollback point.
 - Rollback point: `74c877d5`; after creating the task commit, run `git revert <task-commit-hash>` from the repository root.
+
+## 2026-07-20 - Task: Integrate local Leo video output persistence into v0.1.161
+### What was done
+- Recovered the uncommitted video-output worktree changes that were not included in `v0.1.161-fy.2` and integrated them into the active v0.1.161 release branch.
+- Preserved v0.1.161 prompt auditing, Grok eligibility probing, authentication cache invalidation, Token Incentive, and fork update wiring while injecting the shared video output store.
+- Kept unrelated Baota daily-report commits, homepage preview worktrees, stashes, and `.superpowers/` outside the release.
+- Fixed three static-analysis findings in the new runtime tests by explicitly checking interface type assertions before inspecting test doubles.
+### Testing
+- Source-worktree backend video tests passed across service, handler, and routes; targeted frontend video API and workbench tests passed.
+- Final-branch backend video, output storage, authentication, route, and prompt-audit coverage tests passed.
+- `go test -p 2 -tags=unit -timeout 10m ./...`: passed for all backend packages.
+- `pnpm run test:run`: passed for the complete frontend Vitest suite.
+- `pnpm run lint:check`, `pnpm run typecheck`, and `pnpm run build`: passed.
+- `..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues` after the test-only type-assertion fix.
+- `go build -o ..\\.codex-run\\sub2api-v0.1.161-fy.3.exe ./cmd/server` and `--version`: passed and reported `Sub2API 0.1.161`.
+- `git diff --check`: passed before this final progress append; final staged checks follow.
+### Notes
+- `backend/internal/handler/openai_gateway_handler.go`: retained v0.1.161 security and Grok dependencies while attaching `VideoOutputStore`.
+- `backend/internal/handler/wire.go`: merged output-store injection into the v0.1.161 gateway provider.
+- `backend/cmd/server/wire_gen.go`: regenerated final dependency injection with prompt audit, Token Incentive, and video output persistence together.
+- `backend/internal/service/video_job_runtime_test.go`: explicitly checked test-double type assertions to satisfy static analysis without changing behavior.
+- `progress.md`: recorded recovery of the missed local changes, final-branch verification, exclusions, release target, and rollback procedure.
+- Rollback point: deploy `v0.1.161-fy.2`; for source rollback after release, run `git revert --no-commit v0.1.161-fy.2..v0.1.161-fy.3`, review the staged reversal, and commit it without applying or deleting unrelated worktrees or stashes.

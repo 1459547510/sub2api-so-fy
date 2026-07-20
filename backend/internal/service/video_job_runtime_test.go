@@ -176,8 +176,12 @@ func TestVideoJobRuntimeFailsEmptyCompletedResultWithoutCharging(t *testing.T) {
 	require.NoError(t, runtime.RunOnce(context.Background()))
 	require.Equal(t, VideoJobFailed, repo.job.Status)
 	require.NotNil(t, repo.job.SettledAt)
-	require.Empty(t, billing.UsageRecorder.(*fakeVideoUsageRecorder).inputs)
-	require.Len(t, billing.BillingRepo.(*fakeVideoJobBalanceRepo).releases, 1)
+	usageRecorder, ok := billing.UsageRecorder.(*fakeVideoUsageRecorder)
+	require.True(t, ok)
+	balanceRepo, ok := billing.BillingRepo.(*fakeVideoJobBalanceRepo)
+	require.True(t, ok)
+	require.Empty(t, usageRecorder.inputs)
+	require.Len(t, balanceRepo.releases, 1)
 }
 
 func TestVideoJobRuntimeRetriesInvalidOutputThenReleasesHold(t *testing.T) {
@@ -198,6 +202,10 @@ func TestVideoJobRuntimeRetriesInvalidOutputThenReleasesHold(t *testing.T) {
 	require.Equal(t, VideoJobSettling, repo.job.Status)
 	require.NoError(t, runtime.RunOnce(context.Background()))
 	require.Equal(t, VideoJobFailed, repo.job.Status)
-	require.Empty(t, billing.UsageRecorder.(*fakeVideoUsageRecorder).inputs)
-	require.Len(t, billing.BillingRepo.(*fakeVideoJobBalanceRepo).releases, 1)
+	usageRecorder, ok := billing.UsageRecorder.(*fakeVideoUsageRecorder)
+	require.True(t, ok)
+	balanceRepo, ok := billing.BillingRepo.(*fakeVideoJobBalanceRepo)
+	require.True(t, ok)
+	require.Empty(t, usageRecorder.inputs)
+	require.Len(t, balanceRepo.releases, 1)
 }
