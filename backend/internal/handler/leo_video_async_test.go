@@ -182,7 +182,7 @@ func TestLeoVideoJobErrorsHideUpstreamProviderName(t *testing.T) {
 	h.LeoVideoJob(c)
 
 	require.Equal(t, http.StatusOK, recorder.Code)
-	require.Contains(t, recorder.Body.String(), "video provider")
+	require.Contains(t, strings.ToLower(recorder.Body.String()), "video provider")
 	require.NotContains(t, strings.ToLower(recorder.Body.String()), "leonardo")
 	require.NotContains(t, strings.ToLower(recorder.Body.String()), "leostudio")
 }

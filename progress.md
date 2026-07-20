@@ -2273,3 +2273,69 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_CHANNEL.md`: documented configuration, exact-model rules, pricing precedence, formula, snapshot freezing, and usage attribution.
 - `progress.md`: recorded implementation, verification evidence, changed files, and rollback guidance.
 - Rollback point: `efc132e5`; after creating the task commit, run `git revert <task-commit-hash>` from the repository root.
+
+## 2026-07-20 - Task: Integrate video pricing, custom Key workbench, and API documentation for v0.1.161-fy.5
+### What was done
+- Merged the Leo channel pricing and custom API Key workbench changes into the active fork release branch.
+- Preserved the verified single-image `image_url` contract, ordered multi-image `guidances.image_reference` contract, provider-name sanitization, API documentation page, and existing v0.1.161 security and billing behavior.
+- Added the API documentation page files that were present locally but not yet tracked, regenerated Wire, and validated the Windows service binary used for local verification.
+- Kept `.superpowers/`, Baota daily-report worktrees, homepage preview worktrees, and unrelated stashes outside the release.
+### Testing
+- `backend: go generate ./cmd/server`: passed.
+- `backend: go test ./internal/service ./internal/handler ./internal/server/routes -run 'Channel|Pricing|Video|Leo|SanitizeVideoProvider|PromptAuditCoverage' -count=1`: passed.
+- `backend: go test -p 2 -tags=unit -timeout 10m ./...`: passed for all backend packages.
+- `frontend: .\\node_modules\\.bin\\vitest.cmd run src/components/admin/channel/__tests__/types.spec.ts src/components/admin/channel/__tests__/PricingEntryCard.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/api/__tests__/videoGeneration.spec.ts --reporter=dot`: passed, 5 files and 30 tests.
+- `frontend: .\\node_modules\\.bin\\vitest.cmd run`: passed for the complete frontend suite.
+- `frontend: .\\node_modules\\.bin\\eslint.cmd . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts`: passed.
+- `frontend: .\\node_modules\\.bin\\vue-tsc.cmd --noEmit`: passed.
+- `frontend: .\\node_modules\\.bin\\vite.cmd build`: passed with existing dynamic-import and chunk-size warnings.
+- `backend: ..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues`.
+- `backend: go build -o ..\\.codex-run\\sub2api-v0.1.161-fy.5.exe ./cmd/server` and `--version`: passed and reported `Sub2API 0.1.161`.
+- `git diff --check`: passed before this progress append; final staged check follows.
+### Notes
+- `backend/cmd/server/wire_gen.go`: regenerated dependency wiring for asynchronous video billing.
+- `backend/internal/handler/leo_video.go`: attaches resolved channel pricing context to synchronous video usage.
+- `backend/internal/handler/leo_video_async.go`: returns sanitized asynchronous video errors and API-key-scoped jobs.
+- `backend/internal/handler/leo_video_async_test.go`: covers provider-name sanitization and uses case-insensitive matching for the public label.
+- `backend/internal/handler/openai_gateway_handler.go`: applies Leo provider-name sanitization to configured passthrough errors.
+- `backend/internal/service/channel.go`: validates video billing mode and resolution tiers.
+- `backend/internal/service/channel_service.go`: validates exact-model channel video pricing and rejects invalid statistics pricing combinations.
+- `backend/internal/service/channel_service_test.go`: covers channel video pricing validation.
+- `backend/internal/service/channel_test.go`: covers video billing mode and interval validation.
+- `backend/internal/service/leo_video.go`: sanitizes synchronous public video errors.
+- `backend/internal/service/leo_video_async.go`: handles asynchronous Leo video requests and provider-neutral errors.
+- `backend/internal/service/leo_video_async_test.go`: covers asynchronous provider-name sanitization.
+- `backend/internal/service/leo_video_test.go`: covers synchronous provider-name sanitization.
+- `backend/internal/service/model_pricing_resolver.go`: resolves channel video tiers and group fallback prices.
+- `backend/internal/service/model_pricing_resolver_test.go`: covers channel tier resolution and explicit zero prices.
+- `backend/internal/service/openai_gateway_record_usage_test.go`: verifies synchronous channel-price precedence and video multipliers.
+- `backend/internal/service/openai_gateway_usage.go`: applies channel video pricing to synchronous usage calculation.
+- `backend/internal/service/video_job_billing.go`: freezes channel pricing and billing metadata in asynchronous snapshots.
+- `backend/internal/service/video_job_billing_test.go`: covers asynchronous pricing precedence, fallback, snapshots, and settlement attribution.
+- `backend/internal/service/video_job_runtime.go`: sanitizes terminal video job errors.
+- `backend/internal/service/video_job_service.go`: sanitizes persisted video job creation errors.
+- `backend/internal/service/wire.go`: injects the shared model pricing resolver.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents channel pricing, custom Keys, image contracts, API docs, and billing behavior.
+- `frontend/src/components/admin/channel/PricingEntryCard.vue`: edits fixed Seedance resolution-tier prices.
+- `frontend/src/components/admin/channel/__tests__/PricingEntryCard.spec.ts`: tests channel video pricing controls.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: tests video pricing form normalization and validation.
+- `frontend/src/components/admin/channel/types.ts`: defines video pricing defaults, normalization, and validation.
+- `frontend/src/components/video/ApiCodeBlock.vue`: renders copyable API examples.
+- `frontend/src/components/video/EndpointTitle.vue`: renders API endpoint headings.
+- `frontend/src/components/video/SectionHeading.vue`: renders API documentation section headings.
+- `frontend/src/components/video/VideoSectionTabs.vue`: links the generation workbench and API docs.
+- `frontend/src/components/video/__tests__/ApiCodeBlock.spec.ts`: tests API example copying.
+- `frontend/src/components/video/__tests__/VideoSectionTabs.spec.ts`: tests video page tab navigation.
+- `frontend/src/constants/channel.ts`: registers video billing mode, Seedance models, and resolutions.
+- `frontend/src/i18n/locales/en/admin/channels.ts`: adds English channel pricing labels.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English video workbench and API docs text.
+- `frontend/src/i18n/locales/zh/admin/channels.ts`: adds Chinese channel pricing labels.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese video workbench and API docs text.
+- `frontend/src/router/index.ts`: registers the authenticated API docs route.
+- `frontend/src/views/admin/ChannelsView.vue`: exposes Leo channel pricing administration.
+- `frontend/src/views/user/VideoApiDocsView.vue`: implements the API integration documentation page.
+- `frontend/src/views/user/VideoGenerationView.vue`: supports saved/custom Keys and verified image payload contracts.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: tests documented endpoints and request examples.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: tests custom Keys, Key isolation, single-image, multi-image, upload, cancel, and download flows.
+- `progress.md`: records this release integration and verification evidence.
+- Rollback point: redeploy `v0.1.161-fy.4`; for source rollback after this release commit, run `git revert <release-commit-hash>` from the repository root.
