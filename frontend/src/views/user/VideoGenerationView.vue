@@ -104,20 +104,22 @@
             <div v-if="imageMode === 'local'" class="space-y-3">
               <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-dark-300 dark:hover:border-primary-500 dark:hover:text-primary-300">
                 <Icon name="upload" size="sm" />
-                <span>{{ localFile ? t('video.replaceImage') : t('video.chooseImage') }}</span>
-                <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" data-testid="video-image-file" @change="onFileChange" />
+                <span>{{ localFiles.length ? t('video.replaceImage') : t('video.chooseImage') }}</span>
+                <input type="file" accept="image/png,image/jpeg,image/webp" multiple class="sr-only" data-testid="video-image-file" @change="onFileChange" />
               </label>
-              <div v-if="previewUrl" class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-dark-700">
-                <img :src="previewUrl" alt="" class="max-h-40 w-full object-cover" />
-                <button type="button" class="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md bg-black/60 text-white hover:bg-black/80" :title="t('video.removeImage')" @click="removeLocalImage">
-                  <Icon name="x" size="sm" />
-                </button>
+              <div v-if="previewUrls.length" class="grid grid-cols-2 gap-2">
+                <div v-for="(preview, index) in previewUrls" :key="preview" class="relative aspect-video overflow-hidden rounded-lg border border-gray-200 dark:border-dark-700">
+                  <img :src="preview" alt="" class="h-full w-full object-cover" />
+                  <button type="button" class="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white hover:bg-black/80" :title="t('video.removeImage')" @click="removeLocalImage(index)">
+                    <Icon name="x" size="sm" />
+                  </button>
+                </div>
               </div>
             </div>
 
             <label v-else-if="imageMode === 'url'" class="block">
               <span class="sr-only">{{ t('video.imageUrl') }}</span>
-              <input v-model="imageUrl" type="url" class="input" :placeholder="t('video.imageUrlPlaceholder')" data-testid="video-image-url" />
+              <textarea v-model="imageUrlText" rows="4" class="input resize-y" :placeholder="t('video.imageUrlPlaceholder')" data-testid="video-image-url"></textarea>
             </label>
 
             <button type="submit" class="btn btn-primary flex w-full items-center justify-center gap-2" :disabled="!canSubmit || submitting || uploading" data-testid="submit-video">
@@ -222,9 +224,9 @@ const duration = ref(8)
 const aspectRatio = ref('16:9')
 const audio = ref(false)
 const imageMode = ref<'none' | 'local' | 'url'>('none')
-const imageUrl = ref('')
-const localFile = ref<File | null>(null)
-const previewUrl = ref('')
+const imageUrlText = ref('')
+const localFiles = ref<File[]>([])
+const previewUrls = ref<string[]>([])
 const loadingKeys = ref(false)
 const loadingJobs = ref(false)
 const submitting = ref(false)
@@ -245,7 +247,11 @@ const leoKeys = computed(() => keys.value.filter((key) => key.status === 'active
 const selectedKey = computed(() => leoKeys.value.find((key) => key.id === selectedKeyId.value) || null)
 const activeJobs = computed(() => jobs.value.filter((job) => ['pending', 'running', 'settling'].includes(job.status)))
 const selectedJob = computed(() => jobs.value.find((job) => job.job_id === selectedJobId.value) || jobs.value[0] || null)
-const canSubmit = computed(() => Boolean(selectedKey.value && prompt.value.trim() && model.value && duration.value >= 4 && duration.value <= 15 && (imageMode.value !== 'url' || /^https?:\/\/\S+$/i.test(imageUrl.value.trim()))))
+const remoteImageUrls = computed(() => imageUrlText.value.split(/[\r\n,]+/).map((value) => value.trim()).filter(Boolean))
+const canSubmit = computed(() => Boolean(
+  selectedKey.value && prompt.value.trim() && model.value && duration.value >= 4 && duration.value <= 15 &&
+  (imageMode.value !== 'url' || (remoteImageUrls.value.length > 0 && remoteImageUrls.value.length <= 4 && remoteImageUrls.value.every((value) => /^https?:\/\/\S+$/i.test(value))))
+))
 
 async function loadKeys() {
   loadingKeys.value = true
@@ -283,14 +289,15 @@ async function submitJob() {
   if (!canSubmit.value || !selectedKey.value || submitting.value || uploading.value) return
   submitting.value = true
   try {
-    let selectedImageUrl = ''
-    if (imageMode.value === 'local' && localFile.value) {
+    let selectedImageUrls: string[] = []
+    if (imageMode.value === 'local' && localFiles.value.length) {
       uploading.value = true
-      const uploaded = await uploadVideoInput(selectedKey.value.key, localFile.value)
-      selectedImageUrl = uploaded.image_url
+      const apiKey = selectedKey.value.key
+      const uploaded = await Promise.all(localFiles.value.map((file) => uploadVideoInput(apiKey, file)))
+      selectedImageUrls = uploaded.map((item) => item.image_url)
       uploading.value = false
     } else if (imageMode.value === 'url') {
-      selectedImageUrl = imageUrl.value.trim()
+      selectedImageUrls = remoteImageUrls.value
     }
     const payload: VideoGenerationRequest = {
       model: model.value,
@@ -300,7 +307,7 @@ async function submitJob() {
       aspect_ratio: aspectRatio.value,
       audio: audio.value,
     }
-    if (selectedImageUrl) payload.image_url = selectedImageUrl
+    if (selectedImageUrls.length) payload.image_urls = selectedImageUrls
     const accepted = await createVideoJob(selectedKey.value.key, payload)
     const now = new Date().toISOString()
     const job: VideoJob = { ...accepted, model: accepted.model || model.value, prompt: accepted.prompt || payload.prompt, created_at: accepted.created_at || now, updated_at: accepted.updated_at || now }
@@ -308,7 +315,7 @@ async function submitJob() {
     selectedJobId.value = job.job_id
     updatePolling()
     appStore.showSuccess(t('video.submitSuccess'))
-    if (imageMode.value === 'local') removeLocalImage()
+    if (imageMode.value === 'local') removeLocalImages()
   } catch (error) {
     appStore.showError(errorMessage(error))
   } finally {
@@ -331,22 +338,34 @@ async function cancelJob(job: VideoJob) {
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+  const files = Array.from(input.files || [])
+  if (!files.length) return
+  if (files.length > 4) {
+    appStore.showError(t('video.tooManyImages'))
+    input.value = ''
+    return
+  }
+  if (files.some((file) => !['image/png', 'image/jpeg', 'image/webp'].includes(file.type))) {
     appStore.showError(t('video.invalidImage'))
     input.value = ''
     return
   }
-  removeLocalImage()
-  localFile.value = file
-  previewUrl.value = URL.createObjectURL(file)
+  removeLocalImages()
+  localFiles.value = files
+  previewUrls.value = files.map((file) => URL.createObjectURL(file))
 }
 
-function removeLocalImage() {
-  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
-  previewUrl.value = ''
-  localFile.value = null
+function removeLocalImage(index: number) {
+  const preview = previewUrls.value[index]
+  if (preview) URL.revokeObjectURL(preview)
+  previewUrls.value = previewUrls.value.filter((_, itemIndex) => itemIndex !== index)
+  localFiles.value = localFiles.value.filter((_, itemIndex) => itemIndex !== index)
+}
+
+function removeLocalImages() {
+  for (const preview of previewUrls.value) URL.revokeObjectURL(preview)
+  previewUrls.value = []
+  localFiles.value = []
 }
 
 function clearSelectedVideo() {
@@ -416,6 +435,6 @@ onBeforeUnmount(() => {
   videoOutputRequest++
   stopPolling()
   clearSelectedVideo()
-  removeLocalImage()
+  removeLocalImages()
 })
 </script>

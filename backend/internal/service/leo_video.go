@@ -19,6 +19,7 @@ type LeoVideoRequestInfo struct {
 	Resolution      string
 	DurationSeconds int
 	ImageURL        string
+	ImageURLs       []string
 	AspectRatio     string
 	Audio           bool
 }
@@ -27,18 +28,52 @@ func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
 	if !gjson.ValidBytes(body) {
 		return LeoVideoRequestInfo{}, fmt.Errorf("invalid leo video JSON request")
 	}
+	imageURLs := LeoVideoReferenceURLs(body)
 	info := LeoVideoRequestInfo{
 		Model:       strings.TrimSpace(gjson.GetBytes(body, "model").String()),
 		Prompt:      strings.TrimSpace(gjson.GetBytes(body, "prompt").String()),
 		Resolution:  strings.TrimSpace(gjson.GetBytes(body, "resolution").String()),
-		ImageURL:    strings.TrimSpace(gjson.GetBytes(body, "image_url").String()),
+		ImageURLs:   imageURLs,
 		AspectRatio: strings.TrimSpace(gjson.GetBytes(body, "aspect_ratio").String()),
 		Audio:       gjson.GetBytes(body, "audio").Bool(),
+	}
+	if len(imageURLs) > 0 {
+		info.ImageURL = imageURLs[0]
 	}
 	if duration := gjson.GetBytes(body, "duration"); duration.Exists() && duration.Type == gjson.Number {
 		info.DurationSeconds = int(duration.Int())
 	}
 	return info, nil
+}
+
+func LeoVideoReferenceURLs(body []byte) []string {
+	seen := make(map[string]struct{})
+	urls := make([]string, 0, 6)
+	add := func(raw string) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return
+		}
+		if _, ok := seen[raw]; ok {
+			return
+		}
+		seen[raw] = struct{}{}
+		urls = append(urls, raw)
+	}
+	for _, path := range []string{"image_url", "start_frame_url", "end_frame_url"} {
+		add(gjson.GetBytes(body, path).String())
+	}
+	for _, path := range []string{
+		"image_urls",
+		"guidances.start_frame.#.image.url",
+		"guidances.end_frame.#.image.url",
+		"guidances.image_reference.#.image.url",
+	} {
+		for _, item := range gjson.GetBytes(body, path).Array() {
+			add(item.String())
+		}
+	}
+	return urls
 }
 
 func (s *OpenAIGatewayService) ForwardLeoVideo(

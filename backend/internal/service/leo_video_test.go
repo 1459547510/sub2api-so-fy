@@ -41,7 +41,7 @@ func (u *leoVideoHTTPUpstream) DoWithTLS(req *http.Request, proxyURL string, acc
 }
 
 func TestForwardLeoVideoMapsModelAndAddsBearer(t *testing.T) {
-	body := []byte(`{"model":"seedance","prompt":"city","resolution":"720p","duration":8,"audio":false}`)
+	body := []byte(`{"model":"seedance","prompt":"city","resolution":"720p","duration":8,"audio":false,"image_urls":["https://cdn.example/ref-1.png","https://cdn.example/ref-2.png"],"guidances":{"video_reference_base":[{"video":{"id":"22222222-2222-2222-2222-222222222222","type":"GENERATED"}}]}}`)
 	responseBody := `{"data":[{"url":"https://cdn.example/video.mp4","mp4_url":"https://cdn.example/video.mp4"}],"provider":{"generation_id":"gen-1","resolution":"RESOLUTION_720","duration":12}}`
 	upstream := &leoVideoHTTPUpstream{response: leoVideoResponse(http.StatusOK, responseBody)}
 	svc := &OpenAIGatewayService{httpUpstream: upstream}
@@ -62,6 +62,8 @@ func TestForwardLeoVideoMapsModelAndAddsBearer(t *testing.T) {
 	require.Equal(t, "720p", gjson.GetBytes(upstream.requestBody, "resolution").String())
 	require.Equal(t, int64(8), gjson.GetBytes(upstream.requestBody, "duration").Int())
 	require.False(t, gjson.GetBytes(upstream.requestBody, "audio").Bool())
+	require.Len(t, gjson.GetBytes(upstream.requestBody, "image_urls").Array(), 2)
+	require.Equal(t, "22222222-2222-2222-2222-222222222222", gjson.GetBytes(upstream.requestBody, "guidances.video_reference_base.0.video.id").String())
 	require.Equal(t, 1, result.VideoCount)
 	require.Equal(t, "720p", result.VideoResolution)
 	require.Equal(t, 12, result.VideoDurationSeconds)
@@ -69,6 +71,28 @@ func TestForwardLeoVideoMapsModelAndAddsBearer(t *testing.T) {
 	require.Equal(t, "seedance", result.Model)
 	require.Equal(t, "seedance-2.0", result.UpstreamModel)
 	require.JSONEq(t, responseBody, rec.Body.String())
+}
+
+func TestParseLeoVideoRequestCollectsNewGuidanceImageURLs(t *testing.T) {
+	body := []byte(`{
+		"model":"seedance-2.0","prompt":"city",
+		"start_frame_url":"https://cdn.example/start.png",
+		"end_frame_url":"https://cdn.example/end.png",
+		"image_urls":["https://cdn.example/ref-1.png","https://cdn.example/ref-2.png"],
+		"guidances":{"image_reference":[{"image":{"url":"https://cdn.example/ref-2.png"}},{"image":{"url":"https://cdn.example/ref-3.png"}}]}
+	}`)
+
+	info, err := ParseLeoVideoRequest(body)
+
+	require.NoError(t, err)
+	require.Equal(t, "https://cdn.example/start.png", info.ImageURL)
+	require.Equal(t, []string{
+		"https://cdn.example/start.png",
+		"https://cdn.example/end.png",
+		"https://cdn.example/ref-1.png",
+		"https://cdn.example/ref-2.png",
+		"https://cdn.example/ref-3.png",
+	}, info.ImageURLs)
 }
 
 func TestForwardLeoVideoFallsBackToRequestMetadata(t *testing.T) {

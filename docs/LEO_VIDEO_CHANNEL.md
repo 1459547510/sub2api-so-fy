@@ -15,7 +15,7 @@ LeoStudio 实例必须提供以下接口：
 在 LeoStudio 二次开发中配置 API Key，并确保错误 Key 对 `/health` 和视频生成接口返回 `401` 或 `403`。Base URL 必须精确指向 `/v1`，例如：
 
 ```text
-http://leostudio:8000/v1
+http://127.0.0.1:18000/v1
 ```
 
 Sub2API 的连接测试会请求去掉 `/v1` 后的 `/health`；视频生成会请求 `<base_url>/videos/generations`。
@@ -51,7 +51,15 @@ seedance-2.0-fast -> seedance-2.0-fast
 
 7. 执行账号连接测试，确认 `/health` 返回成功。
 
-模型映射只改写请求 JSON 中的 `model`，提示词、分辨率、时长、音频等字段原样转发。
+模型映射只改写请求 JSON 中的 `model`，提示词、分辨率、时长、音频和 guidance 字段原样转发。LeoStudio `7af385af` 新增的视频输入字段均可通过同步或异步 Sub2 API 使用：
+
+- `image_url`：兼容字段，表示单张首帧图片；
+- `start_frame_url`、`end_frame_url`：分别表示首帧和尾帧；
+- `image_urls`：图片参考 URL 数组，与 `guidances.image_reference` 合计最多 4 张；
+- `guidances.start_frame`、`end_frame`、`image_reference`：接受图片 URL 或 Leonardo UUID；
+- `guidances.video_reference_base`、`audio_reference`：只接受池内账号可访问的 Leonardo 素材 UUID。
+
+图片 URL 必须是 LeoStudio 服务端可以访问的绝对 `http`/`https` URL。接口不接受 data URL、Base64 或 multipart 视频生成请求；本地图片应先调用 Sub2 的 `/v1/videos/uploads`，再把返回 URL 放入上述字段。
 
 ## 用户端菜单开关
 
@@ -71,7 +79,11 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
     "aspect_ratio": "16:9",
     "resolution": "720p",
     "duration": 8,
-    "audio": false
+    "audio": false,
+    "image_urls": [
+      "https://media.example/reference-1.png",
+      "https://media.example/reference-2.png"
+    ]
   }'
 ```
 
@@ -94,8 +106,8 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 前端用户端新增 `/video-generation` 工作台。页面只接触用户选择的 Sub2API API Key，不会显示 LeoStudio API Key、Cookie、上游账号或上游任务 ID。工作台支持：
 
 - 文生视频；
-- 远程 `http`/`https` 图片 URL；
-- PNG、JPEG、WebP 本地图片上传，最大 10 MiB；
+- 最多 4 张远程 `http`/`https` 参考图片 URL；
+- 最多 4 张 PNG、JPEG、WebP 本地参考图片，每张最大 10 MiB；
 - `pending`、`running`、`settling`、`completed`、`failed`、`canceled` 状态查询；
 - 只有 `pending` 任务可取消，`running` 和终态任务不能取消；
 - 完成任务的本地视频预览和下载。
@@ -115,7 +127,7 @@ Sub2API 返回 `202` 和自己的 `job_id`，后台协调器再轮询固定的 L
 
 本地图片保存在现有数据目录的 `video-inputs/` 子目录，文件名使用随机 token，权限为仅宿主机进程可读。LeoStudio 与 Sub2API 必须运行在同一宿主机，上传接口返回的图片 URL 使用 `127.0.0.1` 回环地址；跨主机、Docker 网络或多实例部署时不要猜测地址，应改用对象存储或显式内部地址方案。
 
-内部读取接口只接受真实 loopback `RemoteAddr`，不信任 `X-Forwarded-For`，也不返回目录列表或服务器路径。任务完成、失败或取消后文件会被标记为终态，至少保留 1 小时；没有关联任务的孤儿文件保留 24 小时。后台 runtime 启动时执行一次扫描，之后每天最多执行一次清理，删除失败会在下一轮重试。
+内部读取接口只接受真实 loopback `RemoteAddr`，不信任 `X-Forwarded-For`，也不返回目录列表或服务器路径。Sub2 会识别 `image_url`、首尾帧、`image_urls` 和嵌套图片 guidance 中的全部本地 token。任务完成、失败或取消后，关联图片会一起标记为终态并至少保留 1 小时；没有关联任务的孤儿文件保留 24 小时。后台 runtime 启动时执行一次扫描，之后每天最多执行一次清理，删除失败会在下一轮重试。
 
 ## 本地视频成品
 
@@ -133,4 +145,4 @@ LeoStudio 报告任务完成后，Sub2API 会先从结果中的 `source_url`、`
 
 ## 运维边界
 
-当前实现对应 LeoStudio 上游提交 `f822735629c51f15d115e3e60b161a93ec2e20ff` 的异步协议：`POST /v1/videos/generations`、`GET /v1/videos/jobs/:id` 和 `DELETE /v1/videos/jobs/:id`。Sub2API 将完成视频保存到本地数据目录并提供 API Key 鉴权读取；不提供 Webhook、SSE、WebSocket、编辑、扩展或任务删除功能。
+当前实现对应 LeoStudio 上游提交 `7af385af0fd8996dab1853c8ec965d4c1179bb08` 的 guidance 与异步协议：`POST /v1/videos/generations`、`GET /v1/videos/jobs/:id` 和 `DELETE /v1/videos/jobs/:id`。Sub2API 将完成视频保存到本地数据目录并提供 API Key 鉴权读取；不提供 Webhook、SSE、WebSocket、编辑、扩展或任务删除功能。

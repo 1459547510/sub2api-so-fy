@@ -2,6 +2,24 @@ import { buildGatewayUrl } from './client'
 
 export type VideoJobStatus = 'pending' | 'running' | 'settling' | 'completed' | 'failed' | 'canceled' | string
 
+export interface VideoGuidanceAsset {
+  id?: string
+  url?: string
+  type?: string
+  width?: number
+  height?: number
+  duration?: number
+  motion_has_audio?: boolean
+}
+
+export interface VideoGuidances {
+  start_frame?: Array<{ image: VideoGuidanceAsset }>
+  end_frame?: Array<{ image: VideoGuidanceAsset }>
+  image_reference?: Array<{ image: VideoGuidanceAsset; strength?: 'LOW' | 'MID' | 'HIGH' | string; order?: number }>
+  video_reference_base?: Array<{ video: VideoGuidanceAsset }>
+  audio_reference?: Array<{ audio: VideoGuidanceAsset }>
+}
+
 export interface VideoGenerationRequest {
   model: string
   prompt: string
@@ -10,6 +28,10 @@ export interface VideoGenerationRequest {
   aspect_ratio?: string
   audio?: boolean
   image_url?: string
+  start_frame_url?: string
+  end_frame_url?: string
+  image_urls?: string[]
+  guidances?: VideoGuidances
 }
 
 export interface VideoUploadResponse {

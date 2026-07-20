@@ -2073,3 +2073,39 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/service/video_job_runtime_test.go`: explicitly checked test-double type assertions to satisfy static analysis without changing behavior.
 - `progress.md`: recorded recovery of the missed local changes, final-branch verification, exclusions, release target, and rollback procedure.
 - Rollback point: deploy `v0.1.161-fy.2`; for source rollback after release, run `git revert --no-commit v0.1.161-fy.2..v0.1.161-fy.3`, review the staged reversal, and commit it without applying or deleting unrelated worktrees or stashes.
+
+## 2026-07-20 - Task: Sync LeoStudio Seedance guidance and multi-image support
+### What was done
+- Advanced the existing local LeoStudio checkout from `083180d3` to upstream `7af385af` and reviewed its new video guidance contract.
+- Added Sub2 request typings and passthrough coverage for start/end frames, up to four image references, and full Seedance `guidances` including existing video/audio asset IDs.
+- Changed the user video workbench from one image to up to four local files or remote URLs and submitted them through `image_urls` while retaining legacy `image_url` API compatibility.
+- Tracked every local image URL used by top-level and nested guidance fields so all associated temporary inputs enter cleanup after completion, failure, or cancellation without a database migration.
+- Preserved LeoStudio `400` and `422` asynchronous guidance validation responses as Sub2 client errors instead of reporting them as upstream gateway failures.
+### Testing
+- `leostudio-admin: go test ./internal/leonardo ./internal/service ./internal/server -count=1`: passed.
+- `backend: go test ./internal/service ./internal/handler -run 'LeoVideo|VideoInput|VideoJob' -count=1`: passed.
+- `backend: go test ./... -count=1`: passed.
+- `backend: go vet ./...`: passed.
+- `frontend: .\node_modules\.bin\vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed (10 tests).
+- `frontend: .\node_modules\.bin\vitest.cmd run --exclude src/i18n/__tests__/localesMessageCompile.spec.ts --reporter=dot`: passed; the excluded existing test requires the missing `@intlify/message-compiler` dependency.
+- `frontend: .\node_modules\.bin\vue-tsc.cmd --noEmit`: passed.
+- `frontend: .\node_modules\.bin\eslint.cmd src/api/videoGeneration.ts src/api/__tests__/videoGeneration.spec.ts src/views/user/VideoGenerationView.vue src/views/user/__tests__/VideoGenerationView.spec.ts src/i18n/locales/en/dashboard.ts src/i18n/locales/zh/dashboard.ts`: passed.
+- `frontend: .\node_modules\.bin\vite.cmd build`: passed with existing dynamic-import and chunk-size warnings.
+- `git diff --check`: passed.
+### Notes
+- `backend/internal/handler/leo_video_async.go`: collected all local guidance tokens and preserved upstream asynchronous validation status codes.
+- `backend/internal/handler/leo_video_async_test.go`: covered multi-input tracking and upstream guidance validation responses.
+- `backend/internal/service/leo_video.go`: recognized top-level and nested image guidance URLs while keeping the request payload intact.
+- `backend/internal/service/leo_video_test.go`: verified new guidance passthrough and URL collection order with deduplication.
+- `backend/internal/service/video_input_store.go`: supported bounded multi-token lifecycle tracking in the existing job field.
+- `backend/internal/service/video_input_store_test.go`: verified all local guidance images are marked terminal and cleaned.
+- `frontend/src/api/videoGeneration.ts`: typed the latest start/end frame, image array, and full guidance request fields.
+- `frontend/src/api/__tests__/videoGeneration.spec.ts`: verified new guidance fields are serialized unchanged.
+- `frontend/src/views/user/VideoGenerationView.vue`: added up to four local or remote reference images with preview and cleanup.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covered multi-URL and multi-file job submission.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updated English multi-image workbench labels and validation text.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updated Chinese multi-image workbench labels and validation text.
+- `docs/LEO_VIDEO_CHANNEL.md`: synchronized the LeoStudio version, Base URL, guidance fields, multi-image limits, and local lifecycle behavior.
+- `progress.md`: recorded the protocol synchronization, verification evidence, file list, and rollback point.
+- External reference checkout: `C:\Users\feiyu\.codex\tmp\leostudio-admin-review-083180d3` is clean at upstream commit `7af385af` and has no Sub2-specific edits.
+- Rollback point: `0a4a064f`; after creating the task commit, run `git revert <task-commit-hash>` from the repository root.

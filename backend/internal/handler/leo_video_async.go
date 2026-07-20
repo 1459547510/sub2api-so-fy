@@ -69,20 +69,18 @@ func (h *OpenAIGatewayHandler) LeoVideoAsyncGeneration(c *gin.Context) {
 	subscription, _ := middleware2.GetSubscriptionFromContext(c)
 	localInputName := ""
 	if h.videoInputHandler != nil && h.videoInputHandler.store != nil {
-		var payload struct {
-			ImageURL string `json:"image_url"`
-		}
-		if json.Unmarshal(body, &payload) == nil {
-			localInputName = h.videoInputHandler.store.TokenFromURL(payload.ImageURL)
-		}
+		localInputName = strings.Join(h.videoInputHandler.store.TokensFromVideoRequest(body), ",")
 	}
 	job, err := h.videoJobService.Create(c.Request.Context(), service.CreateVideoJobInput{
 		APIKey: apiKey, User: user, Subscription: subscription, Body: body, LocalInputName: localInputName,
 	})
 	if err != nil {
 		status, code := http.StatusBadGateway, "upstream_error"
+		var upstreamErr *service.LeoAsyncUpstreamError
 		if errors.Is(err, service.ErrVideoInsufficientBalance) {
 			status, code = http.StatusPaymentRequired, "billing_error"
+		} else if errors.As(err, &upstreamErr) && (upstreamErr.StatusCode == http.StatusBadRequest || upstreamErr.StatusCode == http.StatusUnprocessableEntity) {
+			status, code = upstreamErr.StatusCode, "invalid_request_error"
 		} else if strings.Contains(err.Error(), "required") || strings.Contains(err.Error(), "valid JSON") {
 			status, code = http.StatusBadRequest, "invalid_request_error"
 		}

@@ -76,6 +76,12 @@ func (handlerVideoClient) CancelLeoAsyncVideo(context.Context, *service.Account,
 	return &service.LeoAsyncJob{JobID: 777, Status: service.VideoJobCanceled}, nil
 }
 
+type handlerRejectingVideoClient struct{ handlerVideoClient }
+
+func (handlerRejectingVideoClient) CreateLeoAsyncVideo(context.Context, *service.Account, []byte) (*service.LeoAsyncAccepted, error) {
+	return nil, &service.LeoAsyncUpstreamError{StatusCode: http.StatusBadRequest, Message: "guidances.image_reference supports at most 4 items"}
+}
+
 type handlerVideoBillingRepo struct{ service.UsageBillingRepository }
 
 func (handlerVideoBillingRepo) ReserveVideoBalance(context.Context, *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
@@ -115,6 +121,48 @@ func TestLeoVideoAsyncGenerationReturnsPublic202Mapping(t *testing.T) {
 	require.Equal(t, repo.job.JobID, body["job_id"])
 	require.NotContains(t, recorder.Body.String(), "777")
 	require.NotContains(t, recorder.Body.String(), "account_id")
+}
+
+func TestLeoVideoAsyncGenerationTracksMultipleLocalGuidanceInputs(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &handlerVideoJobRepo{}
+	store := service.NewVideoInputStore(t.TempDir(), 8080)
+	first := "01234567890123456789012345678901"
+	second := "abcdefghijklmnopqrstuvwxyzABCDEF"
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(repo), videoInputHandler: NewVideoInputHandler(store)}
+	body := `{"model":"seedance","prompt":"waves","image_urls":["` + store.InternalURL(first) + `","` + store.InternalURL(second) + `"]}`
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set("Prefer", "respond-async")
+	setHandlerVideoAuth(c)
+
+	h.LeoVideoGeneration(c)
+
+	require.Equal(t, http.StatusAccepted, recorder.Code)
+	require.Equal(t, first+","+second, repo.job.LocalInputName)
+}
+
+func TestLeoVideoAsyncGenerationPreservesNewUpstreamValidationErrors(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &handlerVideoJobRepo{}
+	selector := handlerVideoAccountSelector{account: &service.Account{ID: 9, Platform: service.PlatformLeo, Type: service.AccountTypeAPIKey, Credentials: map[string]any{
+		"base_url": "http://leo.internal:8000/v1", "api_key": "secret", "model_mapping": map[string]any{"seedance": "seedance-2.0"},
+	}}}
+	billing := &service.VideoJobBillingService{BillingRepo: handlerVideoBillingRepo{}}
+	h := &OpenAIGatewayHandler{videoJobService: service.NewVideoJobService(repo, selector, handlerRejectingVideoClient{}, billing)}
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", strings.NewReader(`{"model":"seedance","prompt":"waves"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set("Prefer", "respond-async")
+	setHandlerVideoAuth(c)
+
+	h.LeoVideoGeneration(c)
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+	require.Contains(t, recorder.Body.String(), "guidances.image_reference supports at most 4 items")
 }
 
 func TestLeoVideoAsyncJobEndpointsStayAPIKeyScoped(t *testing.T) {

@@ -61,7 +61,8 @@ function mountView() {
 describe('VideoGenerationView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:local-video') })
+    let imageIndex = 0
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn((blob: Blob) => blob.type === 'video/mp4' ? 'blob:local-video' : `blob:local-image-${++imageIndex}`) })
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
     vi.mocked(keysAPI.list).mockResolvedValue({ items: [leoKey, grokKey] } as any)
     vi.mocked(listVideoJobs).mockResolvedValue({ data: [] })
@@ -92,23 +93,56 @@ describe('VideoGenerationView', () => {
     expect(wrapper.text()).toContain('vidjob-text')
   })
 
-  it('uploads a local image before submitting a URL-backed payload', async () => {
-    vi.mocked(uploadVideoInput).mockResolvedValue({
-      upload_id: 'upload-1', image_url: 'http://127.0.0.1/internal/video-inputs/upload-1', content_type: 'image/png', size: 3,
+  it('submits multiple remote reference image URLs', async () => {
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-remote', status: 'pending', status_url: '/v1/videos/jobs/vidjob-remote',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mode-url"]').trigger('click')
+    await wrapper.get('[data-testid="video-image-url"]').setValue('https://example.com/ref-1.png\nhttps://example.com/ref-2.png')
+    await wrapper.get('[data-testid="video-prompt"]').setValue('Animate this frame')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', expect.objectContaining({
+      image_urls: ['https://example.com/ref-1.png', 'https://example.com/ref-2.png'],
+    }))
+  })
+
+  it('uploads multiple local reference images before creating the job', async () => {
+    vi.mocked(uploadVideoInput).mockImplementation(async (_key, file) => ({
+      upload_id: file.name,
+      image_url: `http://127.0.0.1/internal/video-inputs/${file.name}`,
+      content_type: file.type,
+      size: file.size,
+    }))
     vi.mocked(createVideoJob).mockResolvedValue({
       job_id: 'vidjob-local', status: 'pending', status_url: '/v1/videos/jobs/vidjob-local',
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     })
     const wrapper = mountView()
     await flushPromises()
-    await wrapper.get('[data-testid="mode-url"]').trigger('click')
-    await wrapper.get('[data-testid="video-image-url"]').setValue('https://example.com/frame.png')
-    await wrapper.get('[data-testid="video-prompt"]').setValue('Animate this frame')
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+    const input = wrapper.get('[data-testid="video-image-file"]')
+    const files = [
+      new File(['one'], 'ref-1.png', { type: 'image/png' }),
+      new File(['two'], 'ref-2.jpg', { type: 'image/jpeg' }),
+    ]
+    Object.defineProperty(input.element, 'files', { configurable: true, value: files })
+    await input.trigger('change')
+    await wrapper.get('[data-testid="video-prompt"]').setValue('Keep both references')
     await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
     await flushPromises()
 
-    expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', expect.objectContaining({ image_url: 'https://example.com/frame.png' }))
+    expect(uploadVideoInput).toHaveBeenCalledTimes(2)
+    expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', expect.objectContaining({
+      image_urls: [
+        'http://127.0.0.1/internal/video-inputs/ref-1.png',
+        'http://127.0.0.1/internal/video-inputs/ref-2.jpg',
+      ],
+    }))
   })
 
   it('cancels pending jobs and renders completed video output', async () => {

@@ -30,13 +30,23 @@ describe('video generation API', () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ job_id: 'vidjob-1', status: 'pending' }), { status: 202 }))
     vi.stubGlobal('fetch', fetchMock)
 
-    await createVideoJob('sub2-key', { model: 'seedance-2.0', prompt: 'waves' })
+    await createVideoJob('sub2-key', {
+      model: 'seedance-2.0',
+      prompt: 'waves',
+      image_urls: ['https://example.com/ref-1.png', 'https://example.com/ref-2.png'],
+      guidances: { image_reference: [{ image: { id: 'asset-1', type: 'GENERATED' }, strength: 'HIGH' }] },
+    })
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     const headers = init.headers as Record<string, string>
     expect(headers.Authorization).toBe('Bearer sub2-key')
     expect(headers.Prefer).toBe('respond-async')
-    expect(JSON.parse(String(init.body))).toMatchObject({ model: 'seedance-2.0', prompt: 'waves' })
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      model: 'seedance-2.0',
+      prompt: 'waves',
+      image_urls: ['https://example.com/ref-1.png', 'https://example.com/ref-2.png'],
+      guidances: { image_reference: [{ strength: 'HIGH' }] },
+    })
   })
 
   it('lists jobs with the selected API key and cancels with DELETE', async () => {

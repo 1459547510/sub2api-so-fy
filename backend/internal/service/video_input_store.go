@@ -18,6 +18,9 @@ import (
 
 const VideoInputMaxBytes = 10 * 1024 * 1024
 
+// Seven 32-byte tokens plus delimiters fit the existing VARCHAR(255) job field.
+const videoInputTokenStorageLimit = 7
+
 var (
 	ErrVideoInputTooLarge        = errors.New("video input is too large")
 	ErrVideoInputUnsupportedType = errors.New("video input type is not supported")
@@ -50,8 +53,14 @@ func MarkVideoInputTerminal(store *VideoInputStore, token string, at time.Time) 
 	if store == nil || strings.TrimSpace(token) == "" {
 		return nil
 	}
-	if err := store.MarkTerminal(token, at); err != nil && !errors.Is(err, ErrVideoInputNotFound) {
-		return err
+	for _, item := range strings.Split(token, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if err := store.MarkTerminal(item, at); err != nil && !errors.Is(err, ErrVideoInputNotFound) {
+			return err
+		}
 	}
 	return nil
 }
@@ -195,6 +204,29 @@ func (s *VideoInputStore) TokenFromURL(raw string) string {
 		return ""
 	}
 	return token
+}
+
+func (s *VideoInputStore) TokensFromVideoRequest(body []byte) []string {
+	if s == nil {
+		return nil
+	}
+	tokens := make([]string, 0, 6)
+	seen := make(map[string]struct{})
+	for _, raw := range LeoVideoReferenceURLs(body) {
+		if len(tokens) >= videoInputTokenStorageLimit {
+			break
+		}
+		token := s.TokenFromURL(raw)
+		if token == "" {
+			continue
+		}
+		if _, ok := seen[token]; ok {
+			continue
+		}
+		seen[token] = struct{}{}
+		tokens = append(tokens, token)
+	}
+	return tokens
 }
 
 func newVideoInputToken() (string, error) {

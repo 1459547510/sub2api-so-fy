@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,6 +53,25 @@ func TestVideoInputStoreRejectsOversizedAndCleansTerminalAndOrphanFiles(t *testi
 	require.ErrorIs(t, err, ErrVideoInputNotFound)
 	_, err = os.Stat(orphan)
 	require.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestVideoInputStoreTracksAllLocalVideoGuidanceURLs(t *testing.T) {
+	store := NewVideoInputStore(t.TempDir(), 8080)
+	first, err := store.Save(bytes.NewReader(videoPNGBytes()))
+	require.NoError(t, err)
+	second, err := store.Save(bytes.NewReader(videoJPEGBytes()))
+	require.NoError(t, err)
+	third, err := store.Save(bytes.NewReader(videoPNGBytes()))
+	require.NoError(t, err)
+	body := []byte(`{"start_frame_url":"` + first.URL + `","image_urls":["` + second.URL + `"],"guidances":{"image_reference":[{"image":{"url":"` + third.URL + `"}},{"image":{"url":"` + second.URL + `"}}]}}`)
+
+	tokens := store.TokensFromVideoRequest(body)
+
+	require.Equal(t, []string{first.Token, second.Token, third.Token}, tokens)
+	require.NoError(t, MarkVideoInputTerminal(store, strings.Join(tokens, ","), time.Now().Add(-2*time.Hour)))
+	removed, err := store.Cleanup(time.Now())
+	require.NoError(t, err)
+	require.Equal(t, 3, removed)
 }
 
 func videoPNGBytes() []byte {
