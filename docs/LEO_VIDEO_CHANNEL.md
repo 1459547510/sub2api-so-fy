@@ -148,6 +148,8 @@ LeoStudio 报告任务完成后，Sub2API 会先从结果中的 `source_url`、`
 
 任务结果中的原始 CDN 地址保存在 `source_url`，客户端使用的 `mp4_url`、`url` 和 `local_url` 会改写为 `/v1/videos/jobs/<job_id>/content`。该内容接口要求 `Authorization: Bearer <sub2_api_key>`，只允许创建该任务的 API Key 读取已完成任务，并通过 HTTP Range 返回 `video/mp4`。浏览器工作台先带 Bearer 下载 Blob，再使用本地 Blob URL 播放和下载，不直接播放 LeoStudio CDN 地址。
 
+前端页面的 CSP 必须允许 `media-src 'self' blob:`，否则浏览器会成功下载成品但拒绝把 Blob URL 交给 `<video>` 播放。默认策略和安全中间件会自动补齐该指令，包括仍使用旧自定义 CSP 配置的部署；播放失败时页面仍保留原文件下载入口，重试会撤销旧 Blob 并重新获取成品。
+
 当前不会自动清理 `video-outputs/` 中的成品；部署时应把 `pricing.data_dir` 所在磁盘容量纳入监控和备份策略。多实例部署必须共享同一数据目录，否则任务记录所在实例可能读取不到成品。
 
 ## 异步计费

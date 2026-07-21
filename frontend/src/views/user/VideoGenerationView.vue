@@ -216,11 +216,11 @@
             </div>
             <div v-if="videoPreviewError" class="mt-2 flex items-center justify-between gap-3 text-xs text-red-600 dark:text-red-300" data-testid="video-preview-error">
               <p>{{ videoPreviewError }}</p>
-              <button type="button" class="font-medium hover:text-red-700 dark:hover:text-red-200" data-testid="retry-video-preview" @click="loadSelectedVideo">{{ t('video.retryPreview') }}</button>
+              <button type="button" class="font-medium hover:text-red-700 dark:hover:text-red-200" data-testid="retry-video-preview" @click="retrySelectedVideo">{{ t('video.retryPreview') }}</button>
             </div>
             <div v-if="selectedJob" class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-dark-400">
               <span class="truncate">{{ selectedJob.prompt }}</span>
-              <a v-if="selectedVideoUrl && selectedVideoKey === currentVideoKey" :href="selectedVideoUrl" :download="`${selectedJob.job_id}.mp4`" class="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-700 dark:text-primary-300" :title="t('video.download')">
+              <a v-if="selectedVideoUrl && selectedVideoKey === currentVideoKey" :href="selectedVideoUrl" :download="`${selectedJob.job_id}.mp4`" class="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-700 dark:text-primary-300" :title="t('video.download')" data-testid="download-video-output">
                 <Icon name="download" size="sm" />
                 {{ t('video.download') }}
               </a>
@@ -598,7 +598,15 @@ async function loadSelectedVideo() {
 
 function onVideoError() {
   videoPreviewError.value = t('video.previewError')
+}
+
+function retrySelectedVideo() {
+  const previousUrl = selectedVideoUrl.value
+  selectedVideoUrl.value = ''
   selectedVideoKey.value = ''
+  videoPreviewError.value = ''
+  if (previousUrl) URL.revokeObjectURL(previousUrl)
+  void loadSelectedVideo()
 }
 
 function statusLabel(status: string) {

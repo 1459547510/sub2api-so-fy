@@ -360,6 +360,25 @@ describe('VideoGenerationView', () => {
     wrapper.unmount()
   })
 
+  it('keeps the download available after playback fails and refetches on retry', async () => {
+    const completedJob = { job_id: 'vidjob-retry', status: 'completed', status_url: '', model: 'seedance-2.0', prompt: 'retry', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+    vi.mocked(listVideoJobs).mockResolvedValue({ data: [completedJob] })
+    vi.mocked(downloadVideoOutput).mockResolvedValue(new Blob(['mp4'], { type: 'video/mp4' }))
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="video-preview"]').trigger('error')
+    expect(wrapper.get('[data-testid="video-preview-error"]').text()).toContain('video.previewError')
+    expect(wrapper.get('[data-testid="download-video-output"]').attributes('download')).toBe('vidjob-retry.mp4')
+
+    await wrapper.get('[data-testid="retry-video-preview"]').trigger('click')
+    await flushPromises()
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:local-video')
+    expect(downloadVideoOutput).toHaveBeenCalledTimes(2)
+    expect(wrapper.get('[data-testid="download-video-output"]').attributes('download')).toBe('vidjob-retry.mp4')
+    wrapper.unmount()
+  })
+
   it('uses the custom API Key to list, cancel, and download jobs', async () => {
     vi.mocked(keysAPI.list).mockResolvedValue({ items: [grokKey] } as any)
     vi.mocked(downloadVideoOutput).mockResolvedValue(new Blob(['mp4'], { type: 'video/mp4' }))

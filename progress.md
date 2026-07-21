@@ -2535,3 +2535,46 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the release version, backend embed validation, security audit, and rollback point.
 - The release contains only the eight files listed in the preceding implementation record; `.superpowers/` and local build output are excluded.
 - Release rollback point: redeploy tag `v0.1.162-fy.3`; source rollback after publication is `git revert v0.1.162-fy.4`.
+
+## 2026-07-21 - Task: Fix video preview playback and preserve downloads
+### What was done
+- Identified the production-only playback failure as a CSP mismatch: the workbench downloads completed videos into Blob URLs, while the page policy omitted `media-src blob:` and therefore blocked the `<video>` element.
+- Added the narrow `media-src 'self' blob:` permission to the default policy and the security middleware's required directives so existing custom CSP configurations are upgraded without relaxing script, connection, frame, or authentication rules.
+- Changed the video workbench so a media playback error no longer hides the already downloaded file; the download action remains available and the retry action now revokes the old Blob and fetches the completed output again.
+### Testing
+- `backend: go test ./internal/server/middleware ./internal/config -count=1`: passed.
+- `frontend: .\node_modules\.bin\vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed, 2 files and 20 tests.
+- The new frontend regression proves that a playback error keeps the completed MP4 download visible and that retry performs a second content request after revoking the previous Blob URL.
+- `frontend: .\node_modules\.bin\vue-tsc.cmd --noEmit` and changed-file ESLint: passed.
+- `frontend: npm run build`: passed with only the existing stale Browserslist data, dynamic-import, and large-chunk warnings.
+- `backend: go test -tags=embed ./internal/web ./internal/server/middleware ./internal/config -count=1`: passed.
+- `backend: go build -tags embed -trimpath -o ..\.codex-run\sub2api-video-preview-fix.exe ./cmd/server`: passed.
+- `git diff --check`: passed before this log append, with only the existing LF-to-CRLF notice for `docs/LEO_VIDEO_CHANNEL.md`.
+### Notes
+- `backend/internal/config/config.go`: adds Blob media playback to the default CSP policy.
+- `backend/internal/server/middleware/security_headers.go`: automatically injects the required Blob media source into old custom CSP policies.
+- `backend/internal/server/middleware/security_headers_test.go`: verifies default, missing, and already-present media directives.
+- `deploy/config.example.yaml`: documents the production CSP media directive.
+- `frontend/src/views/user/VideoGenerationView.vue`: preserves downloads after playback failure and makes retry refetch the output.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers download retention and actual retry behavior.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the Blob media CSP requirement and failure behavior.
+- `progress.md`: records root cause, implementation, verification, file ownership, and rollback evidence.
+- No video generation, billing, database, authentication, Leo request, or production deployment action was performed.
+- Source rollback: from the repository root, run `git restore --worktree -- backend/internal/config/config.go backend/internal/server/middleware/security_headers.go backend/internal/server/middleware/security_headers_test.go deploy/config.example.yaml docs/LEO_VIDEO_CHANNEL.md frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md`.
+
+## 2026-07-21 - Task: Prepare v0.1.162-fy.5 release
+### What was done
+- Locked the video preview and CSP corrective release to `v0.1.162-fy.5` on `codex/leo-video-channel`.
+- Revalidated the complete frontend suite, the embedded backend path, and the dependency security gate before preparing the release commit and tag.
+### Testing
+- `frontend: .\\node_modules\\.bin\\vitest.cmd run --reporter=dot --maxWorkers=2 --minWorkers=1`: passed.
+- `frontend: pnpm run build`: passed; output contained only existing non-blocking warnings.
+- `frontend: pnpm audit --audit-level=high`: passed with no high-severity advisory output.
+- `backend: go test -tags=embed ./internal/web ./internal/server/middleware ./internal/server/routes -count=1`: passed.
+- `backend: go vet -tags=embed ./internal/web ./internal/server/middleware ./internal/server/routes`: passed.
+- `backend: go build -tags embed -trimpath -ldflags "-s -w -X main.Version=0.1.162-fy.5" -o ..\\.codex-run\\sub2api-v0.1.162-fy.5.exe ./cmd/server`: passed.
+- `backend: ..\\.codex-run\\sub2api-v0.1.162-fy.5.exe --version`: reported `Sub2API 0.1.162-fy.5`.
+### Notes
+- `progress.md`: records the release version, final validation evidence, scope, and rollback point.
+- The release contains only the eight files listed in this and the preceding implementation record; `.superpowers/` and `.codex-run/` remain excluded.
+- Release rollback point: redeploy tag `v0.1.162-fy.4`; source rollback after publication is `git revert v0.1.162-fy.5`.

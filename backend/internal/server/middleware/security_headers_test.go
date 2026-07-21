@@ -192,6 +192,7 @@ func TestSecurityHeaders(t *testing.T) {
 		assert.NotEmpty(t, csp)
 		// Default policy should contain these elements
 		assert.Contains(t, csp, "default-src 'self'")
+		assert.Contains(t, csp, "media-src 'self' blob:")
 	})
 
 	t.Run("uses_default_policy_when_whitespace_only", func(t *testing.T) {
@@ -320,6 +321,14 @@ func TestEnhanceCSPPolicy(t *testing.T) {
 		assert.Contains(t, enhanced, "script-src")
 		assert.Contains(t, enhanced, NonceTemplate)
 		assert.Contains(t, enhanced, CloudflareInsightsDomain)
+		assert.Contains(t, enhanced, "media-src 'self' blob:")
+	})
+
+	t.Run("does_not_duplicate_blob_media_source", func(t *testing.T) {
+		policy := "default-src 'self'; media-src 'self' blob:"
+		enhanced := enhanceCSPPolicy(policy)
+
+		assert.Equal(t, 1, countDirectiveValue(enhanced, "media-src", "blob:"))
 	})
 
 	t.Run("preserves_existing_nonce", func(t *testing.T) {
