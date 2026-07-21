@@ -2472,3 +2472,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_CHANNEL.md`: documents ordered local references and concurrent frame submission.
 - `progress.md`: records implementation evidence and formal release verification.
 - Rollback point: redeploy `v0.1.162-fy.1`; for source rollback after release, run `git revert <v0.1.162-fy.2-commit>` from the repository root.
+
+## 2026-07-21 - Task: Resolve the v0.1.162-fy.2 security gate and release v0.1.162-fy.3
+### What was done
+- Investigated both failed `v0.1.162-fy.2` security runs and traced them to the newly published high-severity axios advisory `GHSA-gcfj-64vw-6mp9`; backend `govulncheck` remained successful.
+- Upgraded the direct axios dependency from `1.16.0` to the fixed `1.18.1` release instead of adding or extending an audit exception.
+- Regenerated the dependency lock with CI-compatible pnpm 9, retained existing Rollup platform constraints, and removed package-manager metadata churn unrelated to axios.
+- Kept the already-public `v0.1.162-fy.2` tag immutable and selected `v0.1.162-fy.3` for the auditable corrective release.
+### Testing
+- `pnpm@9.15.9 install --lockfile-only --frozen-lockfile` with an isolated modules directory: passed.
+- `pnpm audit --prod --audit-level=high --json` plus `tools/check_pnpm_audit_exceptions.py`: passed; high/critical findings are limited to the two existing, unexpired `xlsx` exceptions and axios has no remaining high finding.
+- `frontend: .\\node_modules\\.bin\\vue-tsc.cmd --noEmit`: passed.
+- `frontend: .\\node_modules\\.bin\\vitest.cmd run --reporter=dot --maxWorkers=2 --minWorkers=1`: passed for the full suite. The first concurrent run was discarded after the local esbuild service and workers were terminated without an assertion failure.
+- `frontend: .\\node_modules\\.bin\\vite.cmd build`: passed with only the existing dynamic-import, stale Browserslist-data, and large-chunk warnings.
+- `backend: go test -tags=embed ./internal/web ./internal/handler ./internal/server/routes -count=1`: passed.
+- `backend: go vet -tags=embed ./internal/web ./internal/handler ./internal/server/routes`: passed.
+- `backend: go build -tags embed -trimpath -ldflags "-s -w -X main.Version=0.1.162-fy.3" -o ..\\.codex-run\\sub2api-v0.1.162-fy.3.exe ./cmd/server` and `--version`: passed and reported `0.1.162-fy.3`.
+- `git diff --check`: passed before this log append; final staged checks follow.
+### Notes
+- `frontend/package.json`: raises the direct axios range to `^1.18.1`.
+- `frontend/pnpm-lock.yaml`: locks axios `1.18.1` and only its required new proxy-agent dependency graph.
+- `progress.md`: records the failed security signal, remediation decision, validation evidence, and corrective release target.
+- Emergency rollback point: redeploy `v0.1.162-fy.2`; this restores axios `1.16.0` and reopens `GHSA-gcfj-64vw-6mp9`, so rollback is not recommended except to isolate an axios compatibility regression. Source rollback after release is `git revert <v0.1.162-fy.3-commit>`.
