@@ -10,6 +10,8 @@ import {
   uploadVideoInput,
 } from '@/api/videoGeneration'
 
+const appStoreMocks = vi.hoisted(() => ({ showError: vi.fn(), showSuccess: vi.fn() }))
+
 vi.mock('@/api', () => ({
   keysAPI: { list: vi.fn() },
 }))
@@ -23,7 +25,7 @@ vi.mock('@/api/videoGeneration', () => ({
 }))
 
 vi.mock('@/stores/app', () => ({
-  useAppStore: () => ({ showError: vi.fn(), showSuccess: vi.fn() }),
+  useAppStore: () => appStoreMocks,
 }))
 
 vi.mock('vue-i18n', async () => {
@@ -147,6 +149,8 @@ describe('VideoGenerationView', () => {
     await flushPromises()
     await wrapper.get('[data-testid="mode-url"]').trigger('click')
     await wrapper.get('[data-testid="video-image-url"]').setValue('https://example.com/ref-1.png\nhttps://example.com/ref-2.png')
+    expect(wrapper.get('[data-testid="video-start-frame-url"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="video-end-frame-url"]').attributes('disabled')).toBeDefined()
     await wrapper.get('[data-testid="video-prompt"]').setValue('Animate this frame')
     await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
     await flushPromises()
@@ -202,7 +206,80 @@ describe('VideoGenerationView', () => {
     ] })
   })
 
-  it('uploads reference, start-frame, and end-frame files concurrently and submits every field', async () => {
+  it('disables local frame inputs and rejects frame selection after four reference images', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+
+    const referenceInput = wrapper.get('[data-testid="video-image-file"]')
+    for (let index = 1; index <= 4; index += 1) {
+      const file = new File([String(index)], `reference-${index}.png`, { type: 'image/png' })
+      Object.defineProperty(referenceInput.element, 'files', { configurable: true, value: [file] })
+      await referenceInput.trigger('change')
+    }
+
+    const startInput = wrapper.get('[data-testid="video-start-frame-file"]')
+    expect(startInput.attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="video-end-frame-file"]').attributes('disabled')).toBeDefined()
+    Object.defineProperty(startInput.element, 'files', {
+      configurable: true,
+      value: [new File(['start'], 'start.png', { type: 'image/png' })],
+    })
+    startInput.element.dispatchEvent(new Event('change'))
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="remove-start-frame"]').exists()).toBe(false)
+    expect(appStoreMocks.showError).toHaveBeenCalledWith('video.imageInputConflict')
+  })
+
+  it('disables and rejects local reference images after a frame is selected', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+
+    const startInput = wrapper.get('[data-testid="video-start-frame-file"]')
+    Object.defineProperty(startInput.element, 'files', {
+      configurable: true,
+      value: [new File(['start'], 'start.png', { type: 'image/png' })],
+    })
+    await startInput.trigger('change')
+
+    const referenceInput = wrapper.get('[data-testid="video-image-file"]')
+    expect(referenceInput.attributes('disabled')).toBeDefined()
+    Object.defineProperty(referenceInput.element, 'files', {
+      configurable: true,
+      value: [new File(['ref'], 'reference.png', { type: 'image/png' })],
+    })
+    referenceInput.element.dispatchEvent(new Event('change'))
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-testid="video-settings"] img')).toHaveLength(1)
+    expect(appStoreMocks.showError).toHaveBeenCalledWith('video.imageInputConflict')
+  })
+
+  it('blocks a programmatic mixed URL payload before upload or job creation', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mode-url"]').trigger('click')
+    await wrapper.get('[data-testid="video-start-frame-url"]').setValue('https://example.com/start.png')
+
+    const referenceInput = wrapper.get('[data-testid="video-image-url"]')
+    expect(referenceInput.attributes('disabled')).toBeDefined()
+    const textarea = referenceInput.element as HTMLTextAreaElement
+    textarea.value = 'https://example.com/reference.png'
+    textarea.dispatchEvent(new Event('input'))
+    await wrapper.get('[data-testid="video-prompt"]').setValue('This mixed request must not leave the page')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="submit-video"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+    expect(appStoreMocks.showError).toHaveBeenCalledWith('video.imageInputConflict')
+    expect(uploadVideoInput).not.toHaveBeenCalled()
+    expect(createVideoJob).not.toHaveBeenCalled()
+  })
+
+  it('uploads start-frame and end-frame files concurrently without reference guidance', async () => {
     const pendingUploads = new Map<string, (value: any) => void>()
     vi.mocked(uploadVideoInput).mockImplementation((_key, file) => new Promise((resolve) => {
       pendingUploads.set(file.name, resolve)
@@ -215,7 +292,6 @@ describe('VideoGenerationView', () => {
     await flushPromises()
     await wrapper.get('[data-testid="mode-local"]').trigger('click')
 
-    const reference = new File(['ref'], 'reference.png', { type: 'image/png' })
     const start = new File(['start'], 'start.png', { type: 'image/png' })
     const end = new File(['end'], 'end.jpg', { type: 'image/jpeg' })
     const setFile = async (testId: string, file: File) => {
@@ -223,17 +299,15 @@ describe('VideoGenerationView', () => {
       Object.defineProperty(input.element, 'files', { configurable: true, value: [file] })
       await input.trigger('change')
     }
-    await setFile('video-image-file', reference)
     await setFile('video-start-frame-file', start)
     await setFile('video-end-frame-file', end)
     await wrapper.get('[data-testid="video-prompt"]').setValue('Interpolate between both frames')
     await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
     await Promise.resolve()
 
-    expect(uploadVideoInput).toHaveBeenCalledTimes(3)
-    expect(uploadVideoInput).toHaveBeenNthCalledWith(1, 'sub2-leo-key', reference)
-    expect(uploadVideoInput).toHaveBeenNthCalledWith(2, 'sub2-leo-key', start)
-    expect(uploadVideoInput).toHaveBeenNthCalledWith(3, 'sub2-leo-key', end)
+    expect(uploadVideoInput).toHaveBeenCalledTimes(2)
+    expect(uploadVideoInput).toHaveBeenNthCalledWith(1, 'sub2-leo-key', start)
+    expect(uploadVideoInput).toHaveBeenNthCalledWith(2, 'sub2-leo-key', end)
     expect(createVideoJob).not.toHaveBeenCalled()
 
     for (const [name, resolve] of pendingUploads) {
@@ -245,9 +319,7 @@ describe('VideoGenerationView', () => {
     expect(payload.start_frame_url).toBe('http://127.0.0.1/internal/video-inputs/start.png')
     expect(payload.end_frame_url).toBe('http://127.0.0.1/internal/video-inputs/end.jpg')
     expect(payload.image_url).toBeUndefined()
-    expect(payload.guidances).toEqual({ image_reference: [
-      { image: { url: 'http://127.0.0.1/internal/video-inputs/reference.png', type: 'UPLOADED' }, strength: 'MID', order: 0 },
-    ] })
+    expect(payload.guidances).toBeUndefined()
   })
 
   it('cancels pending jobs and renders completed video output', async () => {

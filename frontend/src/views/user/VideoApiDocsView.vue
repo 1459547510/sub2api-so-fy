@@ -258,16 +258,7 @@ const framePairExample = `{
   "duration": 8,
   "aspect_ratio": "16:9",
   "start_frame_url": "https://media.example/start-frame.png",
-  "end_frame_url": "https://media.example/end-frame.png",
-  "guidances": {
-    "image_reference": [
-      {
-        "image": { "url": "https://media.example/character.png", "type": "UPLOADED" },
-        "strength": "MID",
-        "order": 0
-      }
-    ]
-  }
+  "end_frame_url": "https://media.example/end-frame.png"
 }`
 
 const multiImageExample = `{

@@ -118,10 +118,14 @@
             </div>
 
             <div v-if="imageMode === 'local'" class="space-y-3">
-              <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-dark-300 dark:hover:border-primary-500 dark:hover:text-primary-300">
+              <label
+                class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300"
+                :class="hasLocalFrames ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'"
+                :title="hasLocalFrames ? t('video.imageInputConflict') : undefined"
+              >
                 <Icon name="upload" size="sm" />
                 <span>{{ localFiles.length ? t('video.addImage') : t('video.chooseImage') }}</span>
-                <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" data-testid="video-image-file" @change="onFileChange" />
+                <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" :disabled="hasLocalFrames" data-testid="video-image-file" @change="onFileChange" />
               </label>
               <div v-if="previewUrls.length" class="grid grid-cols-2 gap-2">
                 <div v-for="(preview, index) in previewUrls" :key="preview" class="relative aspect-video overflow-hidden rounded-lg border border-gray-200 dark:border-dark-700">
@@ -132,16 +136,24 @@
                 </div>
               </div>
               <div class="grid grid-cols-2 gap-3">
-                <label class="relative flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 px-2 py-3 text-center text-xs text-gray-600 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-dark-300 dark:hover:border-primary-500 dark:hover:text-primary-300">
+                <label
+                  class="relative flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 px-2 py-3 text-center text-xs text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300"
+                  :class="hasLocalReferences ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'"
+                  :title="hasLocalReferences ? t('video.imageInputConflict') : undefined"
+                >
                   <Icon name="upload" size="sm" class="relative z-10" />
                   <span class="relative z-10">{{ startFrameFile ? t('video.replaceStartFrame') : t('video.chooseStartFrame') }}</span>
-                  <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" data-testid="video-start-frame-file" @change="onStartFrameChange" />
+                  <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" :disabled="hasLocalReferences" data-testid="video-start-frame-file" @change="onStartFrameChange" />
                   <img v-if="startFramePreviewUrl" :src="startFramePreviewUrl" alt="" class="pointer-events-none absolute inset-1 h-[calc(100%-8px)] w-[calc(100%-8px)] rounded-md object-cover opacity-25" />
                 </label>
-                <label class="relative flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 px-2 py-3 text-center text-xs text-gray-600 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-dark-300 dark:hover:border-primary-500 dark:hover:text-primary-300">
+                <label
+                  class="relative flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 px-2 py-3 text-center text-xs text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300"
+                  :class="hasLocalReferences ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'"
+                  :title="hasLocalReferences ? t('video.imageInputConflict') : undefined"
+                >
                   <Icon name="upload" size="sm" class="relative z-10" />
                   <span class="relative z-10">{{ endFrameFile ? t('video.replaceEndFrame') : t('video.chooseEndFrame') }}</span>
-                  <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" data-testid="video-end-frame-file" @change="onEndFrameChange" />
+                  <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" :disabled="hasLocalReferences" data-testid="video-end-frame-file" @change="onEndFrameChange" />
                   <img v-if="endFramePreviewUrl" :src="endFramePreviewUrl" alt="" class="pointer-events-none absolute inset-1 h-[calc(100%-8px)] w-[calc(100%-8px)] rounded-md object-cover opacity-25" />
                 </label>
               </div>
@@ -155,21 +167,23 @@
               </div>
             </div>
 
-            <label v-else-if="imageMode === 'url'" class="block">
+            <label v-else-if="imageMode === 'url'" class="block" :title="hasRemoteFrames ? t('video.imageInputConflict') : undefined">
               <span class="sr-only">{{ t('video.imageUrl') }}</span>
-              <textarea v-model="imageUrlText" rows="4" class="input resize-y" :placeholder="t('video.imageUrlPlaceholder')" data-testid="video-image-url"></textarea>
+              <textarea v-model="imageUrlText" rows="4" class="input resize-y disabled:cursor-not-allowed disabled:opacity-50" :placeholder="t('video.imageUrlPlaceholder')" :disabled="hasRemoteFrames" data-testid="video-image-url"></textarea>
             </label>
 
             <div v-if="imageMode === 'url'" class="grid grid-cols-2 gap-3">
-              <label class="block">
+              <label class="block" :title="hasRemoteReferences ? t('video.imageInputConflict') : undefined">
                 <span class="input-label">{{ t('video.startFrameUrl') }}</span>
-                <input v-model="startFrameUrlText" type="url" class="input" :placeholder="t('video.frameUrlPlaceholder')" data-testid="video-start-frame-url" />
+                <input v-model="startFrameUrlText" type="url" class="input disabled:cursor-not-allowed disabled:opacity-50" :placeholder="t('video.frameUrlPlaceholder')" :disabled="hasRemoteReferences" data-testid="video-start-frame-url" />
               </label>
-              <label class="block">
+              <label class="block" :title="hasRemoteReferences ? t('video.imageInputConflict') : undefined">
                 <span class="input-label">{{ t('video.endFrameUrl') }}</span>
-                <input v-model="endFrameUrlText" type="url" class="input" :placeholder="t('video.frameUrlPlaceholder')" data-testid="video-end-frame-url" />
+                <input v-model="endFrameUrlText" type="url" class="input disabled:cursor-not-allowed disabled:opacity-50" :placeholder="t('video.frameUrlPlaceholder')" :disabled="hasRemoteReferences" data-testid="video-end-frame-url" />
               </label>
             </div>
+
+            <p v-if="imageMode !== 'none'" class="text-xs text-gray-500 dark:text-dark-400">{{ t('video.imageInputExclusive') }}</p>
 
             <button type="submit" class="btn btn-primary flex w-full items-center justify-center gap-2" :disabled="!canSubmit || submitting || uploading" data-testid="submit-video">
               <Icon :name="submitting || uploading ? 'refresh' : 'play'" size="sm" :class="submitting || uploading ? 'animate-spin' : ''" />
@@ -317,12 +331,22 @@ const selectedJob = computed(() => jobs.value.find((job) => job.job_id === selec
 const remoteImageUrls = computed(() => imageUrlText.value.split(/[\r\n,]+/).map((value) => value.trim()).filter(Boolean))
 const remoteStartFrameUrl = computed(() => startFrameUrlText.value.trim())
 const remoteEndFrameUrl = computed(() => endFrameUrlText.value.trim())
+const hasLocalReferences = computed(() => localFiles.value.length > 0)
+const hasLocalFrames = computed(() => Boolean(startFrameFile.value || endFrameFile.value))
+const hasRemoteReferences = computed(() => remoteImageUrls.value.length > 0)
+const hasRemoteFrames = computed(() => Boolean(remoteStartFrameUrl.value || remoteEndFrameUrl.value))
+const hasMixedImageInputs = computed(() => (
+  imageMode.value === 'local'
+    ? hasLocalReferences.value && hasLocalFrames.value
+    : imageMode.value === 'url' && hasRemoteReferences.value && hasRemoteFrames.value
+))
 const currentVideoKey = computed(() => {
   const job = selectedJob.value
   return job && effectiveApiKey.value ? `${effectiveApiKey.value}\u0000${job.job_id}\u0000${job.status}` : ''
 })
 const canSubmit = computed(() => Boolean(
   effectiveApiKey.value && prompt.value.trim() && model.value && duration.value >= 4 && duration.value <= 15 &&
+  !hasMixedImageInputs.value &&
   (imageMode.value !== 'url' || (
     (remoteImageUrls.value.length > 0 || remoteStartFrameUrl.value || remoteEndFrameUrl.value) &&
     remoteImageUrls.value.length <= 4 &&
@@ -369,6 +393,10 @@ async function loadJobs() {
 
 async function submitJob() {
   const apiKey = effectiveApiKey.value
+  if (hasMixedImageInputs.value) {
+    appStore.showError(t('video.imageInputConflict'))
+    return
+  }
   if (!canSubmit.value || !apiKey || submitting.value || uploading.value) return
   submitting.value = true
   try {
@@ -450,6 +478,10 @@ function onFileChange(event: Event) {
   const files = Array.from(input.files || [])
   input.value = ''
   if (!files.length) return
+  if (hasLocalFrames.value) {
+    appStore.showError(t('video.imageInputConflict'))
+    return
+  }
   if (localFiles.value.length >= 4) {
     appStore.showError(t('video.tooManyImages'))
     return
@@ -468,6 +500,10 @@ function onStartFrameChange(event: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
+  if (hasLocalReferences.value) {
+    appStore.showError(t('video.imageInputConflict'))
+    return
+  }
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     appStore.showError(t('video.invalidImage'))
     return
@@ -482,6 +518,10 @@ function onEndFrameChange(event: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
+  if (hasLocalReferences.value) {
+    appStore.showError(t('video.imageInputConflict'))
+    return
+  }
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     appStore.showError(t('video.invalidImage'))
     return

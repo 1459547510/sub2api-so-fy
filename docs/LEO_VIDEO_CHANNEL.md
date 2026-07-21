@@ -63,6 +63,8 @@ seedance-2.0-fast -> seedance-2.0-fast
 
 图片 URL 必须是 LeoStudio 服务端可以访问的绝对 `http`/`https` URL。接口不接受 data URL、Base64 或 multipart 视频生成请求；本地图片应先调用 Sub2 的 `/v1/videos/uploads`，再把返回 URL 放入上述字段。
 
+首尾帧与参考图是两种独立输入模式：首帧和尾帧可以一起提交，但不能再附带 `image_urls` 或 `guidances.image_reference`；参考图请求也不能同时携带首帧或尾帧字段。
+
 用户工作台提交单张图片时使用兼容性已验证的 `image_url` 首帧链路；提交 2 到 4 张图片时使用 `guidances.image_reference`，并按数组位置显式写入从 `0` 开始的连续 `order`。外部 API 仍兼容 `image_urls`，但调用方应优先使用上述两种明确语义。
 
 ## 用户端菜单开关
@@ -114,7 +116,7 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 - 文生视频；
 - 最多 4 张远程 `http`/`https` 参考图片 URL；
 - 最多 4 张 PNG、JPEG、WebP 本地参考图片，每次选择一张并按选择顺序累计，每张最大 10 MiB；
-- 独立首帧和尾帧图片，可与参考图同时选择；提交时所有本地图片并行上传，分别写入 `start_frame_url`、`end_frame_url` 和 `guidances.image_reference`；
+- 独立首帧和尾帧图片，可同时选择并并行上传，分别写入 `start_frame_url` 和 `end_frame_url`；首尾帧模式与参考图模式互斥；
 - `pending`、`running`、`settling`、`completed`、`failed`、`canceled` 状态查询；
 - 只有 `pending` 任务可取消，`running` 和终态任务不能取消；
 - 完成任务的本地视频预览和下载。
@@ -130,7 +132,7 @@ Content-Type: application/json
 
 Sub2API 返回 `202` 和自己的 `job_id`，后台协调器再轮询固定的 LeoStudio 账号。页面刷新后通过 `GET /v1/videos/jobs?limit=50` 恢复任务，不需要保持长连接。
 
-工作台顶部提供“生成工作台 / API 对接文档”页签。独立子页面 `/video-generation/api-docs` 记录 Bearer 鉴权、本地图片上传、异步创建、单图、首尾帧与多参考图请求、任务列表和详情、取消、成品下载、状态流转及常见 HTTP 错误；它不增加侧边栏一级菜单，也不展示供应商凭据、账号标识或供应商任务编号。
+工作台顶部提供“生成工作台 / API 对接文档”页签。独立子页面 `/video-generation/api-docs` 记录 Bearer 鉴权、本地图片上传、异步创建、单图、首尾帧与多参考图请求、两种图片模式的互斥约束、任务列表和详情、取消、成品下载、状态流转及常见 HTTP 错误；它不增加侧边栏一级菜单，也不展示供应商凭据、账号标识或供应商任务编号。
 
 ## 本地图片生命周期
 

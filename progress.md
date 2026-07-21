@@ -2494,3 +2494,44 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/pnpm-lock.yaml`: locks axios `1.18.1` and only its required new proxy-agent dependency graph.
 - `progress.md`: records the failed security signal, remediation decision, validation evidence, and corrective release target.
 - Emergency rollback point: redeploy `v0.1.162-fy.2`; this restores axios `1.16.0` and reopens `GHSA-gcfj-64vw-6mp9`, so rollback is not recommended except to isolate an axios compatibility regression. Source rollback after release is `git revert <v0.1.162-fy.3-commit>`.
+
+## 2026-07-21 - Task: Prevent mixed reference and frame inputs in the video workbench
+### What was done
+- Made local-file and remote-URL reference inputs mutually exclusive with start/end frames: selecting either mode disables the conflicting controls without silently clearing the user's current selection.
+- Added file-handler guards, submit eligibility validation, and a final submission guard so programmatic state changes cannot upload or create a mixed request.
+- Kept both valid workflows unchanged: up to four ordered reference images, or a start frame and end frame uploaded concurrently without reference guidance.
+- Corrected the bilingual API child page and Leo channel documentation so examples and field descriptions no longer recommend combining frames with reference images.
+### Testing
+- `frontend: .\node_modules\.bin\vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed, 3 files and 20 tests.
+- The workbench tests cover four local references disabling both frame inputs, a local frame disabling and rejecting reference selection, remote reference URLs disabling frame URLs, a programmatic mixed URL state producing no upload or job creation, valid ordered references, and valid concurrent start/end-frame uploads.
+- `frontend: .\node_modules\.bin\vue-tsc.cmd --noEmit`: passed.
+- Changed-file ESLint passed for the workbench, API docs, tests, and bilingual locale files.
+- `frontend: npm run build`: passed; Vite reported only the existing stale Browserslist data, dynamic-import, and large-chunk warnings.
+- `git diff --check`: passed before this log append, with only the existing LF-to-CRLF notice for `docs/LEO_VIDEO_CHANNEL.md`.
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: disables conflicting local and URL controls and rejects mixed frame/reference state at selection and submission time.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: replaces the invalid mixed-upload expectation and adds bidirectional local/URL exclusivity regression coverage.
+- `frontend/src/views/user/VideoApiDocsView.vue`: changes the frame-pair example to contain only start and end frames.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: asserts no example combines frame fields with `image_reference`.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese exclusivity guidance and corrects API field descriptions.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English exclusivity guidance and corrects API field descriptions.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the separate frame and reference-image request modes.
+- `progress.md`: records implementation, verification, file ownership, and rollback evidence.
+- No backend protocol, database, pricing, authentication, deployment, or paid video-generation action was performed.
+- Source rollback: from the repository root, run `git restore --worktree -- docs/LEO_VIDEO_CHANNEL.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoApiDocsView.vue frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md`.
+
+## 2026-07-21 - Task: Prepare v0.1.162-fy.4 release
+### What was done
+- Locked the corrective release version to `v0.1.162-fy.4` on `codex/leo-video-channel` for the video image-input exclusivity fix.
+- Revalidated the embedded backend path and produced a local release binary carrying version `0.1.162-fy.4` before publishing the branch and tag.
+### Testing
+- `backend: go test -tags=embed ./internal/web ./internal/handler ./internal/server/routes -count=1`: passed.
+- `backend: go vet -tags=embed ./internal/web ./internal/handler ./internal/server/routes`: passed.
+- `backend: go build -tags embed -trimpath -ldflags "-s -w -X main.Version=0.1.162-fy.4" -o ..\\.codex-run\\sub2api-v0.1.162-fy.4.exe ./cmd/server`: passed.
+- `backend: ..\\.codex-run\\sub2api-v0.1.162-fy.4.exe --version`: reported `Sub2API 0.1.162-fy.4`.
+- `frontend: pnpm audit --audit-level=high`: passed with no high-severity advisory output.
+- `git diff --check`: passed; Git only reported the existing LF-to-CRLF checkout notice for two Markdown files.
+### Notes
+- `progress.md`: records the release version, backend embed validation, security audit, and rollback point.
+- The release contains only the eight files listed in the preceding implementation record; `.superpowers/` and local build output are excluded.
+- Release rollback point: redeploy tag `v0.1.162-fy.3`; source rollback after publication is `git revert v0.1.162-fy.4`.
