@@ -120,8 +120,8 @@
             <div v-if="imageMode === 'local'" class="space-y-3">
               <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-dark-300 dark:hover:border-primary-500 dark:hover:text-primary-300">
                 <Icon name="upload" size="sm" />
-                <span>{{ localFiles.length ? t('video.replaceImage') : t('video.chooseImage') }}</span>
-                <input type="file" accept="image/png,image/jpeg,image/webp" multiple class="sr-only" data-testid="video-image-file" @change="onFileChange" />
+                <span>{{ localFiles.length ? t('video.addImage') : t('video.chooseImage') }}</span>
+                <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" data-testid="video-image-file" @change="onFileChange" />
               </label>
               <div v-if="previewUrls.length" class="grid grid-cols-2 gap-2">
                 <div v-for="(preview, index) in previewUrls" :key="preview" class="relative aspect-video overflow-hidden rounded-lg border border-gray-200 dark:border-dark-700">
@@ -131,12 +131,45 @@
                   </button>
                 </div>
               </div>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="relative flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 px-2 py-3 text-center text-xs text-gray-600 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-dark-300 dark:hover:border-primary-500 dark:hover:text-primary-300">
+                  <Icon name="upload" size="sm" class="relative z-10" />
+                  <span class="relative z-10">{{ startFrameFile ? t('video.replaceStartFrame') : t('video.chooseStartFrame') }}</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" data-testid="video-start-frame-file" @change="onStartFrameChange" />
+                  <img v-if="startFramePreviewUrl" :src="startFramePreviewUrl" alt="" class="pointer-events-none absolute inset-1 h-[calc(100%-8px)] w-[calc(100%-8px)] rounded-md object-cover opacity-25" />
+                </label>
+                <label class="relative flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 px-2 py-3 text-center text-xs text-gray-600 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-dark-300 dark:hover:border-primary-500 dark:hover:text-primary-300">
+                  <Icon name="upload" size="sm" class="relative z-10" />
+                  <span class="relative z-10">{{ endFrameFile ? t('video.replaceEndFrame') : t('video.chooseEndFrame') }}</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" data-testid="video-end-frame-file" @change="onEndFrameChange" />
+                  <img v-if="endFramePreviewUrl" :src="endFramePreviewUrl" alt="" class="pointer-events-none absolute inset-1 h-[calc(100%-8px)] w-[calc(100%-8px)] rounded-md object-cover opacity-25" />
+                </label>
+              </div>
+              <div v-if="startFrameFile || endFrameFile" class="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-dark-400">
+                <button v-if="startFrameFile" type="button" class="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 dark:text-primary-300" data-testid="remove-start-frame" @click="removeStartFrame">
+                  <Icon name="x" size="sm" /> {{ t('video.removeStartFrame') }}
+                </button>
+                <button v-if="endFrameFile" type="button" class="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 dark:text-primary-300" data-testid="remove-end-frame" @click="removeEndFrame">
+                  <Icon name="x" size="sm" /> {{ t('video.removeEndFrame') }}
+                </button>
+              </div>
             </div>
 
             <label v-else-if="imageMode === 'url'" class="block">
               <span class="sr-only">{{ t('video.imageUrl') }}</span>
               <textarea v-model="imageUrlText" rows="4" class="input resize-y" :placeholder="t('video.imageUrlPlaceholder')" data-testid="video-image-url"></textarea>
             </label>
+
+            <div v-if="imageMode === 'url'" class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="input-label">{{ t('video.startFrameUrl') }}</span>
+                <input v-model="startFrameUrlText" type="url" class="input" :placeholder="t('video.frameUrlPlaceholder')" data-testid="video-start-frame-url" />
+              </label>
+              <label class="block">
+                <span class="input-label">{{ t('video.endFrameUrl') }}</span>
+                <input v-model="endFrameUrlText" type="url" class="input" :placeholder="t('video.frameUrlPlaceholder')" data-testid="video-end-frame-url" />
+              </label>
+            </div>
 
             <button type="submit" class="btn btn-primary flex w-full items-center justify-center gap-2" :disabled="!canSubmit || submitting || uploading" data-testid="submit-video">
               <Icon :name="submitting || uploading ? 'refresh' : 'play'" size="sm" :class="submitting || uploading ? 'animate-spin' : ''" />
@@ -159,17 +192,21 @@
           </div>
 
           <div class="border-b border-gray-100 bg-gray-50/70 p-5 dark:border-dark-700 dark:bg-dark-900/40">
-            <div v-if="selectedVideoUrl" class="overflow-hidden rounded-lg bg-black">
-              <video :src="selectedVideoUrl" controls playsinline class="aspect-video max-h-[440px] w-full" data-testid="video-preview"></video>
+            <div v-if="selectedVideoUrl && selectedVideoKey === currentVideoKey" class="overflow-hidden rounded-lg bg-black">
+              <video :src="selectedVideoUrl" controls playsinline class="aspect-video max-h-[440px] w-full" data-testid="video-preview" @error="onVideoError"></video>
             </div>
             <div v-else class="flex min-h-[230px] flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 bg-white px-6 text-center dark:border-dark-700 dark:bg-dark-900/60">
               <Icon name="play" size="xl" class="mb-3 text-gray-300 dark:text-dark-600" />
               <p class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ t('video.previewEmpty') }}</p>
               <p class="mt-1 max-w-sm text-xs text-gray-500 dark:text-dark-400">{{ t('video.previewEmptyHint') }}</p>
             </div>
+            <div v-if="videoPreviewError" class="mt-2 flex items-center justify-between gap-3 text-xs text-red-600 dark:text-red-300" data-testid="video-preview-error">
+              <p>{{ videoPreviewError }}</p>
+              <button type="button" class="font-medium hover:text-red-700 dark:hover:text-red-200" data-testid="retry-video-preview" @click="loadSelectedVideo">{{ t('video.retryPreview') }}</button>
+            </div>
             <div v-if="selectedJob" class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-dark-400">
               <span class="truncate">{{ selectedJob.prompt }}</span>
-              <a v-if="selectedVideoUrl" :href="selectedVideoUrl" :download="`${selectedJob.job_id}.mp4`" class="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-700 dark:text-primary-300" :title="t('video.download')">
+              <a v-if="selectedVideoUrl && selectedVideoKey === currentVideoKey" :href="selectedVideoUrl" :download="`${selectedJob.job_id}.mp4`" class="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-700 dark:text-primary-300" :title="t('video.download')">
                 <Icon name="download" size="sm" />
                 {{ t('video.download') }}
               </a>
@@ -247,11 +284,19 @@ const imageMode = ref<'none' | 'local' | 'url'>('none')
 const imageUrlText = ref('')
 const localFiles = ref<File[]>([])
 const previewUrls = ref<string[]>([])
+const startFrameFile = ref<File | null>(null)
+const endFrameFile = ref<File | null>(null)
+const startFramePreviewUrl = ref('')
+const endFramePreviewUrl = ref('')
+const startFrameUrlText = ref('')
+const endFrameUrlText = ref('')
 const loadingKeys = ref(false)
 const loadingJobs = ref(false)
 const submitting = ref(false)
 const uploading = ref(false)
 const selectedVideoUrl = ref('')
+const selectedVideoKey = ref('')
+const videoPreviewError = ref('')
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let videoOutputRequest = 0
 let jobsRequest = 0
@@ -270,9 +315,21 @@ const effectiveApiKey = computed(() => apiKeyMode.value === 'custom' ? customApi
 const activeJobs = computed(() => jobs.value.filter((job) => ['pending', 'running', 'settling'].includes(job.status)))
 const selectedJob = computed(() => jobs.value.find((job) => job.job_id === selectedJobId.value) || jobs.value[0] || null)
 const remoteImageUrls = computed(() => imageUrlText.value.split(/[\r\n,]+/).map((value) => value.trim()).filter(Boolean))
+const remoteStartFrameUrl = computed(() => startFrameUrlText.value.trim())
+const remoteEndFrameUrl = computed(() => endFrameUrlText.value.trim())
+const currentVideoKey = computed(() => {
+  const job = selectedJob.value
+  return job && effectiveApiKey.value ? `${effectiveApiKey.value}\u0000${job.job_id}\u0000${job.status}` : ''
+})
 const canSubmit = computed(() => Boolean(
   effectiveApiKey.value && prompt.value.trim() && model.value && duration.value >= 4 && duration.value <= 15 &&
-  (imageMode.value !== 'url' || (remoteImageUrls.value.length > 0 && remoteImageUrls.value.length <= 4 && remoteImageUrls.value.every((value) => /^https?:\/\/\S+$/i.test(value))))
+  (imageMode.value !== 'url' || (
+    (remoteImageUrls.value.length > 0 || remoteStartFrameUrl.value || remoteEndFrameUrl.value) &&
+    remoteImageUrls.value.length <= 4 &&
+    remoteImageUrls.value.every((value) => /^https?:\/\/\S+$/i.test(value)) &&
+    (!remoteStartFrameUrl.value || /^https?:\/\/\S+$/i.test(remoteStartFrameUrl.value)) &&
+    (!remoteEndFrameUrl.value || /^https?:\/\/\S+$/i.test(remoteEndFrameUrl.value))
+  ))
 ))
 
 async function loadKeys() {
@@ -316,10 +373,23 @@ async function submitJob() {
   submitting.value = true
   try {
     let selectedImageUrls: string[] = []
-    if (imageMode.value === 'local' && localFiles.value.length) {
+    let startFrameUrl = imageMode.value === 'url' ? remoteStartFrameUrl.value : ''
+    let endFrameUrl = imageMode.value === 'url' ? remoteEndFrameUrl.value : ''
+    const referenceFiles = [...localFiles.value]
+    const startFile = startFrameFile.value
+    const endFile = endFrameFile.value
+    if (imageMode.value === 'local' && (referenceFiles.length || startFile || endFile)) {
       uploading.value = true
-      const uploaded = await Promise.all(localFiles.value.map((file) => uploadVideoInput(apiKey, file)))
-      selectedImageUrls = uploaded.map((item) => item.image_url)
+      const uploadFiles = [
+        ...referenceFiles,
+        ...(startFile ? [startFile] : []),
+        ...(endFile ? [endFile] : []),
+      ]
+      const uploaded = await Promise.all(uploadFiles.map((file) => uploadVideoInput(apiKey, file)))
+      selectedImageUrls = uploaded.slice(0, referenceFiles.length).map((item) => item.image_url)
+      const startUploadIndex = referenceFiles.length
+      if (startFile) startFrameUrl = uploaded[startUploadIndex]?.image_url || ''
+      if (endFile) endFrameUrl = uploaded[startUploadIndex + (startFile ? 1 : 0)]?.image_url || ''
       uploading.value = false
     } else if (imageMode.value === 'url') {
       selectedImageUrls = remoteImageUrls.value
@@ -332,9 +402,11 @@ async function submitJob() {
       aspect_ratio: aspectRatio.value,
       audio: audio.value,
     }
-    if (selectedImageUrls.length === 1) {
+    if (startFrameUrl) payload.start_frame_url = startFrameUrl
+    if (endFrameUrl) payload.end_frame_url = endFrameUrl
+    if (selectedImageUrls.length === 1 && !startFrameUrl && !endFrameUrl) {
       payload.image_url = selectedImageUrls[0]
-    } else if (selectedImageUrls.length > 1) {
+    } else if (selectedImageUrls.length) {
       payload.guidances = {
         image_reference: selectedImageUrls.map((url, order) => ({
           image: { url, type: 'UPLOADED' },
@@ -350,7 +422,7 @@ async function submitJob() {
     selectedJobId.value = job.job_id
     updatePolling()
     appStore.showSuccess(t('video.submitSuccess'))
-    if (imageMode.value === 'local') removeLocalImages()
+    if (imageMode.value === 'local') clearImageInputs()
   } catch (error) {
     appStore.showError(errorMessage(error))
   } finally {
@@ -376,20 +448,47 @@ async function cancelJob(job: VideoJob) {
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || [])
+  input.value = ''
   if (!files.length) return
-  if (files.length > 4) {
+  if (localFiles.value.length >= 4) {
     appStore.showError(t('video.tooManyImages'))
-    input.value = ''
     return
   }
-  if (files.some((file) => !['image/png', 'image/jpeg', 'image/webp'].includes(file.type))) {
+  const file = files[0]
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     appStore.showError(t('video.invalidImage'))
-    input.value = ''
     return
   }
-  removeLocalImages()
-  localFiles.value = files
-  previewUrls.value = files.map((file) => URL.createObjectURL(file))
+  localFiles.value = [...localFiles.value, file]
+  previewUrls.value = [...previewUrls.value, URL.createObjectURL(file)]
+}
+
+function onStartFrameChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    appStore.showError(t('video.invalidImage'))
+    return
+  }
+  removeStartFrame()
+  startFrameFile.value = file
+  startFramePreviewUrl.value = URL.createObjectURL(file)
+}
+
+function onEndFrameChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    appStore.showError(t('video.invalidImage'))
+    return
+  }
+  removeEndFrame()
+  endFrameFile.value = file
+  endFramePreviewUrl.value = URL.createObjectURL(file)
 }
 
 function removeLocalImage(index: number) {
@@ -405,24 +504,61 @@ function removeLocalImages() {
   localFiles.value = []
 }
 
+function removeStartFrame() {
+  if (startFramePreviewUrl.value) URL.revokeObjectURL(startFramePreviewUrl.value)
+  startFramePreviewUrl.value = ''
+  startFrameFile.value = null
+}
+
+function removeEndFrame() {
+  if (endFramePreviewUrl.value) URL.revokeObjectURL(endFramePreviewUrl.value)
+  endFramePreviewUrl.value = ''
+  endFrameFile.value = null
+}
+
+function clearImageInputs() {
+  removeLocalImages()
+  removeStartFrame()
+  removeEndFrame()
+}
+
 function clearSelectedVideo() {
   if (selectedVideoUrl.value) URL.revokeObjectURL(selectedVideoUrl.value)
   selectedVideoUrl.value = ''
+  selectedVideoKey.value = ''
+  videoPreviewError.value = ''
 }
 
 async function loadSelectedVideo() {
-  const request = ++videoOutputRequest
-  clearSelectedVideo()
   const job = selectedJob.value
   const apiKey = effectiveApiKey.value
-  if (!job || !apiKey || job.status !== 'completed') return
+  const key = job && apiKey ? `${apiKey}\u0000${job.job_id}\u0000${job.status}` : ''
+  const request = ++videoOutputRequest
+  if (!job || !apiKey || job.status !== 'completed') {
+    clearSelectedVideo()
+    return
+  }
+  if (selectedVideoKey.value === key && selectedVideoUrl.value) return
+  videoPreviewError.value = ''
   try {
     const blob = await downloadVideoOutput(apiKey, job.job_id)
     if (request !== videoOutputRequest) return
-    selectedVideoUrl.value = URL.createObjectURL(blob)
+    const nextUrl = URL.createObjectURL(blob)
+    const previousUrl = selectedVideoUrl.value
+    selectedVideoUrl.value = nextUrl
+    selectedVideoKey.value = key
+    if (previousUrl) URL.revokeObjectURL(previousUrl)
   } catch (error) {
-    if (request === videoOutputRequest) appStore.showError(errorMessage(error))
+    if (request === videoOutputRequest) {
+      videoPreviewError.value = errorMessage(error)
+      appStore.showError(videoPreviewError.value)
+    }
   }
+}
+
+function onVideoError() {
+  videoPreviewError.value = t('video.previewError')
+  selectedVideoKey.value = ''
 }
 
 function statusLabel(status: string) {
@@ -482,7 +618,7 @@ watch(customApiKey, () => {
   if (apiKeyMode.value === 'custom') resetKeyScopedState()
 })
 watch(activeJobs, updatePolling)
-watch(() => [effectiveApiKey.value, selectedJob.value?.job_id, selectedJob.value?.status], () => void loadSelectedVideo())
+watch([effectiveApiKey, () => selectedJob.value?.job_id, () => selectedJob.value?.status], () => void loadSelectedVideo())
 
 onMounted(async () => {
   await loadKeys()
@@ -492,6 +628,6 @@ onBeforeUnmount(() => {
   videoOutputRequest++
   stopPolling()
   clearSelectedVideo()
-  removeLocalImages()
+  clearImageInputs()
 })
 </script>

@@ -91,6 +91,7 @@
             </div>
             <div class="mt-6 grid min-w-0 gap-4 xl:grid-cols-2">
               <ApiCodeBlock :label="t('video.apiDocs.examples.singleImage')" :code="singleImageExample" />
+              <ApiCodeBlock :label="t('video.apiDocs.examples.framePair')" :code="framePairExample" />
               <ApiCodeBlock :label="t('video.apiDocs.examples.multiImage')" :code="multiImageExample" />
             </div>
           </section>
@@ -180,6 +181,8 @@ const requestFields = [
   { name: 'aspect_ratio', type: 'string', required: false, description: 'video.apiDocs.fields.aspectRatio' },
   { name: 'audio', type: 'boolean', required: false, description: 'video.apiDocs.fields.audio' },
   { name: 'image_url', type: 'string', required: false, description: 'video.apiDocs.fields.imageUrl' },
+  { name: 'start_frame_url', type: 'string', required: false, description: 'video.apiDocs.fields.startFrameUrl' },
+  { name: 'end_frame_url', type: 'string', required: false, description: 'video.apiDocs.fields.endFrameUrl' },
   { name: 'guidances', type: 'object', required: false, description: 'video.apiDocs.fields.guidances' },
 ]
 
@@ -246,6 +249,25 @@ const singleImageExample = `{
   "duration": 8,
   "aspect_ratio": "16:9",
   "image_url": "https://media.example/start-frame.png"
+}`
+
+const framePairExample = `{
+  "model": "seedance-2.0",
+  "prompt": "Move smoothly from the opening composition to the closing composition",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "start_frame_url": "https://media.example/start-frame.png",
+  "end_frame_url": "https://media.example/end-frame.png",
+  "guidances": {
+    "image_reference": [
+      {
+        "image": { "url": "https://media.example/character.png", "type": "UPLOADED" },
+        "strength": "MID",
+        "order": 0
+      }
+    ]
+  }
 }`
 
 const multiImageExample = `{

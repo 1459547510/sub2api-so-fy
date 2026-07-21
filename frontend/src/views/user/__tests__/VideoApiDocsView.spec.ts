@@ -34,6 +34,7 @@ describe('VideoApiDocsView', () => {
     const examples = wrapper.findAllComponents(ApiCodeBlock).map((component) => component.props('code'))
     expect(examples.some((code) => code.includes('Prefer: respond-async'))).toBe(true)
     expect(examples.some((code) => code.includes('"image_url"'))).toBe(true)
+    expect(examples.some((code) => code.includes('"start_frame_url"') && code.includes('"end_frame_url"'))).toBe(true)
     expect(examples.some((code) => code.includes('"image_reference"') && code.includes('"order": 1'))).toBe(true)
     expect(examples.filter((code) => code.startsWith('curl')).every((code) => !/^\+\s/m.test(code))).toBe(true)
     expect(wrapper.html()).not.toMatch(/Leonardo|LeoStudio|upstream_job_id/i)

@@ -113,7 +113,8 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 
 - 文生视频；
 - 最多 4 张远程 `http`/`https` 参考图片 URL；
-- 最多 4 张 PNG、JPEG、WebP 本地参考图片，每张最大 10 MiB；
+- 最多 4 张 PNG、JPEG、WebP 本地参考图片，每次选择一张并按选择顺序累计，每张最大 10 MiB；
+- 独立首帧和尾帧图片，可与参考图同时选择；提交时所有本地图片并行上传，分别写入 `start_frame_url`、`end_frame_url` 和 `guidances.image_reference`；
 - `pending`、`running`、`settling`、`completed`、`failed`、`canceled` 状态查询；
 - 只有 `pending` 任务可取消，`running` 和终态任务不能取消；
 - 完成任务的本地视频预览和下载。
@@ -129,7 +130,7 @@ Content-Type: application/json
 
 Sub2API 返回 `202` 和自己的 `job_id`，后台协调器再轮询固定的 LeoStudio 账号。页面刷新后通过 `GET /v1/videos/jobs?limit=50` 恢复任务，不需要保持长连接。
 
-工作台顶部提供“生成工作台 / API 对接文档”页签。独立子页面 `/video-generation/api-docs` 记录 Bearer 鉴权、本地图片上传、异步创建、单图与多图请求、任务列表和详情、取消、成品下载、状态流转及常见 HTTP 错误；它不增加侧边栏一级菜单，也不展示供应商凭据、账号标识或供应商任务编号。
+工作台顶部提供“生成工作台 / API 对接文档”页签。独立子页面 `/video-generation/api-docs` 记录 Bearer 鉴权、本地图片上传、异步创建、单图、首尾帧与多参考图请求、任务列表和详情、取消、成品下载、状态流转及常见 HTTP 错误；它不增加侧边栏一级菜单，也不展示供应商凭据、账号标识或供应商任务编号。
 
 ## 本地图片生命周期
 

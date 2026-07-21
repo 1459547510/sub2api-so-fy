@@ -2418,3 +2418,57 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the merge decisions, verification evidence, release target, and rollback point.
 - No database migration file is included in this release delta.
 - Rollback point: redeploy `v0.1.161-fy.6`; for source rollback after release, run `git revert -m 1 <v0.1.162-fy.1-merge-commit>` from the repository root.
+
+## 2026-07-21 - Task: Fix video workbench preview and add explicit start/end frames
+### What was done
+- Stabilized completed-video previews so two-second job polling no longer revokes and downloads the same Blob URL repeatedly; switching jobs or Keys still invalidates the previous preview, and media failures now expose a working retry action.
+- Changed local reference selection to append one image at a time in order, added independent local and remote start/end-frame controls, and uploaded the reference/start/end file snapshot concurrently before mapping it to `guidances.image_reference`, `start_frame_url`, and `end_frame_url`.
+- Extended the existing video API documentation child page and bilingual text with the explicit start/end-frame contract and a combined request example.
+- Deployed the embedded frontend as `0.1.162-fy.2-hotfix.2` to `api.fflink.top` with automatic rollback and two timestamped binary backups; no database, migration, authentication, group, or Leo configuration was changed.
+### Testing
+- `frontend: vitest run src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed, 3 files and 17 tests.
+- Frontend full Vitest suite passed; changed-file ESLint, `vue-tsc --noEmit`, and Vite production build passed. Vite reported only the existing dynamic-import and large-chunk warnings.
+- The preview regression test proves refreshing an unchanged completed job keeps `downloadVideoOutput` at one call and does not revoke the active Blob URL; the upload regression proves all three upload promises start before task creation and verifies every output field.
+- Server output `vidjob_jMrHMC4tCe6EqFqkmcVBvgb9PoVMXZP4.mp4` passed `ffprobe` and full `ffmpeg` decode: H.264 High, `yuv420p`, 720x1280, 24 fps, 15.04 seconds, 4,484,597 bytes.
+- LF-archive candidate `go test -tags=embed ./internal/web -count=1` passed before both production builds. Final deployed SHA256 is `464b76016c0f956f4a5dbb78e9f04a2ba0e87802b59581eac136570ab9b8ed69`.
+- Post-deploy service state is `active`; local and public `/health` returned `200`. Public `VideoGenerationView-D0z6THuP.js` returned `200` and contains both `start_frame_url` and `end_frame_url`.
+- The in-app browser reached the production login redirect but had no authenticated session, so authenticated click-through was not claimed as verified. Server media, API payload tests, production assets, and health checks were verified independently.
+- `git diff --check`: passed before this log append.
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: stabilizes preview ownership, accumulates local references, adds start/end-frame inputs, snapshots concurrent uploads, and maps the API payload.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers sequential references, concurrent frame/reference uploads, field mapping, and stable polling previews.
+- `frontend/src/api/__tests__/videoGeneration.spec.ts`: verifies start/end-frame fields are serialized unchanged by the API client.
+- `frontend/src/views/user/VideoApiDocsView.vue`: documents explicit frame fields and the combined frame/reference request body.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies the child page includes both explicit frame fields.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese frame, retry, and API documentation text.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English frame, retry, and API documentation text.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents one-at-a-time reference selection and concurrent frame/reference submission.
+- `progress.md`: records implementation, verification, deployment, file ownership, and rollback evidence.
+- Production rollback: `install -m 0755 /opt/sub2api/sub2api.backup-before-video-ui-hotfix.20260721T015653Z /opt/sub2api/sub2api && systemctl restart sub2api`. The earlier baseline backup is `/opt/sub2api/sub2api.backup-before-video-ui-hotfix.20260721T013956Z`.
+- Source rollback: from the repository root, run `git restore --worktree -- docs/LEO_VIDEO_CHANNEL.md frontend/src/api/__tests__/videoGeneration.spec.ts frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoApiDocsView.vue frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md`.
+
+## 2026-07-21 - Task: Release video workbench fixes as v0.1.162-fy.2
+### What was done
+- Reviewed the complete local video-workbench delta and confirmed it contains the stable preview fix, explicit start/end frames, ordered reference uploads, API documentation, bilingual copy, and regression coverage as one release unit.
+- Selected `v0.1.162-fy.2` as the next fork release and excluded the untracked `.superpowers/` directory and local build artifacts from the commit.
+- Confirmed the release contains no backend protocol, database migration, authentication, homepage, group, pricing, or deployment configuration changes.
+### Testing
+- `frontend: .\\node_modules\\.bin\\vitest.cmd run --reporter=dot`: passed for the full frontend suite, including 12 video-workbench tests and 4 video API-client tests.
+- Changed-file ESLint and `.\\node_modules\\.bin\\vue-tsc.cmd --noEmit`: passed.
+- `frontend: .\\node_modules\\.bin\\vite.cmd build`: passed with only the existing dynamic-import, stale Browserslist-data, and large-chunk warnings.
+- `backend: go test -tags=embed ./internal/web ./internal/handler ./internal/server/routes -count=1`: passed.
+- `backend: go vet -tags=embed ./internal/web ./internal/handler ./internal/server/routes`: passed.
+- `backend: ..\\.codex-run\\bin\\golangci-lint.exe run --concurrency 2 ./...`: passed with `0 issues`.
+- `backend: go build -tags embed -trimpath -ldflags "-s -w -X main.Version=0.1.162-fy.2" -o ..\\.codex-run\\sub2api-v0.1.162-fy.2.exe ./cmd/server` and `--version`: passed and reported `0.1.162-fy.2`.
+- `git diff --check`: passed before this log append; final staged checks follow.
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: contains the preview lifecycle fix and explicit frame/reference controls and payload mapping.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers stable polling previews and concurrent ordered uploads.
+- `frontend/src/api/__tests__/videoGeneration.spec.ts`: verifies frame fields remain intact in API requests.
+- `frontend/src/views/user/VideoApiDocsView.vue`: documents combined frame and reference requests.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies frame fields appear in API examples.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: provides Chinese video-workbench and API-documentation copy.
+- `frontend/src/i18n/locales/en/dashboard.ts`: provides English video-workbench and API-documentation copy.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents ordered local references and concurrent frame submission.
+- `progress.md`: records implementation evidence and formal release verification.
+- Rollback point: redeploy `v0.1.162-fy.1`; for source rollback after release, run `git revert <v0.1.162-fy.2-commit>` from the repository root.

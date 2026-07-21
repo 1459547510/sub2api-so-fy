@@ -181,8 +181,11 @@ describe('VideoGenerationView', () => {
       new File(['one'], 'ref-1.png', { type: 'image/png' }),
       new File(['two'], 'ref-2.jpg', { type: 'image/jpeg' }),
     ]
-    Object.defineProperty(input.element, 'files', { configurable: true, value: files })
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [files[0]] })
     await input.trigger('change')
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [files[1]] })
+    await input.trigger('change')
+    expect(wrapper.findAll('[data-testid="video-settings"] img')).toHaveLength(2)
     await wrapper.get('[data-testid="video-prompt"]').setValue('Keep both references')
     await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
     await flushPromises()
@@ -196,6 +199,54 @@ describe('VideoGenerationView', () => {
     expect(payload.guidances).toEqual({ image_reference: [
       { image: { url: 'http://127.0.0.1/internal/video-inputs/ref-1.png', type: 'UPLOADED' }, strength: 'MID', order: 0 },
       { image: { url: 'http://127.0.0.1/internal/video-inputs/ref-2.jpg', type: 'UPLOADED' }, strength: 'MID', order: 1 },
+    ] })
+  })
+
+  it('uploads reference, start-frame, and end-frame files concurrently and submits every field', async () => {
+    const pendingUploads = new Map<string, (value: any) => void>()
+    vi.mocked(uploadVideoInput).mockImplementation((_key, file) => new Promise((resolve) => {
+      pendingUploads.set(file.name, resolve)
+    }))
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-frames', status: 'pending', status_url: '/v1/videos/jobs/vidjob-frames',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+
+    const reference = new File(['ref'], 'reference.png', { type: 'image/png' })
+    const start = new File(['start'], 'start.png', { type: 'image/png' })
+    const end = new File(['end'], 'end.jpg', { type: 'image/jpeg' })
+    const setFile = async (testId: string, file: File) => {
+      const input = wrapper.get(`[data-testid="${testId}"]`)
+      Object.defineProperty(input.element, 'files', { configurable: true, value: [file] })
+      await input.trigger('change')
+    }
+    await setFile('video-image-file', reference)
+    await setFile('video-start-frame-file', start)
+    await setFile('video-end-frame-file', end)
+    await wrapper.get('[data-testid="video-prompt"]').setValue('Interpolate between both frames')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await Promise.resolve()
+
+    expect(uploadVideoInput).toHaveBeenCalledTimes(3)
+    expect(uploadVideoInput).toHaveBeenNthCalledWith(1, 'sub2-leo-key', reference)
+    expect(uploadVideoInput).toHaveBeenNthCalledWith(2, 'sub2-leo-key', start)
+    expect(uploadVideoInput).toHaveBeenNthCalledWith(3, 'sub2-leo-key', end)
+    expect(createVideoJob).not.toHaveBeenCalled()
+
+    for (const [name, resolve] of pendingUploads) {
+      resolve({ upload_id: name, image_url: `http://127.0.0.1/internal/video-inputs/${name}`, content_type: 'image/png', size: 3 })
+    }
+    await flushPromises()
+
+    const payload = vi.mocked(createVideoJob).mock.calls[0][1]
+    expect(payload.start_frame_url).toBe('http://127.0.0.1/internal/video-inputs/start.png')
+    expect(payload.end_frame_url).toBe('http://127.0.0.1/internal/video-inputs/end.jpg')
+    expect(payload.image_url).toBeUndefined()
+    expect(payload.guidances).toEqual({ image_reference: [
+      { image: { url: 'http://127.0.0.1/internal/video-inputs/reference.png', type: 'UPLOADED' }, strength: 'MID', order: 0 },
     ] })
   })
 
@@ -216,6 +267,25 @@ describe('VideoGenerationView', () => {
     expect(cancelVideoJob).toHaveBeenCalledWith('sub2-leo-key', 'vidjob-pending')
     wrapper.unmount()
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:local-video')
+  })
+
+  it('keeps the completed preview stable when polling refreshes the same job', async () => {
+    const completedJob = { job_id: 'vidjob-stable', status: 'completed', status_url: '', model: 'seedance-2.0', prompt: 'done', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+    const pendingJob = { job_id: 'vidjob-active', status: 'running', status_url: '', model: 'seedance-2.0', prompt: 'active', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+    vi.mocked(listVideoJobs).mockResolvedValue({ data: [completedJob, pendingJob] })
+    vi.mocked(downloadVideoOutput).mockResolvedValue(new Blob(['mp4'], { type: 'video/mp4' }))
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(downloadVideoOutput).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('[data-testid="video-preview"]').attributes('src')).toBe('blob:local-video')
+    await wrapper.get('[data-testid="refresh-video-jobs"]').trigger('click')
+    await flushPromises()
+
+    expect(downloadVideoOutput).toHaveBeenCalledTimes(1)
+    expect(URL.revokeObjectURL).not.toHaveBeenCalledWith('blob:local-video')
+    expect(wrapper.get('[data-testid="video-preview"]').attributes('src')).toBe('blob:local-video')
+    wrapper.unmount()
   })
 
   it('uses the custom API Key to list, cancel, and download jobs', async () => {

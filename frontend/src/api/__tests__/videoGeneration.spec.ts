@@ -33,6 +33,8 @@ describe('video generation API', () => {
     await createVideoJob('sub2-key', {
       model: 'seedance-2.0',
       prompt: 'waves',
+      start_frame_url: 'https://example.com/start.png',
+      end_frame_url: 'https://example.com/end.png',
       image_urls: ['https://example.com/ref-1.png', 'https://example.com/ref-2.png'],
       guidances: { image_reference: [{ image: { id: 'asset-1', type: 'GENERATED' }, strength: 'HIGH' }] },
     })
@@ -44,6 +46,8 @@ describe('video generation API', () => {
     expect(JSON.parse(String(init.body))).toMatchObject({
       model: 'seedance-2.0',
       prompt: 'waves',
+      start_frame_url: 'https://example.com/start.png',
+      end_frame_url: 'https://example.com/end.png',
       image_urls: ['https://example.com/ref-1.png', 'https://example.com/ref-2.png'],
       guidances: { image_reference: [{ strength: 'HIGH' }] },
     })
