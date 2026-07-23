@@ -2795,3 +2795,70 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/PaymentView.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
 - `progress.md`: records the upstream boundary, conflict decisions, verification evidence, changed-file inventory, migration note, and rollback point.
 - Source rollback immediately after this merge commit: `git revert -m 1 HEAD`. Release rollback point: redeploy `v0.1.162-fy.5`.
+
+## 2026-07-23 - Task: Constrain video workbench parameters by LeoStudio model capability
+### What was done
+- Added a model capability matrix to the video workbench so each model only exposes supported resolutions, discrete durations, and resolution-specific aspect ratios.
+- Restricted `seedance-2.0` to the production-verified `480p` and `720p` modes; kept `480p`, `720p`, and `1080p` for `seedance-2.0-fast`.
+- Reset model parameters on model changes, repaired unsupported aspect ratios after resolution changes, and added a pre-upload submission guard with a fixed request parameter snapshot.
+- Updated the workbench API documentation text and Leo channel documentation with the exact parameter matrix and the distinction between UI constraints and direct API callers.
+
+### Testing
+- From `frontend/`, `.\node_modules\.bin\vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts` passed: 2 files, 25 tests.
+- From `frontend/`, `.\node_modules\.bin\vue-tsc.cmd --noEmit` passed.
+- Changed-file ESLint passed for the workbench component, its test, and the Chinese and English dashboard locale files.
+- From `frontend/`, `npm run build` passed; Vite reported only the repository's existing chunking and bundle-size warnings.
+- `git diff --check` passed. No paid video generation or production deployment was performed.
+
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: added model-specific option filtering, defaults, parameter locking, and the final submission guard.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: added regression coverage for model switching, discrete durations, aspect fallback, invalid-state blocking, and exact request payloads.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: documented the Chinese parameter matrix and added the invalid-combination error message.
+- `frontend/src/i18n/locales/en/dashboard.ts`: documented the English parameter matrix and added the invalid-combination error message.
+- `docs/LEO_VIDEO_CHANNEL.md`: recorded the production workbench capability matrix and fallback behavior.
+- `progress.md`: appended this implementation, verification, changed-file inventory, and rollback record.
+- Rollback point: `2050e1ed9`. Before commit, run `git restore --source=2050e1ed9 -- docs/LEO_VIDEO_CHANNEL.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md`.
+
+## 2026-07-23 - Task: Realign video workbench parameters with the latest LeoStudio documentation
+### What was done
+- Fetched LeoStudio remote references without touching its existing uncommitted work; `origin/main` remains at `7af385af0fd8996dab1853c8ec965d4c1179bb08`.
+- Compared the locally updated Sub2 integration document with the current LeoStudio model registry and restored `1080p` for `seedance-2.0`, so both Seedance models now expose the registered `480p`, `720p`, and `1080p` modes.
+- Kept the registered defaults and constraints: `480p`, 8 seconds, discrete durations from 4 through 15, all seven aspect ratios at 480p/1080p, and no `9:21` at 720p.
+- Documented the updated guidance contract: direct API callers may omit image-reference `order`, while the workbench continues to send explicit continuous order values.
+
+### Testing
+- From `frontend/`, `.\node_modules\.bin\vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts` passed: 2 files, 25 tests.
+- From `frontend/`, `.\node_modules\.bin\vue-tsc.cmd --noEmit` passed.
+- Changed-file ESLint passed for the workbench component, its test, and both dashboard locale files.
+- From `frontend/`, `npm run build` passed; Vite reported only the repository's existing chunking and bundle-size warnings.
+- `git diff --check` passed. No paid 1080p generation or production deployment was performed.
+
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: aligned the standard Seedance model with the current three-resolution registry and its 1080p aspect map.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: updated resolution expectations and retained an invalid-duration bypass test for the final submission guard.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: aligned Chinese API documentation text with the current resolution and reference-order contract.
+- `frontend/src/i18n/locales/en/dashboard.ts`: aligned English API documentation text with the current resolution and reference-order contract.
+- `docs/LEO_VIDEO_CHANNEL.md`: replaced the retired production exception with the current LeoStudio registry and documented omitted reference orders.
+- `progress.md`: appended this follow-up's evidence, changed-file inventory, and rollback record.
+- Full uncommitted feature rollback point: `2050e1ed9`. Run `git restore --source=2050e1ed9 -- docs/LEO_VIDEO_CHANNEL.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md`.
+
+## 2026-07-23 - Task: Release LeoStudio parameter constraints as v0.1.163-fy.2
+### What was done
+- Prepared the current six-file LeoStudio parameter-constraint change for the `v0.1.163-fy.2` release.
+- Kept the release scoped to the current branch and excluded the unrelated untracked `.superpowers/` directory.
+
+### Testing
+- From `frontend/`, Vitest passed: 2 files, 25 tests.
+- From `frontend/`, `vue-tsc --noEmit` passed.
+- Changed-file ESLint passed for the workbench component, its test, and both dashboard locale files.
+- From `frontend/`, `pnpm run build` passed.
+- `git diff --check` passed.
+
+### Notes
+- `docs/LEO_VIDEO_CHANNEL.md`: included the final LeoStudio capability documentation in the release.
+- `frontend/src/i18n/locales/en/dashboard.ts`: included the English workbench/API guidance changes.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: included the Chinese workbench/API guidance changes.
+- `frontend/src/views/user/VideoGenerationView.vue`: included model-specific parameter constraints and submission validation.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: included regression coverage for parameter filtering and payload validation.
+- `progress.md`: recorded this release preparation and verification evidence.
+- Rollback point before this release commit: `2050e1ed9`; restore the six listed files from that commit, or revert the release commit after it is created.

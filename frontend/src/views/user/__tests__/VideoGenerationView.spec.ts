@@ -80,6 +80,98 @@ describe('VideoGenerationView', () => {
     expect(wrapper.text()).not.toContain('Grok only')
   })
 
+  it('only shows resolutions supported by the selected model', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    const resolution = wrapper.get('[data-testid="video-resolution"]')
+    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p'])
+    expect((resolution.element as HTMLSelectElement).value).toBe('480p')
+
+    await resolution.setValue('720p')
+    await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0-fast')
+    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p'])
+    expect((resolution.element as HTMLSelectElement).value).toBe('480p')
+
+    await resolution.setValue('1080p')
+    await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0')
+    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p'])
+    expect((resolution.element as HTMLSelectElement).value).toBe('480p')
+  })
+
+  it('uses LeoStudio discrete duration options instead of free numeric input', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    const duration = wrapper.get('[data-testid="video-duration"]')
+    expect(duration.element.tagName).toBe('SELECT')
+    expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    expect((duration.element as HTMLSelectElement).value).toBe('8')
+  })
+
+  it('removes unsupported aspect ratios and falls back when resolution changes', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    const aspectRatio = wrapper.get('[data-testid="video-aspect-ratio"]')
+    await aspectRatio.setValue('9:21')
+    await wrapper.get('[data-testid="video-resolution"]').setValue('720p')
+
+    expect(aspectRatio.findAll('option').map((option) => option.attributes('value'))).not.toContain('9:21')
+    expect((aspectRatio.element as HTMLSelectElement).value).toBe('16:9')
+  })
+
+  it('rejects programmatically injected unsupported model parameters before uploading', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+    const input = wrapper.get('[data-testid="video-image-file"]')
+    Object.defineProperty(input.element, 'files', {
+      configurable: true,
+      value: [new File(['ref'], 'reference.png', { type: 'image/png' })],
+    })
+    await input.trigger('change')
+    await wrapper.get('[data-testid="video-prompt"]').setValue('This invalid request must stay in the browser')
+
+    const setupState = (wrapper.vm as any).$?.setupState
+    setupState.duration = 16
+    await wrapper.vm.$nextTick()
+    expect(wrapper.get('[data-testid="submit-video"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    expect(appStoreMocks.showError).toHaveBeenCalledWith('video.invalidModelParameters')
+    expect(uploadVideoInput).not.toHaveBeenCalled()
+    expect(createVideoJob).not.toHaveBeenCalled()
+  })
+
+  it('submits the exact supported model parameter combination', async () => {
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-fast', status: 'pending', status_url: '/v1/videos/jobs/vidjob-fast',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0-fast')
+    await wrapper.get('[data-testid="video-resolution"]').setValue('1080p')
+    await wrapper.get('[data-testid="video-aspect-ratio"]').setValue('9:21')
+    await wrapper.get('[data-testid="video-duration"]').setValue('15')
+    await wrapper.get('[data-testid="video-audio"]').setValue(true)
+    await wrapper.get('[data-testid="video-prompt"]').setValue('A vertical city reveal')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', {
+      model: 'seedance-2.0-fast',
+      prompt: 'A vertical city reveal',
+      resolution: '1080p',
+      duration: 15,
+      aspect_ratio: '9:21',
+      audio: true,
+    })
+  })
+
   it('submits a text prompt and shows the accepted job', async () => {
     vi.mocked(createVideoJob).mockResolvedValue({
       job_id: 'vidjob-text', status: 'pending', status_url: '/v1/videos/jobs/vidjob-text',

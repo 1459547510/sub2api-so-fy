@@ -73,16 +73,14 @@
             <div class="grid grid-cols-2 gap-3">
               <label class="block">
                 <span class="input-label">{{ t('video.model') }}</span>
-                <select v-model="model" class="input" data-testid="video-model">
+                <select v-model="model" class="input" :disabled="submitting || uploading" data-testid="video-model">
                   <option v-for="option in modelOptions" :key="option" :value="option">{{ option }}</option>
                 </select>
               </label>
               <label class="block">
                 <span class="input-label">{{ t('video.resolution') }}</span>
-                <select v-model="resolution" class="input" data-testid="video-resolution">
-                  <option value="480p">480p</option>
-                  <option value="720p">720p</option>
-                  <option value="1080p">1080p</option>
+                <select v-model="resolution" class="input" :disabled="submitting || uploading" data-testid="video-resolution">
+                  <option v-for="option in resolutionOptions" :key="option" :value="option">{{ option }}</option>
                 </select>
               </label>
             </div>
@@ -90,13 +88,15 @@
             <div class="grid grid-cols-2 gap-3">
               <label class="block">
                 <span class="input-label">{{ t('video.aspectRatio') }}</span>
-                <select v-model="aspectRatio" class="input" data-testid="video-aspect-ratio">
+                <select v-model="aspectRatio" class="input" :disabled="submitting || uploading" data-testid="video-aspect-ratio">
                   <option v-for="option in aspectRatioOptions" :key="option" :value="option">{{ option }}</option>
                 </select>
               </label>
               <label class="block">
                 <span class="input-label">{{ t('video.duration') }}</span>
-                <input v-model.number="duration" type="number" min="4" max="15" step="1" class="input" data-testid="video-duration" />
+                <select v-model.number="duration" class="input" :disabled="submitting || uploading" data-testid="video-duration">
+                  <option v-for="option in durationOptions" :key="option" :value="option">{{ option }}</option>
+                </select>
               </label>
             </div>
 
@@ -105,7 +105,7 @@
                 <span class="block text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('video.audio') }}</span>
                 <span class="block text-xs text-gray-500 dark:text-dark-400">{{ t('video.audioHint') }}</span>
               </span>
-              <input v-model="audio" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" data-testid="video-audio" />
+              <input v-model="audio" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" :disabled="submitting || uploading" data-testid="video-audio" />
             </label>
 
             <div>
@@ -290,9 +290,9 @@ const jobs = ref<VideoJob[]>([])
 const selectedJobId = ref('')
 const prompt = ref('')
 const model = ref('seedance-2.0')
-const resolution = ref<'480p' | '720p' | '1080p'>('720p')
+const resolution = ref<VideoResolution>('480p')
 const duration = ref(8)
-const aspectRatio = ref('16:9')
+const aspectRatio = ref<VideoAspectRatio>('16:9')
 const audio = ref(false)
 const imageMode = ref<'none' | 'local' | 'url'>('none')
 const imageUrlText = ref('')
@@ -315,8 +315,48 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let videoOutputRequest = 0
 let jobsRequest = 0
 
-const modelOptions = ['seedance-2.0', 'seedance-2.0-fast']
-const aspectRatioOptions = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '9:21']
+type VideoResolution = '480p' | '720p' | '1080p'
+type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '21:9' | '9:21'
+
+interface VideoModelCapability {
+  resolutions: readonly VideoResolution[]
+  defaultResolution: VideoResolution
+  durations: readonly number[]
+  defaultDuration: number
+  aspectsByResolution: Partial<Record<VideoResolution, readonly VideoAspectRatio[]>>
+  defaultAspectRatio: VideoAspectRatio
+}
+
+const allDurationOptions = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+const allAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '9:21']
+const hdAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
+const videoModelCapabilities: Record<string, VideoModelCapability> = {
+  'seedance-2.0': {
+    resolutions: ['480p', '720p', '1080p'],
+    defaultResolution: '480p',
+    durations: allDurationOptions,
+    defaultDuration: 8,
+    aspectsByResolution: {
+      '480p': allAspectRatioOptions,
+      '720p': hdAspectRatioOptions,
+      '1080p': allAspectRatioOptions,
+    },
+    defaultAspectRatio: '16:9',
+  },
+  'seedance-2.0-fast': {
+    resolutions: ['480p', '720p', '1080p'],
+    defaultResolution: '480p',
+    durations: allDurationOptions,
+    defaultDuration: 8,
+    aspectsByResolution: {
+      '480p': allAspectRatioOptions,
+      '720p': hdAspectRatioOptions,
+      '1080p': allAspectRatioOptions,
+    },
+    defaultAspectRatio: '16:9',
+  },
+}
+const modelOptions = Object.keys(videoModelCapabilities)
 const imageModes = [
   { value: 'none' as const, label: 'video.imageNone' },
   { value: 'local' as const, label: 'video.imageLocal' },
@@ -326,6 +366,10 @@ const imageModes = [
 const leoKeys = computed(() => keys.value.filter((key) => key.status === 'active' && key.group?.platform === 'leo' && key.group?.allow_image_generation === true))
 const selectedKey = computed(() => leoKeys.value.find((key) => key.id === selectedKeyId.value) || null)
 const effectiveApiKey = computed(() => apiKeyMode.value === 'custom' ? customApiKey.value.trim() : selectedKey.value?.key || '')
+const currentModelCapability = computed(() => videoModelCapabilities[model.value])
+const resolutionOptions = computed(() => currentModelCapability.value?.resolutions || [])
+const durationOptions = computed(() => currentModelCapability.value?.durations || [])
+const aspectRatioOptions = computed(() => currentModelCapability.value?.aspectsByResolution[resolution.value] || [])
 const activeJobs = computed(() => jobs.value.filter((job) => ['pending', 'running', 'settling'].includes(job.status)))
 const selectedJob = computed(() => jobs.value.find((job) => job.job_id === selectedJobId.value) || jobs.value[0] || null)
 const remoteImageUrls = computed(() => imageUrlText.value.split(/[\r\n,]+/).map((value) => value.trim()).filter(Boolean))
@@ -344,8 +388,9 @@ const currentVideoKey = computed(() => {
   const job = selectedJob.value
   return job && effectiveApiKey.value ? `${effectiveApiKey.value}\u0000${job.job_id}\u0000${job.status}` : ''
 })
+const hasValidModelParameters = computed(() => supportsModelParameters(model.value, resolution.value, duration.value, aspectRatio.value))
 const canSubmit = computed(() => Boolean(
-  effectiveApiKey.value && prompt.value.trim() && model.value && duration.value >= 4 && duration.value <= 15 &&
+  effectiveApiKey.value && prompt.value.trim() && hasValidModelParameters.value &&
   !hasMixedImageInputs.value &&
   (imageMode.value !== 'url' || (
     (remoteImageUrls.value.length > 0 || remoteStartFrameUrl.value || remoteEndFrameUrl.value) &&
@@ -393,6 +438,17 @@ async function loadJobs() {
 
 async function submitJob() {
   const apiKey = effectiveApiKey.value
+  const requestParameters = {
+    model: model.value,
+    resolution: resolution.value,
+    duration: duration.value,
+    aspectRatio: aspectRatio.value,
+    audio: audio.value,
+  }
+  if (!supportsModelParameters(requestParameters.model, requestParameters.resolution, requestParameters.duration, requestParameters.aspectRatio)) {
+    appStore.showError(t('video.invalidModelParameters'))
+    return
+  }
   if (hasMixedImageInputs.value) {
     appStore.showError(t('video.imageInputConflict'))
     return
@@ -423,12 +479,12 @@ async function submitJob() {
       selectedImageUrls = remoteImageUrls.value
     }
     const payload: VideoGenerationRequest = {
-      model: model.value,
+      model: requestParameters.model,
       prompt: prompt.value.trim(),
-      resolution: resolution.value,
-      duration: Math.round(duration.value),
-      aspect_ratio: aspectRatio.value,
-      audio: audio.value,
+      resolution: requestParameters.resolution,
+      duration: requestParameters.duration,
+      aspect_ratio: requestParameters.aspectRatio,
+      audio: requestParameters.audio,
     }
     if (startFrameUrl) payload.start_frame_url = startFrameUrl
     if (endFrameUrl) payload.end_frame_url = endFrameUrl
@@ -445,7 +501,7 @@ async function submitJob() {
     }
     const accepted = await createVideoJob(apiKey, payload)
     const now = new Date().toISOString()
-    const job: VideoJob = { ...accepted, model: accepted.model || model.value, prompt: accepted.prompt || payload.prompt, created_at: accepted.created_at || now, updated_at: accepted.updated_at || now }
+    const job: VideoJob = { ...accepted, model: accepted.model || requestParameters.model, prompt: accepted.prompt || payload.prompt, created_at: accepted.created_at || now, updated_at: accepted.updated_at || now }
     jobs.value = [job, ...jobs.value.filter((item) => item.job_id !== job.job_id)].slice(0, 50)
     selectedJobId.value = job.job_id
     updatePolling()
@@ -652,6 +708,30 @@ function resetKeyScopedState() {
 function errorMessage(error: unknown) {
   return error instanceof Error && error.message ? error.message : t('common.error')
 }
+
+function supportsModelParameters(modelValue: string, resolutionValue: VideoResolution, durationValue: number, aspectRatioValue: VideoAspectRatio) {
+  const capability = videoModelCapabilities[modelValue]
+  return Boolean(
+    capability &&
+    capability.resolutions.includes(resolutionValue) &&
+    capability.durations.includes(durationValue) &&
+    capability.aspectsByResolution[resolutionValue]?.includes(aspectRatioValue)
+  )
+}
+
+watch(model, () => {
+  const capability = currentModelCapability.value
+  if (!capability) return
+  resolution.value = capability.defaultResolution
+  duration.value = capability.defaultDuration
+  aspectRatio.value = capability.defaultAspectRatio
+}, { flush: 'sync' })
+watch(resolution, () => {
+  const capability = currentModelCapability.value
+  if (!capability) return
+  const supportedAspects = capability.aspectsByResolution[resolution.value] || []
+  if (!supportedAspects.includes(aspectRatio.value)) aspectRatio.value = capability.defaultAspectRatio
+}, { flush: 'sync' })
 
 watch(selectedKeyId, () => {
   if (apiKeyMode.value !== 'saved') return
