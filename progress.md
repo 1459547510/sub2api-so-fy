@@ -2603,3 +2603,195 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this implementation and verification evidence.
 - Source rollback: from the repository root, run `git restore --worktree -- backend/cmd/server/wire_gen.go backend/internal/service/video_job_billing.go backend/internal/service/video_job_billing_test.go backend/internal/service/wire.go docs/LEO_VIDEO_CHANNEL.md progress.md`.
 - No production deployment, database migration, pricing change, authentication change, or paid video-generation action was performed.
+
+
+## 2026-07-23 - Task: Merge upstream v0.1.163 and prepare v0.1.163-fy.1
+### What was done
+- Merged the official upstream tag `v0.1.163` at commit `d0bdd7e771636a8d315f542cafd39484f39bd60c` with a non-fast-forward merge; the three later untagged `upstream/main` commits were intentionally excluded.
+- Preserved the fork's Leo video pricing validation, fork container image, and axios `1.18.1` security floor while integrating upstream OpenAI reasoning policy, Redis ACL, gateway, billing, scheduler, and mobile-layout changes.
+- Resolved five conflicts in the group service, Docker Compose, frontend dependency manifest, pnpm lockfile, and group administration page without dropping either valid feature path.
+### Testing
+- `frontend: pnpm install --frozen-lockfile --offline`: passed.
+- Conflict-focused frontend Vitest passed: 4 files and 26 tests covering Leo image/video pricing, OpenAI reasoning policy, model lists, and group duplication.
+- `backend: go test ./internal/service -run 'Test.*Group|Test.*Leo.*Price|TestValidateLeoVideoPrices' -count=1`: passed.
+- Go `1.26.5` matched CI; `go test -tags=unit ./...` and `go test -tags=integration ./...` both passed.
+- `frontend: pnpm run lint:check`, `pnpm run typecheck`, the complete Vitest suite, and `pnpm run build`: passed.
+- The repository frontend audit exception checker passed against a fresh production `pnpm audit --audit-level=high` JSON report.
+- `backend: go vet ./...`: passed.
+- The embedded release build reported `Sub2API 0.1.163-fy.1` with upstream commit `d0bdd7e771636a8d315f542cafd39484f39bd60c`.
+- `git diff --check`: passed.
+### Notes
+- Upstream migration `185_group_reasoning_effort_policy.sql` adds group reasoning-policy fields; deployment must allow normal startup migrations before serving traffic.
+- Rolling the binary back to `v0.1.162-fy.5` leaves the additive migration columns in place and does not require destructive schema rollback.
+- `.superpowers/`, `.codex-run/`, audit output, and local binaries remain excluded.
+- Changed files:
+- `README.md`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/cmd/server/main.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/group.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/group/group.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/group/where.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/group_create.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/group_update.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/migrate/schema.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/mutation.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/runtime/runtime.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/ent/schema/group.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/go.mod`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/go.sum`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/config/config.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/config/config_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/domain/reasoning_effort.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/admin/group_handler.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/admin/group_handler_reasoning_effort_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/admin/usage_handler.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/admin/usage_handler_request_type_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/dto/mappers.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/dto/types.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/gateway_handler.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/openai_chat_completions.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/handler/openai_gateway_handler.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/pkg/apicompat/responses_client_tools.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/pkg/apicompat/responses_client_tools_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/api_key_repo.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/group_repo.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/proxy_probe_service.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/proxy_probe_service_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/redis.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/redis_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/scheduler_cache.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/scheduler_cache_last_used_unit_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/repository/scheduler_cache_unit_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/server/api_contract_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/account_test_service.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/account_test_service_openai_compact_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/account_test_service_openai_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/admin_group.go`: merged Leo video price validation with the upstream OpenAI reasoning-policy normalization and sanitization.
+- `backend/internal/service/admin_group_duplicate.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/admin_group_duplicate_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/admin_service.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/admin_service_group_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/api_key_auth_cache.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/api_key_auth_cache_impl.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/api_key_auth_cache_version_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/api_key_service_cache_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/channel_monitor_runner.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/channel_monitor_runner_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/gateway_anthropic_passthrough.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/gateway_forward_as_chat_completions.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/gateway_forward_as_chat_completions_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/gateway_forward_as_responses.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/gateway_forward_as_responses_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/gateway_non_streaming_response_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/grok_media.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/grok_upstream_errors.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/grok_upstream_errors_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/group.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_account_runtime_block_fastpath.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_account_scheduler.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_account_scheduler_compact_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_account_scheduler_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_account_scheduler_upstream_cost_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_apikey_responses_probe.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_apikey_responses_probe_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_codex_identity.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_codex_identity_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_codex_transform.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_codex_transform_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_cc_pipeline.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_chat_completions_raw.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_forward.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok_cache.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok_cache_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok_chat_bridge.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok_chat_bridge_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok_compact.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok_tool_protocol.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_grok_tool_protocol_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_response_handling.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_response_handling_image_usage_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_scheduling.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_service.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_service_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_gateway_upstream_errors.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_oauth_passthrough_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_reasoning_effort_policy.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_reasoning_effort_policy_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_responses_namespace.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_responses_namespace_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_ws_forwarder.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_ws_forwarder_ingress.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_ws_forwarder_payload.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_ws_forwarder_success_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_ws_http_bridge.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/openai_ws_v2_passthrough_adapter.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/scheduler_snapshot_service.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/upstream_models.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/service/upstream_models_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/setup/handler.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/setup/setup.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/internal/setup/setup_test.go`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `backend/migrations/185_group_reasoning_effort_policy.sql`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `deploy/.env.example`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `deploy/config.example.yaml`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `deploy/docker-compose.dev.yml`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `deploy/docker-compose.local.yml`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `deploy/docker-compose.standalone.yml`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `deploy/docker-compose.yml`: kept the fork image target while accepting upstream Redis ACL username support.
+- `docs/PAYMENT.md`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `docs/PAYMENT_CN.md`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `docs/screenshots/mobile-account-actions-menu.png`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/api/setup.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/admin/group/GroupRPMOverridesModal.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/admin/group/GroupRateMultipliersModal.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/admin/group/ReasoningEffortPolicyFields.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/admin/usage/UsageFilters.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/admin/usage/__tests__/UsageFilters.spec.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/charts/EndpointDistributionChart.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/charts/GroupDistributionChart.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/charts/ModelDistributionChart.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/common/Select.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/layout/AppHeader.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/payment/SubscriptionPlanCard.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/payment/__tests__/SubscriptionPlanCard.spec.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/payment/__tests__/validity.spec.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/payment/validity.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/components/user/dashboard/UserDashboardCharts.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/en/admin/ops.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/en/admin/overview.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/en/landing.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/en/misc.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/zh/admin/ops.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/zh/admin/overview.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/zh/landing.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/i18n/locales/zh/misc.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/main.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/types/index.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/utils/__tests__/device.spec.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/utils/__tests__/floatingPanel.spec.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/utils/__tests__/formatMultiplier.spec.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/utils/device.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/utils/floatingPanel.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/utils/formatters.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/AccountsView.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/GroupsView.vue`: runs both Leo video price completeness checks and upstream reasoning-policy form validation.
+- `frontend/src/views/admin/PromoCodesView.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/SettingsView.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/__tests__/groupsReasoningEffort.spec.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/groupsReasoningEffort.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/OpsAlertEventsCard.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/OpsAlertRulesCard.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/OpsDashboardSkeleton.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/OpsErrorDetailsModal.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/OpsOpenAITokenStatsCard.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/OpsRequestDetailsModal.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/OpsSystemLogTable.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/OpsThroughputTrendChart.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/admin/ops/components/__tests__/OpsThroughputTrendChart.spec.ts`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/setup/SetupWizardView.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/user/KeysView.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `frontend/src/views/user/PaymentView.vue`: imported from the signed upstream v0.1.163 release tag without a manual conflict.
+- `progress.md`: records the upstream boundary, conflict decisions, verification evidence, changed-file inventory, migration note, and rollback point.
+- Source rollback immediately after this merge commit: `git revert -m 1 HEAD`. Release rollback point: redeploy `v0.1.162-fy.5`.
