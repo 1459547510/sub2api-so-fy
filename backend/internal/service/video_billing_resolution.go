@@ -8,6 +8,40 @@ const (
 	VideoBillingResolution1080P = "1080p"
 )
 
+var leoVideoPricingResolutions = []string{
+	VideoBillingResolution480P,
+	VideoBillingResolution720P,
+	VideoBillingResolution1080P,
+}
+
+// LeoVideoPricingResolutions returns the resolution tiers supported by a Leo
+// video model. The returned slice is a copy so callers cannot mutate the
+// shared capability table.
+func LeoVideoPricingResolutions(model string) []string {
+	if strings.EqualFold(strings.TrimSpace(model), "seedance-2.0-mini") {
+		return []string{VideoBillingResolution720P}
+	}
+	return append([]string(nil), leoVideoPricingResolutions...)
+}
+
+func DefaultLeoVideoResolution(model string) string {
+	resolutions := LeoVideoPricingResolutions(model)
+	if len(resolutions) == 1 {
+		return resolutions[0]
+	}
+	return VideoBillingResolution720P
+}
+
+func LeoVideoModelSupportsResolution(model, resolution string) bool {
+	normalized := NormalizeVideoBillingResolutionOrDefault(resolution)
+	for _, supported := range LeoVideoPricingResolutions(model) {
+		if normalized == supported {
+			return true
+		}
+	}
+	return false
+}
+
 // xAI 视频生成按秒计费，duration 请求参数允许 1-15 秒；未指定时上游默认生成 8 秒。
 // 计费时长必须与上游实际消耗对齐，否则用户可通过拉长 duration 套利（提交时长由用户控制）。
 const (

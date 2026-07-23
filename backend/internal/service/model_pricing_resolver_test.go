@@ -496,6 +496,20 @@ func TestVideoPriceConfigFromResolvedPricing(t *testing.T) {
 		require.InDelta(t, 0.12, *config.Price1080P, 1e-12)
 	})
 
+	t.Run("mini config only requires 720p", func(t *testing.T) {
+		resolved := &ResolvedPricing{
+			Mode:           BillingModeVideo,
+			channelPricing: &ChannelModelPricing{Models: []string{"seedance-2.0-mini"}},
+			RequestTiers:   []PricingInterval{{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.06)}},
+		}
+
+		config, ok := VideoPriceConfigFromResolvedPricing(resolved)
+		require.True(t, ok)
+		require.Nil(t, config.Price480P)
+		require.InDelta(t, 0.06, *config.Price720P, 1e-12)
+		require.Nil(t, config.Price1080P)
+	})
+
 	tests := []struct {
 		name     string
 		resolved *ResolvedPricing

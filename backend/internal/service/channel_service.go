@@ -676,17 +676,17 @@ func checkVideoBillingModeRequirements(p ChannelModelPricing) error {
 			"video pricing must configure per-second prices through resolution intervals",
 		)
 	}
-	if len(p.Intervals) != 3 {
+	requiredResolutions := LeoVideoPricingResolutions(p.Models[0])
+	if len(p.Intervals) != len(requiredResolutions) {
 		return infraerrors.BadRequest(
 			"VIDEO_PRICING_INVALID_TIERS",
-			"video pricing requires exactly 480p, 720p, and 1080p intervals",
+			fmt.Sprintf("video pricing requires exactly %s intervals", strings.Join(requiredResolutions, ", ")),
 		)
 	}
 
-	required := map[string]bool{
-		VideoBillingResolution480P:  false,
-		VideoBillingResolution720P:  false,
-		VideoBillingResolution1080P: false,
+	required := make(map[string]bool, len(requiredResolutions))
+	for _, resolution := range requiredResolutions {
+		required[resolution] = false
 	}
 	for _, interval := range p.Intervals {
 		label := strings.ToLower(strings.TrimSpace(interval.TierLabel))
@@ -694,7 +694,7 @@ func checkVideoBillingModeRequirements(p ChannelModelPricing) error {
 		if !ok {
 			return infraerrors.BadRequest(
 				"VIDEO_PRICING_INVALID_TIER",
-				fmt.Sprintf("unsupported video pricing tier %q; expected 480p, 720p, or 1080p", interval.TierLabel),
+				fmt.Sprintf("unsupported video pricing tier %q; expected %s", interval.TierLabel, strings.Join(requiredResolutions, ", ")),
 			)
 		}
 		if seen {

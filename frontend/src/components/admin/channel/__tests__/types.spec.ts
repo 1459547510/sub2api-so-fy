@@ -124,7 +124,19 @@ describe('video pricing', () => {
     expect(getNextLeoVideoModel([
       createPricingFormEntry(['seedance-2.0'], 'video'),
       createPricingFormEntry(['seedance-2.0-fast'], 'video'),
+    ])).toBe('seedance-2.0-mini')
+    expect(getNextLeoVideoModel([
+      createPricingFormEntry(['seedance-2.0'], 'video'),
+      createPricingFormEntry(['seedance-2.0-fast'], 'video'),
+      createPricingFormEntry(['seedance-2.0-mini'], 'video'),
     ])).toBeUndefined()
+  })
+
+  it('creates a Mini pricing entry with only its supported 720p tier', () => {
+    const entry = createPricingFormEntry(['seedance-2.0-mini'], 'video')
+    expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['720p'])
+    entry.intervals[0].per_request_price = 0.06
+    expect(validateVideoPricing(entry, t)).toBeNull()
   })
 
   it('splits synchronized Leo models into independent video entries', () => {

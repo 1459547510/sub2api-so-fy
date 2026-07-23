@@ -97,5 +97,5 @@ func TestAdminServiceCreateAccountRejectsInvalidLeoCredentials(t *testing.T) {
 }
 
 func TestDefaultModelsListCandidateIDsLeo(t *testing.T) {
-	require.Equal(t, []string{"seedance-2.0", "seedance-2.0-fast"}, defaultModelsListCandidateIDs(PlatformLeo))
+	require.Equal(t, []string{"seedance-2.0", "seedance-2.0-fast", "seedance-2.0-mini"}, defaultModelsListCandidateIDs(PlatformLeo))
 }

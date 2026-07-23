@@ -290,7 +290,7 @@ const jobs = ref<VideoJob[]>([])
 const selectedJobId = ref('')
 const prompt = ref('')
 const model = ref('seedance-2.0')
-const resolution = ref<VideoResolution>('480p')
+const resolution = ref<VideoResolution>('720p')
 const duration = ref(8)
 const aspectRatio = ref<VideoAspectRatio>('16:9')
 const audio = ref(false)
@@ -333,7 +333,7 @@ const hdAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1'
 const videoModelCapabilities: Record<string, VideoModelCapability> = {
   'seedance-2.0': {
     resolutions: ['480p', '720p', '1080p'],
-    defaultResolution: '480p',
+    defaultResolution: '720p',
     durations: allDurationOptions,
     defaultDuration: 8,
     aspectsByResolution: {
@@ -344,14 +344,23 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     defaultAspectRatio: '16:9',
   },
   'seedance-2.0-fast': {
-    resolutions: ['480p', '720p', '1080p'],
-    defaultResolution: '480p',
+    resolutions: ['480p', '720p'],
+    defaultResolution: '720p',
     durations: allDurationOptions,
     defaultDuration: 8,
     aspectsByResolution: {
       '480p': allAspectRatioOptions,
       '720p': hdAspectRatioOptions,
-      '1080p': allAspectRatioOptions,
+    },
+    defaultAspectRatio: '16:9',
+  },
+  'seedance-2.0-mini': {
+    resolutions: ['720p'],
+    defaultResolution: '720p',
+    durations: allDurationOptions,
+    defaultDuration: 8,
+    aspectsByResolution: {
+      '720p': ['16:9'],
     },
     defaultAspectRatio: '16:9',
   },

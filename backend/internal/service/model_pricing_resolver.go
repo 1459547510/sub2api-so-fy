@@ -309,16 +309,24 @@ func (r *ModelPricingResolver) GetRequestTierPriceByContext(resolved *ResolvedPr
 	return 0
 }
 
-// VideoPriceConfigFromResolvedPricing extracts a complete channel video price configuration.
-// The bool is true only when all three resolution tiers are present with non-negative prices;
-// explicit zero prices remain valid through the returned non-nil pointers.
+// VideoPriceConfigFromResolvedPricing extracts a channel video price configuration.
+// Mini uses only its supported 720p tier; legacy models still require all three
+// resolution tiers. Explicit zero prices remain valid through non-nil pointers.
 func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPriceConfig, bool) {
-	if resolved == nil || resolved.Mode != BillingModeVideo || len(resolved.RequestTiers) != 3 {
+	if resolved == nil || resolved.Mode != BillingModeVideo {
 		return nil, false
 	}
 
 	var price480P, price720P, price1080P float64
-	seen := make(map[string]bool, 3)
+	model := ""
+	if resolved.channelPricing != nil && len(resolved.channelPricing.Models) == 1 {
+		model = resolved.channelPricing.Models[0]
+	}
+	requiredResolutions := LeoVideoPricingResolutions(model)
+	if len(resolved.RequestTiers) != len(requiredResolutions) {
+		return nil, false
+	}
+	seen := make(map[string]bool, len(requiredResolutions))
 	for _, tier := range resolved.RequestTiers {
 		label := strings.ToLower(strings.TrimSpace(tier.TierLabel))
 		if seen[label] || tier.PerRequestPrice == nil || *tier.PerRequestPrice < 0 {
@@ -336,12 +344,23 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 		}
 		seen[label] = true
 	}
-	if !seen[VideoBillingResolution480P] || !seen[VideoBillingResolution720P] || !seen[VideoBillingResolution1080P] {
+	for _, resolution := range requiredResolutions {
+		if !seen[resolution] {
+			return nil, false
+		}
+	}
+	if !seen[VideoBillingResolution720P] {
 		return nil, false
 	}
+	price480PPointer := &price480P
+	price1080PPointer := &price1080P
+	if len(requiredResolutions) == 1 {
+		price480PPointer = nil
+		price1080PPointer = nil
+	}
 	return &VideoPriceConfig{
-		Price480P:  &price480P,
+		Price480P:  price480PPointer,
 		Price720P:  &price720P,
-		Price1080P: &price1080P,
+		Price1080P: price1080PPointer,
 	}, true
 }

@@ -2842,6 +2842,29 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: appended this follow-up's evidence, changed-file inventory, and rollback record.
 - Full uncommitted feature rollback point: `2050e1ed9`. Run `git restore --source=2050e1ed9 -- docs/LEO_VIDEO_CHANNEL.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md`.
 
+## 2026-07-23 - Task: Correct Fast resolution options from LeoStudio feat/web-admin
+### What was done
+- Rechecked all LeoStudio remote branches and found the actual latest capability update at `origin/feat-web-admin` commit `2fd5c21b01a049817962812cf4675ade7727cc12` (`feat: align video models with Leonardo specs`, 2026-07-23 11:30 +08:00).
+- Corrected the workbench matrix to match that release: `seedance-2.0` supports `480p/720p/1080p`, while `seedance-2.0-fast` supports only `480p/720p`; both default to `720p`.
+- Kept the existing strict duration and aspect-ratio validation, and retained the current page scope of the two already-configured Seedance models rather than exposing new Mini, Happy Horse, or Grok models without matching Sub2 pricing and request contracts.
+- Updated the Chinese and English API help text and Leo channel documentation to identify the exact source commit and Fast limitation.
+
+### Testing
+- From `frontend/`, `.\node_modules\.bin\vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts` passed: 2 files, 25 tests.
+- From `frontend/`, `.\node_modules\.bin\vue-tsc.cmd --noEmit` passed.
+- Changed-file ESLint passed for the workbench component, its test, and both dashboard locale files.
+- From `frontend/`, `npm run build` passed; Vite reported only the repository's existing chunking and bundle-size warnings.
+- `git diff --check` passed. No paid video generation or production deployment was performed.
+
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: removed Fast `1080p` and aligned both model defaults to `720p`.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verifies Fast options are exactly `480p/720p`, ordinary Seedance retains `1080p`, and supported payloads remain valid.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: documented the corrected Fast resolution list.
+- `frontend/src/i18n/locales/en/dashboard.ts`: documented the corrected Fast resolution list.
+- `docs/LEO_VIDEO_CHANNEL.md`: recorded the `2fd5c21b` capability matrix and `720p` defaults.
+- `progress.md`: appended this correction, verification evidence, changed-file inventory, and rollback record.
+- Full uncommitted feature rollback point: `2050e1ed9`. Run `git restore --source=2050e1ed9 -- docs/LEO_VIDEO_CHANNEL.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md`.
+
 ## 2026-07-23 - Task: Release LeoStudio parameter constraints as v0.1.163-fy.2
 ### What was done
 - Prepared the current six-file LeoStudio parameter-constraint change for the `v0.1.163-fy.2` release.
@@ -2862,3 +2885,89 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: included regression coverage for parameter filtering and payload validation.
 - `progress.md`: recorded this release preparation and verification evidence.
 - Rollback point before this release commit: `2050e1ed9`; restore the six listed files from that commit, or revert the release commit after it is created.
+
+## 2026-07-23 - Task: Add Seedance 2.0 Mini model and channel pricing
+### What was done
+- Added `seedance-2.0-mini` to Leo account model candidates, whitelist/preset mappings, and the video generation workbench.
+- Aligned Mini workbench capabilities with the latest LeoStudio matrix: `720p` only, `16:9` only, and the existing `4`–`15` second duration choices; omitted resolution now defaults to `720p` for video requests.
+- Added model-aware Leo channel pricing: regular Seedance models retain `480p/720p/1080p` tiers, while Mini uses a single `720p` USD-per-second tier. Mini requests using unsupported resolutions are rejected before scheduling or forwarding.
+- Updated the Leo integration documentation and Chinese/English UI help text with Mini capabilities and pricing rules.
+
+### Testing
+- From `backend/`, targeted Leo service and handler tests passed, including Mini resolution capability, account candidates, channel pricing validation, resolver extraction, and unsupported-resolution request rejection.
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1` passed.
+- From `frontend/`, Vitest passed for channel pricing, account mappings, and video workbench coverage: 5 files, 89 tests.
+- From `frontend/`, the full `npm run test:run` suite completed successfully (Vitest exit code 0).
+- From `frontend/`, `npm run typecheck` passed.
+- From `frontend/`, `npm run lint:check -- --no-fix` passed.
+- From `frontend/`, `npm run build` passed; Vite reported only existing chunk-size/dynamic-import warnings.
+- `git diff --check` passed. No paid video generation or production deployment was performed.
+
+### Notes
+- `backend/internal/service/video_billing_resolution.go`: added model-aware resolution capability and default helpers.
+- `backend/internal/service/leo_video.go`: applies the 720p default when resolution is omitted.
+- `backend/internal/service/video_job_service.go`: validates Mini resolution before creating an async job.
+- `backend/internal/handler/leo_video.go`: rejects unsupported Mini resolution on the synchronous endpoint.
+- `backend/internal/service/leo_account.go`: adds Mini to Leo default model candidates.
+- `backend/internal/service/channel_service.go`: validates one 720p Mini pricing tier while preserving three tiers for other Seedance models.
+- `backend/internal/service/model_pricing_resolver.go`: extracts Mini channel pricing with unsupported tiers unset.
+- `backend/internal/service/video_job_billing.go`: snapshots Mini pricing without requiring unsupported tiers.
+- `backend/internal/service/*_test.go` and `backend/internal/handler/leo_video_test.go`: add Mini capability, pricing, account, and request-validation regression coverage.
+- `frontend/src/constants/channel.ts`: adds Mini to Leo video pricing model order.
+- `frontend/src/composables/useModelWhitelist.ts`: adds Mini whitelist and account mapping preset.
+- `frontend/src/components/account/CreateAccountModal.vue`: prepopulates Mini account mapping.
+- `frontend/src/views/user/VideoGenerationView.vue`: exposes Mini with its strict resolution/aspect matrix.
+- `frontend/src/components/admin/channel/types.ts`: makes video pricing intervals model-aware.
+- `frontend/src/components/admin/channel/PricingEntryCard.vue` and `frontend/src/views/admin/ChannelsView.vue`: display, normalize, and serialize Mini's single 720p pricing tier.
+- `frontend/src/i18n/locales/en/dashboard.ts`, `frontend/src/i18n/locales/zh/dashboard.ts`, `frontend/src/i18n/locales/en/admin/channels.ts`, `frontend/src/i18n/locales/zh/admin/channels.ts`: document Mini capabilities and model-specific pricing validation.
+- `frontend/src/components/admin/channel/__tests__/*` and `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: cover Mini pricing and workbench behavior.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents Mini model parameters, mapping, and pricing.
+- `progress.md`: records this implementation and verification evidence.
+- Rollback point: this task is part of the existing uncommitted worktree; before reverting, save `git diff` and selectively reverse the Mini-related hunks so earlier user changes in overlapping files remain intact. No commit or deployment was created.
+
+## 2026-07-23 - Task: Verify and push Seedance 2.0 Mini support
+### What was done
+- Revalidated the existing Mini model, model-aware pricing, resolution validation, and Leo video workbench changes before pushing them to `codex/leo-video-channel`.
+- Applied the required Go formatting correction to the new pricing resolver regression test.
+- Kept the unrelated untracked `.superpowers/` directory outside the commit; this task creates no release tag.
+
+### Testing
+- From `backend/`, targeted Mini/Leo tests passed.
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1` passed.
+- From `frontend/`, the full `pnpm run test:run` suite passed.
+- From `frontend/`, `pnpm run typecheck` passed.
+- From `frontend/`, `pnpm run lint:check -- --no-fix` passed.
+- From `frontend/`, `pnpm run build` passed.
+- `gofmt` and `git diff --check` passed for the current changes.
+
+### Notes
+- `backend/internal/handler/leo_video.go`: retained unsupported-resolution request rejection.
+- `backend/internal/handler/leo_video_test.go`: retained handler validation coverage.
+- `backend/internal/service/channel_service.go`: retained model-specific video pricing validation.
+- `backend/internal/service/channel_service_test.go`: retained pricing validation coverage.
+- `backend/internal/service/leo_account.go`: retained the Mini account model candidate.
+- `backend/internal/service/leo_account_test.go`: retained account candidate coverage.
+- `backend/internal/service/leo_video.go`: retained the Mini default resolution behavior.
+- `backend/internal/service/model_pricing_resolver.go`: retained Mini pricing extraction.
+- `backend/internal/service/model_pricing_resolver_test.go`: retained resolver coverage and applied Go formatting.
+- `backend/internal/service/video_billing_resolution.go`: retained model-aware resolution capabilities.
+- `backend/internal/service/video_billing_resolution_test.go`: retained resolution capability coverage.
+- `backend/internal/service/video_job_billing.go`: retained Mini billing snapshot handling.
+- `backend/internal/service/video_job_service.go`: retained async request validation.
+- `docs/LEO_VIDEO_CHANNEL.md`: retained Mini model and pricing documentation.
+- `frontend/src/components/account/CreateAccountModal.vue`: retained Mini account mapping defaults.
+- `frontend/src/components/admin/channel/PricingEntryCard.vue`: retained Mini pricing tier display.
+- `frontend/src/components/admin/channel/__tests__/PricingEntryCard.spec.ts`: retained pricing display coverage.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: retained pricing type coverage.
+- `frontend/src/components/admin/channel/types.ts`: retained model-aware pricing interval normalization.
+- `frontend/src/composables/useModelWhitelist.ts`: retained Mini whitelist and mapping preset.
+- `frontend/src/constants/channel.ts`: retained Mini Leo model registration.
+- `frontend/src/i18n/locales/en/admin/channels.ts`: retained English pricing validation text.
+- `frontend/src/i18n/locales/en/dashboard.ts`: retained English Mini workbench guidance.
+- `frontend/src/i18n/locales/zh/admin/channels.ts`: retained Chinese pricing validation text.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: retained Chinese Mini workbench guidance.
+- `frontend/src/views/admin/ChannelsView.vue`: retained Mini pricing form behavior.
+- `frontend/src/views/user/VideoGenerationView.vue`: retained Mini capability filtering and defaults.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: retained Mini workbench regression coverage.
+- `progress.md`: recorded this verification and push scope.
+- Rollback point before the push commit: `45b0e1813`; revert the new commit after it is created, or restore the listed files from that commit.

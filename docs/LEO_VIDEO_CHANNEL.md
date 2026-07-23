@@ -41,7 +41,7 @@ Sub2API 的连接测试会请求去掉 `/v1` 后的 `/health`；视频生成会�
 2. 开启“允许当前分组生成视频”。
 3. 在分组中填写 480p、720p、1080p 三档 USD/秒回退价格。Leo 分组三档都必填，`0` 表示免费。
 4. 在“渠道管理”中创建或编辑关联该分组的渠道，并进入 `Leo` 平台的模型定价。
-5. 为 `seedance-2.0` 和 `seedance-2.0-fast` 分别添加一条“视频（按秒）”定价，填写各自的 480p、720p、1080p 三档 USD/秒价格。每条只能绑定一个精确模型，不能使用通配符，三档都必填且允许为 `0`；不要配置在账号统计定价规则中。点击“添加”会依次预填这两个模型，同步 Leo 模型时也会拆成独立定价条目。
+5. 为 `seedance-2.0`、`seedance-2.0-fast` 和 `seedance-2.0-mini` 分别添加一条“视频（按秒）”定价。前两个模型填写各自的 480p、720p、1080p 三档 USD/秒价格；Mini 只填写 720p USD/秒价格。每条只能绑定一个精确模型，不能使用通配符；不要配置在账号统计定价规则中。点击“添加”会依次预填这三个模型，同步 Leo 模型时也会拆成独立定价条目。
 6. 创建平台为 `Leo`、类型为 `API Key` 的账号。
 7. 填写 LeoStudio `/v1` Base URL、Bearer API Key、代理和并发。
 8. 保留或调整默认模型映射：
@@ -49,6 +49,7 @@ Sub2API 的连接测试会请求去掉 `/v1` 后的 `/health`；视频生成会�
 ```text
 seedance-2.0      -> seedance-2.0
 seedance-2.0-fast -> seedance-2.0-fast
+seedance-2.0-mini -> seedance-2.0-mini
 ```
 
 9. 执行账号连接测试，确认 `/health` 返回成功。
@@ -103,7 +104,7 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 - 用户接口和任务记录中的错误统一使用 `Video provider`，不暴露 LeoStudio 或其底层供应商名称。
 - 优先使用响应中的 `provider.resolution` 和 `provider.duration` 计费；缺失时回退到请求值。
 - 精确命中的渠道模型视频定价优先于分组视频价格；渠道没有匹配的视频定价时，回退到分组的 480p、720p、1080p 价格。渠道的计费模型来源设置决定使用请求模型、渠道映射模型还是上游模型匹配价格。
-- 费用为“对应分辨率 USD/秒单价 x 实际时长 x 视频数量 x 分组视频倍率”。`seedance-2.0` 与 `seedance-2.0-fast` 可配置不同单价，同步和异步请求使用相同优先级。
+- 费用为“对应分辨率 USD/秒单价 x 实际时长 x 视频数量 x 分组视频倍率”。三个 Seedance 模型均可配置独立单价，同步和异步请求使用相同优先级；Mini 仅按 720p 单价计费。
 
 ## 能力边界
 
@@ -123,14 +124,15 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 
 ### 工作台模型参数约束
 
-工作台按当前 LeoStudio 模型能力注册表过滤参数，默认分辨率为 `480p`、默认时长为 `8` 秒：
+工作台按当前 LeoStudio 模型能力注册表过滤参数，默认分辨率为 `720p`、默认时长为 `8` 秒：
 
 | 模型 | 可选分辨率 | 说明 |
 | --- | --- | --- |
-| `seedance-2.0` | `480p`、`720p`、`1080p` | 按 LeoStudio 当前模型能力表开放。 |
-| `seedance-2.0-fast` | `480p`、`720p`、`1080p` | 按 LeoStudio 当前模型能力表开放。 |
+| `seedance-2.0` | `480p`、`720p`、`1080p` | 按 LeoStudio `2fd5c21b` 模型能力表开放。 |
+| `seedance-2.0-fast` | `480p`、`720p` | LeoStudio `2fd5c21b` 已明确不支持 `1080p`。 |
+| `seedance-2.0-mini` | `720p` | Mini 仅开放 `720p`，画幅仅 `16:9`。 |
 
-两个模型的时长都只能从 `4`、`5`、`6`、`7`、`8`、`9`、`10`、`11`、`12`、`13`、`14`、`15` 秒中选择。`480p` 和 `1080p` 支持 `16:9`、`9:16`、`1:1`、`4:3`、`3:4`、`21:9`、`9:21`；`720p` 不支持 `9:21`。
+三个模型默认分辨率均为 `720p`，时长都只能从 `4`、`5`、`6`、`7`、`8`、`9`、`10`、`11`、`12`、`13`、`14`、`15` 秒中选择。Mini 仅支持 `720p` 和 `16:9`；其他模型的 `480p` 和 `1080p` 支持 `16:9`、`9:16`、`1:1`、`4:3`、`3:4`、`21:9`、`9:21`，`720p` 不支持 `9:21`。Fast 因不支持 `1080p`，不会展示 `1080p` 的画幅选项。
 
 切换模型时，工作台会重置到该模型的默认分辨率、时长和画面比例；切换分辨率后，若原画面比例不再受支持，则回退到 `16:9`。页面提交前会再次校验模型、分辨率、时长和画面比例的组合，并固定本次请求参数，非法组合不会上传图片或创建任务。该矩阵是工作台约束；直接调用公共 API 的客户端仍须自行确保参数符合目标模型和上游账号能力。
 
@@ -180,3 +182,9 @@ LeoStudio 报告任务完成后，Sub2API 会先从结果中的 `source_url`、`
 ### API key quota settlement
 
 When a custom Sub2API API Key has a positive USD quota, a successfully settled Leo video also increments that key's `quota_used` through the shared atomic quota updater. Failed, canceled, or incomplete video jobs do not consume the key quota.
+
+### Seedance 2.0 Mini
+
+`seedance-2.0-mini` is available in the Leo account model presets and the video workbench. LeoStudio supports `4`–`15` seconds, `720p` only, and `16:9` only for this model. Mini requests do not use a Seedance 2.0-specific `parameters.mode` field.
+
+Channel model pricing entries follow the model capability matrix: regular Seedance models require `480p`, `720p`, and `1080p` USD-per-second tiers, while `seedance-2.0-mini` requires a single `720p` USD-per-second tier.

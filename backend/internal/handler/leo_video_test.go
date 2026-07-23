@@ -22,6 +22,7 @@ func TestLeoVideoGenerationValidatesRequestBeforeDependencies(t *testing.T) {
 		{name: "invalid JSON", body: `{"model":`, want: "valid JSON"},
 		{name: "missing model", body: `{"prompt":"waves"}`, want: "model is required"},
 		{name: "missing prompt", body: `{"model":"seedance-2.0"}`, want: "prompt is required"},
+		{name: "mini unsupported resolution", body: `{"model":"seedance-2.0-mini","prompt":"waves","resolution":"1080p"}`, want: "resolution is not supported"},
 	}
 
 	for _, tt := range tests {

@@ -161,7 +161,8 @@ const xaiModels = [
 
 const leoModels = [
   'seedance-2.0',
-  'seedance-2.0-fast'
+  'seedance-2.0-fast',
+  'seedance-2.0-mini'
 ]
 
 // Cohere
@@ -323,7 +324,8 @@ const grokPresetMappings = [
 
 const leoPresetMappings = [
   { label: 'Seedance 2.0', from: 'seedance-2.0', to: 'seedance-2.0', color: 'bg-teal-100 text-teal-700 hover:bg-teal-200 dark:bg-teal-900/30 dark:text-teal-300' },
-  { label: 'Seedance 2.0 Fast', from: 'seedance-2.0-fast', to: 'seedance-2.0-fast', color: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300' }
+  { label: 'Seedance 2.0 Fast', from: 'seedance-2.0-fast', to: 'seedance-2.0-fast', color: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300' },
+  { label: 'Seedance 2.0 Mini', from: 'seedance-2.0-mini', to: 'seedance-2.0-mini', color: 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-300' }
 ]
 
 // Antigravity 预设映射（支持通配符）

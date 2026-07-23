@@ -7,7 +7,7 @@ import (
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
-var LeoDefaultVideoModelIDs = []string{"seedance-2.0", "seedance-2.0-fast"}
+var LeoDefaultVideoModelIDs = []string{"seedance-2.0", "seedance-2.0-fast", "seedance-2.0-mini"}
 
 func (a *Account) IsLeo() bool {
 	return a != nil && a.Platform == PlatformLeo

@@ -78,8 +78,14 @@ export function formIntervalsToAPI(intervals: IntervalFormEntry[]): PricingInter
   }))
 }
 
-export function normalizeVideoIntervals(intervals: IntervalFormEntry[] = []): IntervalFormEntry[] {
-  return VIDEO_PRICING_RESOLUTIONS.map((resolution, index) => {
+export function videoPricingResolutionsForModel(model?: string): readonly string[] {
+  return model?.trim().toLowerCase() === 'seedance-2.0-mini'
+    ? ['720p']
+    : VIDEO_PRICING_RESOLUTIONS
+}
+
+export function normalizeVideoIntervals(intervals: IntervalFormEntry[] = [], model?: string): IntervalFormEntry[] {
+  return videoPricingResolutionsForModel(model).map((resolution, index) => {
     const existing = intervals.find(iv => iv.tier_label.toLowerCase() === resolution)
     return {
       min_tokens: 0,
@@ -109,7 +115,7 @@ export function createPricingFormEntry(
     image_input_price: null,
     image_output_price: null,
     per_request_price: null,
-    intervals: billingMode === 'video' ? normalizeVideoIntervals() : [],
+    intervals: billingMode === 'video' ? normalizeVideoIntervals([], models[0]) : [],
   }
 }
 
@@ -133,7 +139,7 @@ export function validateVideoPricing(entry: PricingFormEntry, t: TranslateFn): s
     return t('admin.channels.form.videoSingleModelRequired')
   }
 
-  const intervals = normalizeVideoIntervals(entry.intervals)
+  const intervals = normalizeVideoIntervals(entry.intervals, entry.models[0])
   const allPricesValid = intervals.every(iv => {
     if (iv.per_request_price == null || iv.per_request_price === '') return false
     const price = Number(iv.per_request_price)

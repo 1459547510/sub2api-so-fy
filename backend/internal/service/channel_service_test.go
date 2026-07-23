@@ -2370,6 +2370,16 @@ func TestValidatePricingBillingMode(t *testing.T) {
 			}},
 		},
 		{
+			name: "video mini 720p tier - valid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0-mini"},
+				Intervals: []PricingInterval{
+					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.06)},
+				},
+			}},
+		},
+		{
 			name: "video multiple models - invalid",
 			pricing: []ChannelModelPricing{{
 				BillingMode: BillingModeVideo,

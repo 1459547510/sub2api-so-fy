@@ -64,4 +64,13 @@ describe('PricingEntryCard video mode', () => {
     expect(updated.billing_mode).toBe('video')
     expect(updated.intervals.map(iv => iv.tier_label)).toEqual(['480p', '720p', '1080p'])
   })
+
+  it('only renders the Mini model 720p price', () => {
+    const wrapper = shallowMount(PricingEntryCard, {
+      props: { entry: createPricingFormEntry(['seedance-2.0-mini'], 'video'), platform: 'leo', allowVideo: true },
+    })
+
+    expect(wrapper.findAll('[data-testid^="video-price-"]')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="video-price-720p"]').exists()).toBe(true)
+  })
 })

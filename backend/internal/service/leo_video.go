@@ -47,6 +47,9 @@ func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
 	if len(imageURLs) > 0 {
 		info.ImageURL = imageURLs[0]
 	}
+	if info.Resolution == "" {
+		info.Resolution = DefaultLeoVideoResolution(info.Model)
+	}
 	if duration := gjson.GetBytes(body, "duration"); duration.Exists() && duration.Type == gjson.Number {
 		info.DurationSeconds = int(duration.Int())
 	}

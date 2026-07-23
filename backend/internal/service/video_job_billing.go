@@ -119,8 +119,14 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 			pricingSource = resolved.Source
 		}
 	}
-	if price480P == nil || price720P == nil || price1080P == nil {
+	if price720P == nil || (len(LeoVideoPricingResolutions(billingModel)) != 1 && (price480P == nil || price1080P == nil)) {
 		return errors.New("video pricing is incomplete")
+	}
+	if price480P == nil {
+		price480P = float64Pointer(0)
+	}
+	if price1080P == nil {
+		price1080P = float64Pointer(0)
 	}
 	snapshot := VideoJobBillingSnapshot{
 		Version: 2, BillingType: BillingTypeBalance,

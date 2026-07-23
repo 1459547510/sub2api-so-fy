@@ -86,17 +86,26 @@ describe('VideoGenerationView', () => {
 
     const resolution = wrapper.get('[data-testid="video-resolution"]')
     expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p'])
-    expect((resolution.element as HTMLSelectElement).value).toBe('480p')
+    expect((resolution.element as HTMLSelectElement).value).toBe('720p')
 
-    await resolution.setValue('720p')
     await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0-fast')
-    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p'])
-    expect((resolution.element as HTMLSelectElement).value).toBe('480p')
+    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p'])
+    expect((resolution.element as HTMLSelectElement).value).toBe('720p')
 
-    await resolution.setValue('1080p')
+    await resolution.setValue('480p')
     await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0')
     expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p'])
-    expect((resolution.element as HTMLSelectElement).value).toBe('480p')
+    expect((resolution.element as HTMLSelectElement).value).toBe('720p')
+  })
+
+  it('limits Seedance Mini to 720p and 16:9', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0-mini')
+
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['720p'])
+    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9'])
   })
 
   it('uses LeoStudio discrete duration options instead of free numeric input', async () => {
@@ -114,6 +123,7 @@ describe('VideoGenerationView', () => {
     await flushPromises()
 
     const aspectRatio = wrapper.get('[data-testid="video-aspect-ratio"]')
+    await wrapper.get('[data-testid="video-resolution"]').setValue('480p')
     await aspectRatio.setValue('9:21')
     await wrapper.get('[data-testid="video-resolution"]').setValue('720p')
 
@@ -154,8 +164,8 @@ describe('VideoGenerationView', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0-fast')
-    await wrapper.get('[data-testid="video-resolution"]').setValue('1080p')
-    await wrapper.get('[data-testid="video-aspect-ratio"]').setValue('9:21')
+    await wrapper.get('[data-testid="video-resolution"]').setValue('720p')
+    await wrapper.get('[data-testid="video-aspect-ratio"]').setValue('21:9')
     await wrapper.get('[data-testid="video-duration"]').setValue('15')
     await wrapper.get('[data-testid="video-audio"]').setValue(true)
     await wrapper.get('[data-testid="video-prompt"]').setValue('A vertical city reveal')
@@ -165,9 +175,9 @@ describe('VideoGenerationView', () => {
     expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', {
       model: 'seedance-2.0-fast',
       prompt: 'A vertical city reveal',
-      resolution: '1080p',
+      resolution: '720p',
       duration: 15,
-      aspect_ratio: '9:21',
+      aspect_ratio: '21:9',
       audio: true,
     })
   })

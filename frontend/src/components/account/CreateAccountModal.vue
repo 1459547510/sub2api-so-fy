@@ -4239,7 +4239,8 @@ watch(
       modelRestrictionMode.value = 'mapping'
       modelMappings.value = [
         { from: 'seedance-2.0', to: 'seedance-2.0' },
-        { from: 'seedance-2.0-fast', to: 'seedance-2.0-fast' }
+        { from: 'seedance-2.0-fast', to: 'seedance-2.0-fast' },
+        { from: 'seedance-2.0-mini', to: 'seedance-2.0-mini' }
       ]
     }
     if (newPlatform !== 'gemini' && newPlatform !== 'anthropic' && accountCategory.value === 'service_account') {

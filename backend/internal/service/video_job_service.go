@@ -228,7 +228,10 @@ func parseVideoJobCreateBody(body []byte) (LeoVideoRequestInfo, error) {
 	info.AspectRatio = strings.TrimSpace(gjson.GetBytes(body, "aspect_ratio").String())
 	info.Audio = gjson.GetBytes(body, "audio").Bool()
 	if info.Resolution == "" {
-		info.Resolution = "480p"
+		info.Resolution = DefaultLeoVideoResolution(info.Model)
+	}
+	if !LeoVideoModelSupportsResolution(info.Model, info.Resolution) {
+		return LeoVideoRequestInfo{}, errors.New("resolution is not supported by the selected video model")
 	}
 	if info.DurationSeconds <= 0 {
 		info.DurationSeconds = NormalizeVideoBillingDurationSecondsOrDefault(0)

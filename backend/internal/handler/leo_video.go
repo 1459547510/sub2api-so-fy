@@ -69,6 +69,10 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "prompt is required")
 		return
 	}
+	if !service.LeoVideoModelSupportsResolution(requestModel, requestInfo.Resolution) {
+		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "resolution is not supported by the selected video model")
+		return
+	}
 	if !service.GroupAllowsImageGeneration(apiKey.Group) {
 		h.errorResponse(c, http.StatusForbidden, "permission_error", service.ImageGenerationPermissionMessage())
 		return

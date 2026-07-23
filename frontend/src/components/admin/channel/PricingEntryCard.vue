@@ -234,7 +234,7 @@
             <span class="ml-1 font-normal text-gray-400">USD / {{ t('admin.channels.form.second') }}</span>
           </label>
           <div class="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div v-for="resolution in VIDEO_PRICING_RESOLUTIONS" :key="resolution">
+            <div v-for="resolution in videoPricingResolutionsForModel(entry.models[0])" :key="resolution">
               <label class="text-xs text-gray-400">{{ resolution }}</label>
               <input
                 :value="getVideoPrice(resolution)"
@@ -262,9 +262,8 @@ import Icon from '@/components/icons/Icon.vue'
 import IntervalRow from './IntervalRow.vue'
 import ModelTagInput from './ModelTagInput.vue'
 import type { PricingFormEntry, IntervalFormEntry } from './types'
-import { perTokenToMTok, getPlatformTagClass, normalizeVideoIntervals } from './types'
+import { perTokenToMTok, getPlatformTagClass, normalizeVideoIntervals, videoPricingResolutionsForModel } from './types'
 import type { BillingMode } from '@/api/admin/channels'
-import { VIDEO_PRICING_RESOLUTIONS } from '@/constants/channel'
 import channelsAPI from '@/api/admin/channels'
 
 const { t } = useI18n()
@@ -305,7 +304,7 @@ function onBillingModeUpdate(mode: BillingMode) {
   emit('update', {
     ...props.entry,
     billing_mode: mode,
-    intervals: mode === 'video' ? normalizeVideoIntervals(props.entry.intervals) : [],
+    intervals: mode === 'video' ? normalizeVideoIntervals(props.entry.intervals, props.entry.models[0]) : [],
   })
 }
 
@@ -314,7 +313,7 @@ function getVideoPrice(resolution: string): number | string | null {
 }
 
 function updateVideoPrice(resolution: string, value: string) {
-  const intervals = normalizeVideoIntervals(props.entry.intervals)
+  const intervals = normalizeVideoIntervals(props.entry.intervals, props.entry.models[0])
   const index = intervals.findIndex(iv => iv.tier_label === resolution)
   intervals[index] = {
     ...intervals[index],
