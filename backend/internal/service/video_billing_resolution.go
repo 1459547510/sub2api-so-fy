@@ -33,13 +33,7 @@ func DefaultLeoVideoResolution(model string) string {
 }
 
 func LeoVideoModelSupportsResolution(model, resolution string) bool {
-	normalized := NormalizeVideoBillingResolutionOrDefault(resolution)
-	for _, supported := range LeoVideoPricingResolutions(model) {
-		if normalized == supported {
-			return true
-		}
-	}
-	return false
+	return leoVideoModelSupportsResolution(model, resolution)
 }
 
 // xAI 视频生成按秒计费，duration 请求参数允许 1-15 秒；未指定时上游默认生成 8 秒。

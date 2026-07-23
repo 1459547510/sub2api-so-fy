@@ -68,6 +68,10 @@ func (s *VideoJobService) Create(ctx context.Context, in CreateVideoJobInput) (*
 		}
 		return nil, err
 	}
+	info, err = ValidateLeoVideoRequestForModel(in.Body, accountMappedModel(account, info.Model))
+	if err != nil {
+		return nil, err
+	}
 	jobID, err := NewVideoJobID()
 	if err != nil {
 		return nil, err
@@ -215,26 +219,9 @@ func parseVideoJobCreateBody(body []byte) (LeoVideoRequestInfo, error) {
 	if !gjson.ValidBytes(body) {
 		return LeoVideoRequestInfo{}, errors.New("request body must be valid JSON")
 	}
-	info, err := ParseLeoVideoRequest(body)
+	info, err := ValidateLeoVideoRequest(body)
 	if err != nil {
 		return LeoVideoRequestInfo{}, err
-	}
-	if info.Model == "" {
-		return LeoVideoRequestInfo{}, errors.New("model is required")
-	}
-	if info.Prompt == "" {
-		return LeoVideoRequestInfo{}, errors.New("prompt is required")
-	}
-	info.AspectRatio = strings.TrimSpace(gjson.GetBytes(body, "aspect_ratio").String())
-	info.Audio = gjson.GetBytes(body, "audio").Bool()
-	if info.Resolution == "" {
-		info.Resolution = DefaultLeoVideoResolution(info.Model)
-	}
-	if !LeoVideoModelSupportsResolution(info.Model, info.Resolution) {
-		return LeoVideoRequestInfo{}, errors.New("resolution is not supported by the selected video model")
-	}
-	if info.DurationSeconds <= 0 {
-		info.DurationSeconds = NormalizeVideoBillingDurationSecondsOrDefault(0)
 	}
 	return info, nil
 }

@@ -79,6 +79,8 @@ func (h *OpenAIGatewayHandler) LeoVideoAsyncGeneration(c *gin.Context) {
 		var upstreamErr *service.LeoAsyncUpstreamError
 		if errors.Is(err, service.ErrVideoInsufficientBalance) {
 			status, code = http.StatusPaymentRequired, "billing_error"
+		} else if validationErr := (*service.LeoVideoValidationError)(nil); errors.As(err, &validationErr) {
+			status, code = http.StatusBadRequest, "invalid_request_error"
 		} else if errors.As(err, &upstreamErr) && (upstreamErr.StatusCode == http.StatusBadRequest || upstreamErr.StatusCode == http.StatusUnprocessableEntity) {
 			status, code = upstreamErr.StatusCode, "invalid_request_error"
 		} else if strings.Contains(err.Error(), "required") || strings.Contains(err.Error(), "valid JSON") {

@@ -73,6 +73,9 @@ func (s *OpenAIGatewayService) CreateLeoAsyncVideo(ctx context.Context, account 
 		return nil, err
 	}
 	upstreamModel, _ := account.ResolveMappedModel(request.Model)
+	if _, err := ValidateLeoVideoRequestForModel(body, upstreamModel); err != nil {
+		return nil, err
+	}
 	body, err = sjson.SetBytes(body, "model", upstreamModel)
 	if err != nil {
 		return nil, fmt.Errorf("rewrite leo video model: %w", err)

@@ -123,6 +123,22 @@ func TestLeoVideoAsyncGenerationReturnsPublic202Mapping(t *testing.T) {
 	require.NotContains(t, recorder.Body.String(), "account_id")
 }
 
+func TestLeoVideoAsyncGenerationRejectsUnsupportedMiniAspect(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(&handlerVideoJobRepo{})}
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", strings.NewReader(`{"model":"seedance-2.0-mini","prompt":"waves","aspect_ratio":"9:16"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set("Prefer", "respond-async")
+	setHandlerVideoAuth(c)
+
+	h.LeoVideoGeneration(c)
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+	require.Contains(t, recorder.Body.String(), "aspect_ratio is not supported")
+}
+
 func TestLeoVideoAsyncGenerationTracksMultipleLocalGuidanceInputs(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &handlerVideoJobRepo{}

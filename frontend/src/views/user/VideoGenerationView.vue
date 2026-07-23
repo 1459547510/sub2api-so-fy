@@ -64,6 +64,7 @@
                 rows="5"
                 class="input min-h-[128px] resize-y"
                 :placeholder="t('video.promptPlaceholder')"
+                :maxlength="currentModelCapability?.maxPromptLength"
                 data-testid="video-prompt"
                 @keydown.meta.enter.prevent="submitJob"
                 @keydown.ctrl.enter.prevent="submitJob"
@@ -325,6 +326,7 @@ interface VideoModelCapability {
   defaultDuration: number
   aspectsByResolution: Partial<Record<VideoResolution, readonly VideoAspectRatio[]>>
   defaultAspectRatio: VideoAspectRatio
+  maxPromptLength: number
 }
 
 const allDurationOptions = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
@@ -342,6 +344,7 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
       '1080p': allAspectRatioOptions,
     },
     defaultAspectRatio: '16:9',
+    maxPromptLength: 5000,
   },
   'seedance-2.0-fast': {
     resolutions: ['480p', '720p'],
@@ -353,6 +356,7 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
       '720p': hdAspectRatioOptions,
     },
     defaultAspectRatio: '16:9',
+    maxPromptLength: 5000,
   },
   'seedance-2.0-mini': {
     resolutions: ['720p'],
@@ -363,6 +367,7 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
       '720p': ['16:9'],
     },
     defaultAspectRatio: '16:9',
+    maxPromptLength: 5000,
   },
 }
 const modelOptions = Object.keys(videoModelCapabilities)

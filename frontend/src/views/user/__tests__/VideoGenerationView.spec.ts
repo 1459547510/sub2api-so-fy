@@ -116,6 +116,7 @@ describe('VideoGenerationView', () => {
     expect(duration.element.tagName).toBe('SELECT')
     expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
     expect((duration.element as HTMLSelectElement).value).toBe('8')
+    expect(wrapper.get('[data-testid="video-prompt"]').attributes('maxlength')).toBe('5000')
   })
 
   it('removes unsupported aspect ratios and falls back when resolution changes', async () => {

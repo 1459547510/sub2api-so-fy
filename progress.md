@@ -2971,3 +2971,40 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: retained Mini workbench regression coverage.
 - `progress.md`: recorded this verification and push scope.
 - Rollback point before the push commit: `45b0e1813`; revert the new commit after it is created, or restore the listed files from that commit.
+
+## 2026-07-23 - Task: Align current Seedance video parameters with LeoStudio
+
+### What was done
+- Synchronized the Sub2 request constraints for `seedance-2.0`, `seedance-2.0-fast`, and `seedance-2.0-mini` with LeoStudio commit `2fd5c21b01a049817962812cf4675ade7727cc12`; Happy Horse and Grok were intentionally not added.
+- Added shared synchronous and asynchronous validation for model-specific resolutions, resolution-specific aspect ratios, whole-second durations from 4 through 15, the 8-second default, the 5000-character prompt limit, and Seedance guidance counts.
+- Kept Mini fixed to `720p` and `16:9`, kept Fast limited to `480p` and `720p`, and validated requests again after account model mapping so aliases cannot bypass the effective upstream model constraints.
+- Updated the workbench prompt limit and the user-facing API documentation without changing the existing channel pricing structure.
+
+### Testing
+- From `backend/`, targeted Seedance validation, handler, async handler, billing-resolution, and video-job tests passed for both `internal/service` and `internal/handler`.
+- From `backend/`, `go test ./internal/service ./internal/handler` passed.
+- From `frontend/`, the two video view suites passed: 2 files and 23 tests.
+- From `frontend/`, `vue-tsc --noEmit` and targeted ESLint checks passed.
+- From `frontend/`, the production Vue/Vite build passed; only existing Browserslist, dynamic-import, and chunk-size warnings were reported.
+- `gofmt` and `git diff --check` passed. No paid video generation or production deployment was performed.
+
+### Notes
+- `.gitignore`: allowed the new Leo video specification document to be tracked while retaining the existing `docs/*` policy.
+- `backend/internal/handler/leo_video.go`: applies shared validation to synchronous requests and returns mapped-model validation failures as HTTP 400.
+- `backend/internal/handler/leo_video_async.go`: classifies local specification failures as HTTP 400 for asynchronous requests.
+- `backend/internal/handler/leo_video_test.go`: covers Fast resolution, Mini resolution/aspect, and duration rejection at the synchronous entry point.
+- `backend/internal/handler/leo_video_async_test.go`: verifies the asynchronous endpoint rejects a non-16:9 Mini request.
+- `backend/internal/service/leo_video.go`: validates the request against the account-mapped synchronous upstream model before forwarding.
+- `backend/internal/service/leo_video_async.go`: validates the request against the account-mapped asynchronous upstream model before forwarding.
+- `backend/internal/service/leo_video_model_specs.go`: defines the three Seedance capability matrices and shared request validation.
+- `backend/internal/service/leo_video_model_specs_test.go`: covers defaults, valid combinations, rejected combinations, prompt/guidance limits, and mapped-model validation.
+- `backend/internal/service/video_billing_resolution.go`: uses strict model capabilities instead of treating unknown resolutions as 480p during request validation.
+- `backend/internal/service/video_billing_resolution_test.go`: covers Fast, Mini, and unknown-resolution behavior.
+- `backend/internal/service/video_job_service.go`: validates async jobs before billing and persists normalized duration, resolution, and aspect values.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records the supported Sub2 Seedance matrix and LeoStudio alignment point.
+- `frontend/src/i18n/locales/en/dashboard.ts`: documents the English 5000-character prompt limit.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: documents the Chinese 5000-character prompt limit.
+- `frontend/src/views/user/VideoGenerationView.vue`: applies the model prompt limit while retaining the synchronized resolution, duration, and aspect options.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verifies the prompt limit in addition to the existing Mini `720p` and `16:9` UI constraint.
+- `progress.md`: records this implementation and its verification evidence.
+- Rollback point: `c0e60c7b3bd90f1289f49f4f46f87a57b0849ed8`. Before committing, restore the tracked files listed above from that revision and remove `backend/internal/service/leo_video_model_specs.go`, `backend/internal/service/leo_video_model_specs_test.go`, and `docs/LEO_VIDEO_MODEL_SPECS.md`; remove only this final progress entry.

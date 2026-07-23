@@ -55,9 +55,13 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Content-Type must be application/json")
 		return
 	}
-	requestInfo, err := service.ParseLeoVideoRequest(body)
+	requestInfo, err := service.ValidateLeoVideoRequest(body)
 	if err != nil {
-		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Request body must be valid JSON")
+		message := err.Error()
+		if !json.Valid(body) {
+			message = "Request body must be valid JSON"
+		}
+		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", message)
 		return
 	}
 	requestModel := strings.TrimSpace(requestInfo.Model)
@@ -67,10 +71,6 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 	}
 	if strings.TrimSpace(requestInfo.Prompt) == "" {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "prompt is required")
-		return
-	}
-	if !service.LeoVideoModelSupportsResolution(requestModel, requestInfo.Resolution) {
-		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "resolution is not supported by the selected video model")
 		return
 	}
 	if !service.GroupAllowsImageGeneration(apiKey.Group) {
@@ -206,6 +206,11 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 		service.SetOpsLatencyMs(c, service.OpsResponseLatencyMsKey, responseLatencyMs)
 
 		if err != nil {
+			var validationErr *service.LeoVideoValidationError
+			if errors.As(err, &validationErr) {
+				h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", validationErr.Error())
+				return
+			}
 			var failoverErr *service.UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
 				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
