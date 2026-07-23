@@ -275,7 +275,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	coordinator := securityaudit.NewCoordinator(legacyEngine, promptService)
 	gatewayHandler := handler.ProvideGatewayHandler(gatewayService, openAIGatewayService, geminiMessagesCompatService, antigravityGatewayService, userService, concurrencyService, billingCacheService, usageService, apiKeyService, usageRecordWorkerPool, errorPassthroughService, contentModerationService, userMessageQueueService, configConfig, settingService, coordinator)
 	videoJobRepository := repository.NewVideoJobRepository(client)
-	videoJobBillingService := service.ProvideVideoJobBillingService(usageBillingRepository, openAIGatewayService, modelPricingResolver, apiKeyRepository, userRepository, accountRepository, userSubscriptionRepository)
+	videoJobBillingService := service.ProvideVideoJobBillingService(usageBillingRepository, openAIGatewayService, modelPricingResolver, apiKeyService, apiKeyRepository, userRepository, accountRepository, userSubscriptionRepository)
 	videoInputStore := service.ProvideVideoInputStore(configConfig)
 	videoJobService := service.ProvideVideoJobService(videoJobRepository, openAIGatewayService, openAIGatewayService, videoJobBillingService, videoInputStore)
 	videoInputHandler := handler.ProvideVideoInputHandler(videoInputStore)

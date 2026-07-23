@@ -83,6 +83,7 @@ type VideoJobBillingSubscriptionLoader interface {
 type VideoJobBillingService struct {
 	BillingRepo   UsageBillingRepository
 	UsageRecorder VideoJobBillingUsageRecorder
+	APIKeyService APIKeyQuotaUpdater
 	Gateway       *OpenAIGatewayService
 	Pricing       *ModelPricingResolver
 	APIKeys       VideoJobBillingAPIKeyLoader
@@ -194,6 +195,7 @@ func (s *VideoJobBillingService) SettleCompleted(ctx context.Context, job *Video
 		Result: usageResult, APIKey: apiKey, User: user, Account: account, Subscription: subscription,
 		InboundEndpoint: "/v1/videos/generations", UpstreamEndpoint: "/v1/videos/generations",
 		RequestPayloadHash: job.RequestHash, QuotaPlatform: PlatformLeo, CostOverride: cost,
+		APIKeyService:      s.APIKeyService,
 		ChannelUsageFields: videoJobSnapshotChannelUsageFields(snapshot, job),
 	}); err != nil {
 		return err

@@ -90,6 +90,7 @@ func ProvideVideoJobBillingService(
 	usageRepo UsageBillingRepository,
 	openAIGateway *OpenAIGatewayService,
 	pricing *ModelPricingResolver,
+	apiKeyService *APIKeyService,
 	apiKeyRepo APIKeyRepository,
 	userRepo UserRepository,
 	accountRepo AccountRepository,
@@ -97,7 +98,8 @@ func ProvideVideoJobBillingService(
 ) *VideoJobBillingService {
 	return &VideoJobBillingService{
 		BillingRepo: usageRepo, UsageRecorder: openAIGateway, Gateway: openAIGateway, Pricing: pricing,
-		APIKeys: apiKeyRepo, Users: userRepo, Accounts: accountRepo, Subscriptions: userSubRepo,
+		APIKeyService: apiKeyService,
+		APIKeys:       apiKeyRepo, Users: userRepo, Accounts: accountRepo, Subscriptions: userSubRepo,
 	}
 }
 

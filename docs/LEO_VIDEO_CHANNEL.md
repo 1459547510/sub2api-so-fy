@@ -163,3 +163,7 @@ LeoStudio 报告任务完成后，Sub2API 会先从结果中的 `source_url`、`
 ## 运维边界
 
 当前实现对应 LeoStudio 上游提交 `7af385af0fd8996dab1853c8ec965d4c1179bb08` 的 guidance 与异步协议：`POST /v1/videos/generations`、`GET /v1/videos/jobs/:id` 和 `DELETE /v1/videos/jobs/:id`。Sub2API 将完成视频保存到本地数据目录并提供 API Key 鉴权读取；不提供 Webhook、SSE、WebSocket、编辑、扩展或任务删除功能。
+
+### API key quota settlement
+
+When a custom Sub2API API Key has a positive USD quota, a successfully settled Leo video also increments that key's `quota_used` through the shared atomic quota updater. Failed, canceled, or incomplete video jobs do not consume the key quota.

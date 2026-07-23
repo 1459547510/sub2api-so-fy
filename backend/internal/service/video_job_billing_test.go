@@ -33,6 +33,16 @@ func (r *fakeVideoUsageRecorder) RecordUsage(_ context.Context, input *OpenAIRec
 	return nil
 }
 
+type fakeVideoAPIKeyQuotaUpdater struct{}
+
+func (fakeVideoAPIKeyQuotaUpdater) UpdateQuotaUsed(context.Context, int64, float64) error {
+	return nil
+}
+
+func (fakeVideoAPIKeyQuotaUpdater) UpdateRateLimitUsage(context.Context, int64, float64) error {
+	return nil
+}
+
 type fakeVideoBillingAPIKeyLoader struct{ apiKey *APIKey }
 
 func (l fakeVideoBillingAPIKeyLoader) GetByID(context.Context, int64) (*APIKey, error) {
@@ -182,6 +192,7 @@ func TestVideoJobBillingPreparePreservesExplicitZeroChannelPrice(t *testing.T) {
 func TestVideoJobSettlementIsIdempotent(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	recorder := &fakeVideoUsageRecorder{}
+	quotaUpdater := &fakeVideoAPIKeyQuotaUpdater{}
 	snapshot, err := json.Marshal(VideoJobBillingSnapshot{
 		BillingType: BillingTypeBalance, Price480P: 0.05, Price720P: 0.1, Price1080P: 0.2, RateMultiplier: 1.5,
 	})
@@ -193,6 +204,7 @@ func TestVideoJobSettlementIsIdempotent(t *testing.T) {
 	}
 	service := &VideoJobBillingService{
 		BillingRepo: balance, UsageRecorder: recorder,
+		APIKeyService: quotaUpdater,
 		APIKeys:       fakeVideoBillingAPIKeyLoader{apiKey: &APIKey{ID: 2}},
 		Users:         fakeVideoBillingUserLoader{user: &User{ID: 1}},
 		Accounts:      fakeVideoBillingAccountLoader{account: &Account{ID: 9, Type: AccountTypeAPIKey}},
@@ -207,6 +219,7 @@ func TestVideoJobSettlementIsIdempotent(t *testing.T) {
 	require.NotNil(t, recorder.inputs[0].CostOverride)
 	require.InDelta(t, 1.8, recorder.inputs[0].CostOverride.ActualCost, 1e-12)
 	require.Equal(t, "video_usage:"+job.JobID, recorder.inputs[0].Result.RequestID)
+	require.Same(t, quotaUpdater, recorder.inputs[0].APIKeyService)
 	require.Len(t, balance.releases, 1)
 	require.Equal(t, VideoReleaseRequestID(job.JobID), balance.releases[0].RequestID)
 	require.NotNil(t, job.SettledAt)

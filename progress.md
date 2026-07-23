@@ -2578,3 +2578,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the release version, final validation evidence, scope, and rollback point.
 - The release contains only the eight files listed in this and the preceding implementation record; `.superpowers/` and `.codex-run/` remain excluded.
 - Release rollback point: redeploy tag `v0.1.162-fy.4`; source rollback after publication is `git revert v0.1.162-fy.5`.
+## 2026-07-23 - Task: Fix video production API key quota settlement
+
+### What was done
+- Fixed the asynchronous Leo video settlement path so a successfully completed video forwards the configured API key quota updater into the shared billing recorder.
+- Preserved the existing settlement rules: quota and rate-limit usage update only after a valid completed output is billed; failed, canceled, or incomplete jobs do not consume the key quota.
+- Regenerated the Wire server injector and documented the API key quota behavior for the Leo video channel.
+
+### Testing
+- `backend: go test ./internal/service -count=1`: passed.
+- `backend: go test ./internal/handler -run 'TestLeoVideo|Test.*Video' -count=1`: passed.
+- `backend: go test ./internal/repository -run 'TestVideoJob|Test.*UsageBilling' -count=1`: passed.
+- `backend: go test ./cmd/server -run '^$' -count=1`: passed.
+- `backend: go generate ./cmd/server`: passed; Wire regenerated `backend/cmd/server/wire_gen.go`.
+- `backend: go build -tags embed -trimpath -o ..\\.codex-run\\sub2api-video-quota-fix.exe ./cmd/server`: passed.
+- `git diff --check`: passed; Git reported only the existing LF-to-CRLF checkout notice for `docs/LEO_VIDEO_CHANNEL.md`.
+
+### Notes
+- `backend/internal/service/video_job_billing.go`: carries `APIKeyQuotaUpdater` into completed-video usage recording.
+- `backend/internal/service/wire.go`: injects the application `APIKeyService` into video billing.
+- `backend/cmd/server/wire_gen.go`: regenerated provider call with the API key service dependency.
+- `backend/internal/service/video_job_billing_test.go`: verifies video settlement forwards the quota updater while remaining idempotent.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents successful video settlement updating a custom API key's `quota_used`.
+- `progress.md`: records this implementation and verification evidence.
+- Source rollback: from the repository root, run `git restore --worktree -- backend/cmd/server/wire_gen.go backend/internal/service/video_job_billing.go backend/internal/service/video_job_billing_test.go backend/internal/service/wire.go docs/LEO_VIDEO_CHANNEL.md progress.md`.
+- No production deployment, database migration, pricing change, authentication change, or paid video-generation action was performed.
