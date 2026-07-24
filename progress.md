@@ -3036,6 +3036,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this implementation, verification evidence, file list, and rollback point.
 - Rollback point: `52468162b71774e2066874e982b24948f12520e6`. Run `git restore --source=52468162b71774e2066874e982b24948f12520e6 -- backend/internal/handler/leo_video_test.go backend/internal/service/leo_video_model_specs.go backend/internal/service/leo_video_model_specs_test.go docs/LEO_VIDEO_MODEL_SPECS.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md` to revert this task; the unrelated `.superpowers/` directory remains untouched.
 
+## 2026-07-24 - Task: Fix frontend security scan PostCSS advisory
+### What was done
+- Upgraded the frontend `postcss` dependency from `8.5.6` to the patched `8.5.22` release and synchronized the pnpm lockfile.
+- Kept the existing `xlsx` exceptions unchanged because they remain scoped, documented, and unexpired; no new audit suppression was added.
+- This is a security-fix commit only; no new Release tag was created in this task.
+
+### Testing
+- `pnpm audit --prod --audit-level=high --json` still reports the documented `xlsx` advisories, and `tools/check_pnpm_audit_exceptions.py` passed with exit code 0.
+- From `frontend/`, frozen installation with pnpm 9 passed.
+- From `frontend/`, the full test suite passed.
+- From `frontend/`, typecheck, lint, and production build passed.
+- `git diff --check` passed. No production deployment was performed.
+
+### Notes
+- `frontend/package.json`: raises the direct PostCSS devDependency to the patched range.
+- `frontend/pnpm-lock.yaml`: locks PostCSS 8.5.22 and its required transitive `nanoid` update.
+- `progress.md`: records the security scan diagnosis, remediation, and verification evidence.
+- Rollback point before this security-fix commit: `38adf812d`; restore the three listed files from that revision or revert the new commit after it is created.
+
 ## 2026-07-24 - Task: Release Seedance 2.0 1080p duration cap as v0.1.163-fy.5
 ### What was done
 - Revalidated and prepared the current 1080p duration-limit changes for `v0.1.163-fy.5`.
