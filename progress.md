@@ -3224,3 +3224,20 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/CONTENT_MODERATION.md`: documents the administrator bypass and its trusted identity boundary.
 - `progress.md`: records the production recovery, implementation, verification evidence, file list, and rollback point.
 - Rollback point before this task: `a9351087d`. Revert the task commit or restore the four source/documentation files from that revision and remove `docs/CONTENT_MODERATION.md`; leave the unrelated `.superpowers/` directory untouched. Production code rollback is `v0.1.164-fy.2`.
+
+## 2026-07-24 - Task: Deploy the administrator content-audit bypass to production
+### What was done
+- Published release `v0.1.164-fy.3` from commit `9e25f5308` and installed it on `api.fflink.top` through the built-in checksum-verifying updater.
+- Restarted the production service after installation and kept the existing database schema and risk-control configuration unchanged.
+- Preserved the user's concurrent, unstaged gateway and moderation edits outside both the release commit and tag.
+
+### Testing
+- The exact release commit passed `go test ./... -count=1` from an isolated clean Git worktree; the main working tree's concurrent edits were not part of this verification or release.
+- GitHub published both `checksums.txt` and the 35,323,253-byte Linux amd64 archive; the production updater reported a completed update, which requires its internal SHA256 verification to pass before binary replacement.
+- After restart, public `GET /health` returned HTTP `200` and the admin version endpoint returned `0.1.164-fy.3`.
+- Production user ID `1` read back as role `admin` and status `active`. Content moderation remained enabled in `pre_block` mode with automatic banning enabled for configured non-admin traffic.
+
+### Notes
+- `progress.md`: records release publication, deployment, production verification, and rollback instructions.
+- No migration, database write, moderation configuration update, user-role change, or ordinary-user audit exemption was included in the deployment.
+- Production rollback: call `POST /api/v1/admin/system/rollback` with `{"version":"0.1.164-fy.2"}`, then call `POST /api/v1/admin/system/restart`; source rollback is tag `v0.1.164-fy.2`.
