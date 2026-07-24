@@ -110,6 +110,7 @@ func TestRecordCyberPolicyEvent_WritesLogWhenEnabled(t *testing.T) {
 		UserEmail:       "u@x.com",
 		Model:           "gpt-5",
 		Endpoint:        "/v1/responses",
+		InputExcerpt:    "inspect this request token=abc123456789xyz " + strings.Repeat("safe ", 1000),
 		UpstreamMessage: "flagged",
 		UpstreamBody:    `{"error":{"code":"cyber_policy"}}`,
 		UpstreamStatus:  400,
@@ -145,6 +146,9 @@ func TestRecordCyberPolicyEvent_WritesLogWhenEnabled(t *testing.T) {
 
 	// endpoint
 	require.Equal(t, "/v1/responses", log.Endpoint)
+	require.Contains(t, log.InputExcerpt, "inspect this request")
+	require.NotContains(t, log.InputExcerpt, "abc123456789xyz")
+	require.LessOrEqual(t, len([]rune(log.InputExcerpt)), maxCyberPolicyInputExcerptRunes)
 
 	// violation count >= 1 (side-effects ran)
 	require.GreaterOrEqual(t, log.ViolationCount, 1)

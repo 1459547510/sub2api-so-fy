@@ -62,6 +62,7 @@ const (
 	maxContentModerationTimeoutMS     = 30000
 	maxModerationInputRunes           = 12000
 	maxModerationExcerptRunes         = 240
+	maxCyberPolicyInputExcerptRunes   = 4000
 
 	defaultContentModerationWorkerCount          = 4
 	maxContentModerationWorkerCount              = 32
@@ -2871,6 +2872,7 @@ type CyberPolicyRecordInput struct {
 	GroupName       string
 	Endpoint        string
 	Model           string
+	InputExcerpt    string
 	UpstreamMessage string
 	UpstreamBody    string
 	UpstreamStatus  int
@@ -2925,6 +2927,7 @@ func (s *ContentModerationService) RecordCyberPolicyEvent(ctx context.Context, i
 		Flagged:         true,
 		HighestCategory: "cyber_policy",
 		HighestScore:    1.0,
+		InputExcerpt:    trimRunes(redactContentModerationSecrets(in.InputExcerpt), maxCyberPolicyInputExcerptRunes),
 		Error:           trimRunes(redactContentModerationSecrets(errBody), maxModerationExcerptRunes*4),
 		CreatedAt:       time.Now(),
 	}

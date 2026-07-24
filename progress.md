@@ -3241,3 +3241,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records release publication, deployment, production verification, and rollback instructions.
 - No migration, database write, moderation configuration update, user-role change, or ordinary-user audit exemption was included in the deployment.
 - Production rollback: call `POST /api/v1/admin/system/rollback` with `{"version":"0.1.164-fy.2"}`, then call `POST /api/v1/admin/system/restart`; source rollback is tag `v0.1.164-fy.2`.
+
+## 2026-07-24 - Task: Retain cyber-policy request excerpts
+
+### What was done
+- Added current-turn input retention for new upstream `cyber_policy` hits on OpenAI Responses, Chat Completions, Anthropic-compatible Messages, and Responses WebSocket requests.
+- Reused the existing moderation log `input_excerpt` field so the retained text is visible in Risk Control and available to the existing cyber-policy revocation audit record without a database migration or frontend change.
+- Limited retained text to 4,000 Unicode characters, applied the existing credential redaction, and omitted image/base64 content by storing extracted text instead of the raw request body. Historical empty excerpts remain unchanged.
+
+### Testing
+- From `backend/`, `go test ./internal/service -run "TestRecordCyberPolicyEvent_WritesLogWhenEnabled" -count=1 -v` passed, covering persistence, secret redaction, and the 4,000-character limit.
+- From `backend/`, `go test ./internal/handler -run "Test(CyberPolicyInputExcerptIfMarked|RecordCyberPolicyIfMarked|ClearCyberPolicyTurnState)" -count=1 -v` passed, covering mark-gated extraction, current input selection, image omission, idempotency, and WebSocket turn reset behavior.
+- From `backend/`, `go test ./... -count=1` passed.
+- `gofmt` was applied to the changed Go files and `git diff --check` passed before this log append.
+
+### Notes
+- `backend/internal/handler/openai_chat_completions.go`: passes the marked Chat Completions input excerpt into cyber-policy recording.
+- `backend/internal/handler/openai_gateway_handler.go`: passes Responses and Messages excerpts and tracks the current WebSocket turn excerpt without retaining the raw request body.
+- `backend/internal/handler/openai_gateway_cyber_test.go`: verifies extraction only after a cyber mark and excludes image payloads.
+- `backend/internal/service/content_moderation.go`: persists the redacted, length-limited cyber-policy input excerpt.
+- `backend/internal/service/content_moderation_cyber_test.go`: verifies excerpt persistence, credential redaction, and length limiting.
+- `docs/CYBER_POLICY_REVOCATION_BAN.md`: documents new-hit retention, visibility, redaction, limits, and the historical-data boundary.
+- `progress.md`: records the implementation, verification evidence, changed files, and rollback point.
+- Rollback point: no commit was created. Run `git restore --source=HEAD -- backend/internal/handler/openai_chat_completions.go backend/internal/handler/openai_gateway_cyber_test.go backend/internal/handler/openai_gateway_handler.go backend/internal/service/content_moderation.go backend/internal/service/content_moderation_cyber_test.go docs/CYBER_POLICY_REVOCATION_BAN.md progress.md` to remove only this uncommitted task; leave `.superpowers/` untouched.
