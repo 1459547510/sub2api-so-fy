@@ -3080,3 +3080,23 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers the 1080p duration selector and client-side guard.
 - `progress.md`: records this release preparation and verification evidence.
 - Rollback point before the release commit: `52468162b71774e2066874e982b24948f12520e6`; revert the release commit after it is created, or restore the nine listed files from that revision.
+
+## 2026-07-24 - Task: Merge upstream v0.1.164 and prepare fork release
+
+### What was done
+- Fetched `Wei-Shaw/sub2api` `upstream/main` at `cb24522dd` (`v0.1.164`) and merged it into the fork branch with a no-fast-forward merge.
+- Preserved the local Leo video platform and token-incentive changes while integrating upstream Composite groups, Ollama Cloud usage, payment, routing, and migration changes.
+- Resolved platform, generated Ent/Wire, gateway route, admin group, frontend type, icon, color, locale, and group view conflicts by retaining both platform implementations.
+- Updated the scheduler composite-platform test expectation to include the existing local Leo scheduler bucket.
+
+### Testing
+- From `backend/`, `go test ./...` passed with exit code 0.
+- From `frontend/`, `pnpm exec vitest run`, `pnpm typecheck`, and `pnpm run build` passed with exit code 0.
+- `gofmt` and `git diff --cached --check` passed; no unresolved merge files or conflict markers remain.
+
+### Notes
+- `backend/cmd/server/wire_gen.go`, `backend/ent/client.go`, `backend/internal/domain/constants.go`, `backend/internal/handler/admin/group_handler.go`, `backend/internal/server/routes/gateway.go`, `backend/internal/server/routes/gateway_test.go`, `backend/internal/service/admin_group.go`, `backend/internal/service/domain_constants.go`, and `backend/internal/service/composite_platform_test.go`: resolve upstream Composite and local Leo integration points.
+- `frontend/src/components/common/GroupBadge.vue`, `frontend/src/components/common/PlatformIcon.vue`, `frontend/src/i18n/locales/en/admin/overview.ts`, `frontend/src/i18n/locales/zh/admin/overview.ts`, `frontend/src/types/index.ts`, `frontend/src/utils/platformColors.ts`, and `frontend/src/views/admin/GroupsView.vue`: retain both platform options in the frontend.
+- All other changed files are the upstream `main` synchronization set; the complete file list is recorded by the merge commit.
+- `.superpowers/` remains untracked and is excluded from the merge.
+- Rollback point before this merge: `79c37efaac634cbb73db825d3f4b72ac7e505927`; before commit use `git merge --abort`, or after the merge commit use `git revert -m 1 <merge_commit>`.
