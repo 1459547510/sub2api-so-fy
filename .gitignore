@@ -141,6 +141,7 @@ docs/*
 !docs/GROK_XAI_SUPPORT.md
 !docs/ASYNC_IMAGE_TASKS.md
 !docs/LEO_VIDEO_MODEL_SPECS.md
+!docs/CYBER_POLICY_REVOCATION_BAN.md
 !docs/legal/
 !docs/legal/*.md
 .serena/

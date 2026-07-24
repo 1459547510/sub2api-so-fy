@@ -24,6 +24,9 @@ describe('Prompt Audit integration surface', () => {
     expect(group).toContain('expandOnly: true')
     expect(group).toContain("path: '/admin/risk-control'")
     expect(group).toContain("path: '/admin/prompt-audit'")
+    expect(group).toContain("path: '/admin/audit-logs'")
+    expect(zh.admin.audit.actions.cyberPolicyRevocationBan).toBeTruthy()
+    expect(en.admin.audit.actions.cyberPolicyRevocationBan).toBeTruthy()
   })
 
   it('keeps Prompt Audit locale trees symmetric and all operational controls named', () => {

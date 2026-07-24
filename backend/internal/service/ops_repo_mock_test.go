@@ -9,10 +9,18 @@ import (
 type opsRepoMock struct {
 	InsertErrorLogFn              func(ctx context.Context, input *OpsInsertErrorLogInput) (int64, error)
 	BatchInsertErrorLogsFn        func(ctx context.Context, inputs []*OpsInsertErrorLogInput) (int64, error)
+	FindCyberPolicyBanCandidateFn func(ctx context.Context, accountID int64, since, until time.Time) (*CyberPolicyBanCandidate, error)
 	BatchInsertSystemLogsFn       func(ctx context.Context, inputs []*OpsInsertSystemLogInput) (int64, error)
 	ListSystemLogsFn              func(ctx context.Context, filter *OpsSystemLogFilter) (*OpsSystemLogList, error)
 	DeleteSystemLogsFn            func(ctx context.Context, filter *OpsSystemLogCleanupFilter) (int64, error)
 	InsertSystemLogCleanupAuditFn func(ctx context.Context, input *OpsSystemLogCleanupAudit) error
+}
+
+func (m *opsRepoMock) FindCyberPolicyBanCandidate(ctx context.Context, accountID int64, since, until time.Time) (*CyberPolicyBanCandidate, error) {
+	if m.FindCyberPolicyBanCandidateFn != nil {
+		return m.FindCyberPolicyBanCandidateFn(ctx, accountID, since, until)
+	}
+	return nil, nil
 }
 
 func (m *opsRepoMock) InsertErrorLog(ctx context.Context, input *OpsInsertErrorLogInput) (int64, error) {

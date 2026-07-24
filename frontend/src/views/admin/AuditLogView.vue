@@ -103,6 +103,9 @@
           <template #cell-action="{ row }">
             <div class="min-w-0 max-w-xs">
               <div class="truncate font-mono text-sm text-gray-800 dark:text-gray-200" :title="row.action">
+                {{ actionLabel(row.action) }}
+              </div>
+              <div v-if="actionLabel(row.action) !== row.action" class="mt-0.5 truncate font-mono text-[11px] text-gray-400" :title="row.action">
                 {{ row.action }}
               </div>
               <div class="mt-0.5 truncate font-mono text-xs text-gray-400" :title="`${row.method} ${row.path}`">
@@ -182,9 +185,10 @@
               <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClass(detail.status_code)"></span>
               {{ detail.status_code }} {{ statusText(detail.status_code) }}
             </span>
-            <span class="break-all font-mono text-base font-semibold text-gray-900 dark:text-white">
-              {{ detail.action }}
-            </span>
+            <div>
+              <div class="break-all text-base font-semibold text-gray-900 dark:text-white">{{ actionLabel(detail.action) }}</div>
+              <div v-if="actionLabel(detail.action) !== detail.action" class="mt-0.5 break-all font-mono text-xs text-gray-400">{{ detail.action }}</div>
+            </div>
           </div>
 
           <div class="mt-3 flex items-center gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200 dark:bg-dark-800 dark:ring-dark-600">
@@ -249,6 +253,46 @@
           <div class="break-all rounded-xl bg-gray-50 p-3 font-mono text-xs leading-relaxed text-gray-600 dark:bg-dark-900 dark:text-gray-400">
             {{ detail.user_agent || '—' }}
           </div>
+        </section>
+
+        <section v-if="isCyberPolicyRevocationAudit(detail)">
+          <h4 class="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">
+            {{ t('admin.audit.ruleEvent.title') }}
+          </h4>
+          <dl class="grid grid-cols-1 gap-x-6 gap-y-3 border-y border-gray-100 py-4 text-sm dark:border-dark-700 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <dt class="text-xs text-gray-400">{{ t('admin.audit.ruleEvent.account') }}</dt>
+              <dd class="mt-1 font-mono text-gray-800 dark:text-gray-200">{{ auditExtraText(detail, 'revoked_account_id') }} / {{ auditExtraText(detail, 'credential_account_id') }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400">{{ t('admin.audit.ruleEvent.user') }}</dt>
+              <dd class="mt-1 break-all text-gray-800 dark:text-gray-200">{{ detail.actor_email || '-' }} / UID {{ auditExtraText(detail, 'disabled_user_id') }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400">{{ t('admin.audit.ruleEvent.hitCount') }}</dt>
+              <dd class="mt-1 font-mono text-gray-800 dark:text-gray-200">{{ auditExtraText(detail, 'hit_count') }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400">{{ t('admin.audit.ruleEvent.planType') }}</dt>
+              <dd class="mt-1 font-mono text-gray-800 dark:text-gray-200">{{ auditExtraText(detail, 'account_plan_type') }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400">{{ t('admin.audit.ruleEvent.triggerRequest') }}</dt>
+              <dd class="mt-1 break-all font-mono text-gray-800 dark:text-gray-200">{{ auditExtraText(detail, 'trigger_request_id') }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400">{{ t('admin.audit.ruleEvent.revocationRequest') }}</dt>
+              <dd class="mt-1 break-all font-mono text-gray-800 dark:text-gray-200">{{ auditExtraText(detail, 'revocation_request_id') }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400">{{ t('admin.audit.ruleEvent.modelPath') }}</dt>
+              <dd class="mt-1 break-all font-mono text-gray-800 dark:text-gray-200">{{ auditExtraText(detail, 'trigger_model') }} / {{ auditExtraText(detail, 'trigger_request_path') }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400">{{ t('admin.audit.ruleEvent.outcome') }}</dt>
+              <dd class="mt-1 font-mono text-gray-800 dark:text-gray-200">{{ auditExtraText(detail, 'outcome') }}</dd>
+            </div>
+          </dl>
         </section>
 
         <!-- Request body (redacted) -->
@@ -475,6 +519,7 @@ const columns = computed<Column[]>(() => [
 
 const methodOptions = computed(() => [
   { value: '', label: t('admin.audit.filters.all') },
+  { value: 'SYSTEM', label: 'SYSTEM' },
   { value: 'POST', label: 'POST' },
   { value: 'PUT', label: 'PUT' },
   { value: 'PATCH', label: 'PATCH' },
@@ -484,6 +529,7 @@ const methodOptions = computed(() => [
 
 const authMethodOptions = computed(() => [
   { value: '', label: t('admin.audit.filters.all') },
+  { value: 'api_key', label: 'API Key' },
   { value: 'jwt', label: 'JWT' },
   { value: 'admin_api_key', label: 'Admin API Key' }
 ])
@@ -497,6 +543,23 @@ const resultOptions = computed(() => [
 function authMethodLabel(method: string): string {
   const found = authMethodOptions.value.find((o) => o.value === method)
   return found && found.value ? found.label : method
+}
+
+function actionLabel(action: string): string {
+  if (action === 'security.cyber_policy_revocation_ban') {
+    return t('admin.audit.actions.cyberPolicyRevocationBan')
+  }
+  return action
+}
+
+function isCyberPolicyRevocationAudit(log: AuditLog | null): boolean {
+  return log?.action === 'security.cyber_policy_revocation_ban'
+}
+
+function auditExtraText(log: AuditLog, key: string): string {
+  const value = log.extra?.[key]
+  if (value === null || value === undefined || value === '') return '-'
+  return String(value)
 }
 
 function toRFC3339(local: string): string | undefined {

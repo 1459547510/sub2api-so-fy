@@ -62,6 +62,7 @@ type OpsService struct {
 	ingressRejectAggregator     *OpsIngressRejectAggregator
 	authCacheInvalidationWorker *AuthCacheInvalidationWorker
 	apiKeyService               *APIKeyService
+	auditLogService             *AuditLogService
 
 	// cleanupReloader 由 wire 在 OpsCleanupService 构造完成后通过 SetCleanupReloader 注入。
 	// 解耦避免 OpsService -> OpsCleanupService 的硬依赖（cleanup 也读 settings，会循环）。
@@ -108,6 +109,13 @@ func (s *OpsService) SetOpenAIQuotaAutoPauseSettingsSink(sink func(OpsOpenAIAcco
 		return
 	}
 	s.quotaAutoPauseSink = sink
+}
+
+func (s *OpsService) SetAuditLogService(auditLogService *AuditLogService) {
+	if s == nil {
+		return
+	}
+	s.auditLogService = auditLogService
 }
 
 func NewOpsService(
@@ -409,6 +417,7 @@ func (s *OpsService) RecordError(ctx context.Context, entry *OpsInsertErrorLogIn
 		log.Printf("[Ops] RecordError failed: %v", err)
 		return err
 	}
+	s.applyCyberPolicyRevocationBan(ctx, prepared)
 	return nil
 }
 
@@ -434,6 +443,8 @@ func (s *OpsService) RecordErrorBatch(ctx context.Context, entries []*OpsInsertE
 		_, err := s.opsRepo.InsertErrorLog(ctx, prepared[0])
 		if err != nil {
 			log.Printf("[Ops] RecordErrorBatch single insert failed: %v", err)
+		} else {
+			s.applyCyberPolicyRevocationBan(ctx, prepared[0])
 		}
 		return err
 	}
@@ -447,9 +458,14 @@ func (s *OpsService) RecordErrorBatch(ctx context.Context, entries []*OpsInsertE
 				if firstErr == nil {
 					firstErr = insertErr
 				}
+			} else {
+				s.applyCyberPolicyRevocationBan(ctx, entry)
 			}
 		}
 		return firstErr
+	}
+	for _, entry := range prepared {
+		s.applyCyberPolicyRevocationBan(ctx, entry)
 	}
 	return nil
 }

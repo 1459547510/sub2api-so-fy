@@ -5,6 +5,20 @@ export default {
     clearAll: '全部清理',
     empty: '暂无操作日志',
     loadFailed: '加载操作日志失败',
+    actions: {
+      cyberPolicyRevocationBan: 'Cyber Policy 账号撤销封禁'
+    },
+    ruleEvent: {
+      title: '安全规则触发记录',
+      account: '被撤销账号',
+      user: '被禁用用户',
+      hitCount: '关联命中次数',
+      planType: '账号套餐',
+      triggerRequest: '关联触发请求',
+      revocationRequest: '最终撤销请求',
+      modelPath: '模型 / 请求路径',
+      outcome: '执行结果'
+    },
     filters: {
       all: '全部',
       q: '关键字',

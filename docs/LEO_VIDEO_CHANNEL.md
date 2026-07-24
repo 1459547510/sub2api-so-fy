@@ -188,3 +188,15 @@ When a custom Sub2API API Key has a positive USD quota, a successfully settled L
 `seedance-2.0-mini` is available in the Leo account model presets and the video workbench. LeoStudio supports `4`–`15` seconds, `720p` only, and `16:9` only for this model. Mini requests do not use a Seedance 2.0-specific `parameters.mode` field.
 
 Channel model pricing entries follow the model capability matrix: regular Seedance models require `480p`, `720p`, and `1080p` USD-per-second tiers, while `seedance-2.0-mini` requires a single `720p` USD-per-second tier.
+
+### Production pricing snapshot
+
+As of 2026-07-24, production channel `Seedance 2 视频专用渠道` (channel ID `5`) uses the following USD-per-second prices:
+
+| Model | 480p | 720p | 1080p |
+| --- | ---: | ---: | ---: |
+| `seedance-2.0` | `$0.12` | `$0.25` | `$0.60` |
+| `seedance-2.0-fast` | `$0.10` | `$0.20` | `$0.25`* |
+| `seedance-2.0-mini` | - | `$0.17` | - |
+
+`*` The Fast 1080p price remains configured only because the current channel validator requires all three tiers for non-Mini entries. The Fast model capability matrix does not expose 1080p, so this tier is not advertised to users and cannot be selected in the video workbench. Exact channel pricing takes precedence over the unchanged group-level fallback prices.

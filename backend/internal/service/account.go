@@ -1239,6 +1239,22 @@ func (a *Account) IsOpenAIChatGPTSubscription() bool {
 	}
 }
 
+// IsOpenAIProOrProLite reports whether an OpenAI OAuth account is one of the
+// paid Pro tiers eligible for cyber-policy revocation attribution.
+func (a *Account) IsOpenAIProOrProLite() bool {
+	if !a.IsOpenAIOAuth() {
+		return false
+	}
+	planType := strings.ToLower(strings.TrimSpace(a.GetCredential("plan_type")))
+	planType = strings.NewReplacer(" ", "", "_", "", "-", "").Replace(planType)
+	switch planType {
+	case "pro", "chatgptpro", "prolite", "chatgptprolite":
+		return true
+	default:
+		return false
+	}
+}
+
 func (a *Account) IsOpenAIPersonalAccessToken() bool {
 	if !a.IsOpenAIOAuth() {
 		return false

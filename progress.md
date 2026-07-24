@@ -3100,3 +3100,107 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - All other changed files are the upstream `main` synchronization set; the complete file list is recorded by the merge commit.
 - `.superpowers/` remains untracked and is excluded from the merge.
 - Rollback point before this merge: `79c37efaac634cbb73db825d3f4b72ac7e505927`; before commit use `git merge --abort`, or after the merge commit use `git revert -m 1 <merge_commit>`.
+
+## 2026-07-24 - Task: Disable the user responsible for an OpenAI cyber-policy account revocation
+
+### What was done
+- Added a post-persistence rule for OpenAI Pro/ProLite OAuth accounts explicitly marked `Token revoked (401)` that correlates the account with upstream `cyber_policy` errors from the preceding 30 days.
+- Selects the non-admin user with the most hits, breaking ties by the latest hit and then the lowest user ID, and disables that user while invalidating API-key authentication caches.
+- Excludes generic 401 responses, OpenAI Plus/Team/Free accounts, non-OpenAI accounts, local `cyber_policy_session_blocked` rejections, deleted users, and administrators; repeated observations do not update an already disabled user.
+
+### Testing
+- From `backend/`, the targeted service and repository tests passed, covering revoked-token enforcement, generic 401 exclusion, administrator exclusion, idempotency, the 30-day window, deterministic ranking, and exact `cyber_policy` filtering.
+- From `backend/`, `go test ./internal/service ./internal/repository -count=1` passed.
+- From `backend/`, `go test ./... -count=1` passed.
+- The additional full `-tags unit` run reached the 184-second command timeout without reporting a test failure; the corresponding tagged compile check, `go test -tags unit ./internal/service ./internal/repository -run '^$' -count=1`, passed.
+- `gofmt` and `git diff --check` passed. No production database write, user ban, deployment, commit, or push was performed.
+
+### Notes
+- `.gitignore`: allows the focused cyber-policy revocation behavior document to be tracked without changing the default `docs/` ignore policy.
+- `backend/internal/repository/ops_repo_cyber_policy.go`: queries the deterministic non-admin candidate for one account and time window.
+- `backend/internal/repository/ops_repo_cyber_policy_test.go`: verifies exact upstream cyber-policy filtering and count/latest-hit ordering.
+- `backend/internal/service/ops_cyber_policy_ban.go`: validates the persisted OpenAI revoked-token account state and applies the user disable action.
+- `backend/internal/service/ops_cyber_policy_ban_test.go`: covers triggering, exclusions, administrator protection, and repeated-observation behavior.
+- `backend/internal/service/account.go`: provides the normalized Pro/ProLite `plan_type` eligibility check.
+- `backend/internal/service/ops_port.go`: exposes the narrow candidate query contract and result model.
+- `backend/internal/service/ops_repo_mock_test.go`: adds the candidate query hook required by Ops service tests.
+- `backend/internal/service/ops_service.go`: runs the rule only after successful single or batched Ops error persistence.
+- `docs/CYBER_POLICY_REVOCATION_BAN.md`: documents the trigger, ranking, exclusions, time window, and Ops-monitoring dependency.
+- `progress.md`: records this implementation, verification evidence, file list, and rollback point.
+- Rollback point: `122aeb81dcd10e2411a65aa9878d052789066fbf`. Run `git restore --source=122aeb81dcd10e2411a65aa9878d052789066fbf -- .gitignore backend/internal/service/ops_port.go backend/internal/service/ops_repo_mock_test.go backend/internal/service/ops_service.go progress.md` and remove the four new Go files plus `docs/CYBER_POLICY_REVOCATION_BAN.md` to revert this task; leave the unrelated `.superpowers/` directory untouched.
+
+## 2026-07-24 - Task: Adjust production Seedance video pricing and publish notice
+
+### What was done
+- Updated production channel `Seedance 2 视频专用渠道` (ID `5`) so the user-facing Seedance prices are `0.12/0.25/0.60` USD/s for standard 480p/720p/1080p, `0.10/0.20` USD/s for Fast 480p/720p, and `0.17` USD/s for Mini 720p.
+- Preserved the existing Fast 1080p entry at `0.25` USD/s because the deployed channel validator requires three tiers for non-Mini entries; Fast 1080p remains unavailable in the model capability matrix and was not included in the user announcement.
+- Published active all-user popup announcement ID `19`, explaining that the increase is caused by higher account-pool maintenance costs and that the new prices take effect immediately.
+
+### Testing
+- The production Admin API update returned channel ID `5` with all six requested prices and the preserved Fast 1080p compatibility tier.
+- A separate `GET /api/v1/admin/channels/5` readback returned standard `0.12/0.25/0.60`, Fast `0.10/0.20/0.25`, and Mini `0.17` with channel status `active`.
+- `GET /api/v1/admin/announcements/19` returned the expected title and price table with status `active`, notify mode `popup`, and empty targeting for all users.
+
+### Notes
+- `docs/LEO_VIDEO_CHANNEL.md`: records the production price snapshot and explains the non-user-facing Fast 1080p compatibility tier.
+- `progress.md`: records the production configuration change, verification evidence, and rollback values.
+- Production state changed through the Admin API only; no database schema, source behavior, deployment, commit, or push was performed. Temporary request payload files were removed after verification, and the administrator credential was not written to disk or logs.
+- Rollback point: update channel ID `5` through `PUT /api/v1/admin/channels/5`, restoring standard prices to `0.10/0.20/0.55`, Fast to `0.08/0.16/0.25`, and Mini 720p to `0.14`; then archive announcement ID `19` with `PUT /api/v1/admin/announcements/19` and `{"status":"archived"}`. Keep the existing channel association, model mapping, and group ID `25` unchanged.
+
+## 2026-07-24 - Task: Verify cyber-policy revocation ban with simulated trigger only
+
+### What was done
+- Re-ran the Pro/ProLite cyber-policy revocation scenarios using in-memory fake repositories and SQL mocks only.
+- Confirmed the simulated top-hit user is selected, while Plus accounts, generic OpenAI 401 responses, administrators, and repeated observations are excluded or handled idempotently.
+
+### Testing
+- From `backend/`, the verbose targeted service and repository test run passed.
+- No production database connection, real user status update, API call, deployment, commit, or push was performed.
+
+### Notes
+- `backend/internal/service/ops_cyber_policy_ban_test.go`: simulated trigger and exclusion coverage.
+- `backend/internal/repository/ops_repo_cyber_policy_test.go`: simulated ranking and exact error-type filtering coverage.
+- `progress.md`: records this simulation-only verification.
+- Rollback point: remove this final progress entry; source rollback remains the prior cyber-policy task rollback point `122aeb81dcd10e2411a65aa9878d052789066fbf`.
+
+## 2026-07-24 - Task: Persist cyber-policy revocation audit records and expose them in security audit UI
+
+### What was done
+- Added a synchronous append-only audit event after a Pro/ProLite cyber-policy revocation rule successfully disables the attributed user.
+- Retained the latest matching request summary, request IDs, account and plan identifiers, hit count, model/path, client metadata, revocation request IDs, outcome, and the existing redacted input excerpt when available.
+- Added readable rule-event details to the admin audit log page and moved its navigation entry under Security Audit.
+
+### Testing
+- From `backend/`, `go test ./... -count=1` passed.
+- From `frontend/`, the full Vitest suite passed, `vue-tsc --noEmit` passed, and the production Vite build passed.
+- `gofmt` and `git diff --check` passed. No production database connection, real user ban, deployment, commit, or push was performed.
+
+### Notes
+- `backend/internal/service/audit_log.go`: names the cyber-policy revocation audit action.
+- `backend/internal/service/audit_log_service.go`: adds synchronous audit persistence for enforcement events.
+- `backend/internal/service/ops_cyber_policy_ban.go`: writes the redacted rule audit event after a successful in-memory/production user update path.
+- `backend/internal/service/ops_port.go`: carries the latest attributed request metadata.
+- `backend/internal/repository/ops_repo_cyber_policy.go`: returns the latest matching Ops request and retained moderation excerpt.
+- `backend/internal/service/ops_service.go`, `backend/internal/service/wire.go`, `backend/cmd/server/wire_gen.go`: inject the audit service into Ops.
+- `backend/internal/repository/ops_repo_cyber_policy_test.go`, `backend/internal/service/ops_cyber_policy_ban_test.go`: cover request metadata and audit persistence with SQL mocks/fake repositories.
+- `frontend/src/views/admin/AuditLogView.vue`, `frontend/src/components/layout/AppSidebar.vue`, `frontend/src/i18n/locales/en/admin/audit.ts`, `frontend/src/i18n/locales/zh/admin/audit.ts`, `frontend/src/features/prompt-audit/__tests__/integrationSurface.spec.ts`: expose and label the rule event in Security Audit.
+- `docs/CYBER_POLICY_REVOCATION_BAN.md`: documents audit retention and redaction behavior.
+- `progress.md`: records the implementation, verification evidence, file list, and rollback guidance.
+- Rollback point: no commit was created; remove the audit-specific hunks in the files listed above while preserving the earlier cyber-policy rule changes in shared files such as `ops_service.go`, `ops_port.go`, and `progress.md`.
+
+## 2026-07-24 - Task: Prepare cyber-policy revocation enforcement release
+
+### What was done
+- Prepared the cyber-policy revocation attribution, user disable action, synchronous audit record, and Security Audit UI changes for release as `v0.1.164-fy.2`.
+- Kept the unrelated `.superpowers/` workspace artifacts outside the release commit.
+
+### Testing
+- From `backend/`, `go test ./internal/service -run '^TestOllamaCloudUsageRefreshSingleflightAndRunnerDeduplicateSharedGroup$' -count=10` passed after an earlier unrelated timing failure.
+- From `backend/`, `go test ./... -count=1` passed.
+- From `frontend/`, `pnpm.cmd test:run`, `pnpm.cmd typecheck`, `pnpm.cmd lint:check`, and `pnpm.cmd run build` passed.
+- `git diff --check` passed.
+
+### Notes
+- The release file set is the cyber-policy enforcement, audit persistence, Security Audit UI, supporting tests and documentation already listed in the preceding task entries, plus this `progress.md` release record.
+- `.superpowers/` remains untracked and is not part of the release.
+- Rollback point before this release: `122aeb81dcd10e2411a65aa9878d052789066fbf`; after publication, revert the release commit or reinstall `v0.1.164-fy.1`.

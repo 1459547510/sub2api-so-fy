@@ -87,6 +87,17 @@ func (s *AuditLogService) Record(entry *AuditLog) {
 	}
 }
 
+// RecordSync persists a security-sensitive event before the caller returns.
+func (s *AuditLogService) RecordSync(ctx context.Context, entry *AuditLog) error {
+	if s == nil || s.repo == nil || entry == nil {
+		return nil
+	}
+	if entry.CreatedAt.IsZero() {
+		entry.CreatedAt = time.Now().UTC()
+	}
+	return s.repo.Insert(ctx, entry)
+}
+
 // List 分页查询审计日志。
 func (s *AuditLogService) List(ctx context.Context, filter *AuditLogFilter) (*AuditLogList, error) {
 	return s.repo.List(ctx, filter)

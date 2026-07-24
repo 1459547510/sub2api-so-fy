@@ -5,6 +5,20 @@ export default {
     clearAll: 'Clear All',
     empty: 'No audit logs yet',
     loadFailed: 'Failed to load audit logs',
+    actions: {
+      cyberPolicyRevocationBan: 'Cyber Policy account revocation ban'
+    },
+    ruleEvent: {
+      title: 'Security rule event',
+      account: 'Revoked account',
+      user: 'Disabled user',
+      hitCount: 'Attributed hits',
+      planType: 'Account plan',
+      triggerRequest: 'Attributed request',
+      revocationRequest: 'Final revocation request',
+      modelPath: 'Model / request path',
+      outcome: 'Outcome'
+    },
     filters: {
       all: 'All',
       q: 'Keyword',

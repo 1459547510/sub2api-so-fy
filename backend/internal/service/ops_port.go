@@ -8,6 +8,7 @@ import (
 type OpsRepository interface {
 	InsertErrorLog(ctx context.Context, input *OpsInsertErrorLogInput) (int64, error)
 	BatchInsertErrorLogs(ctx context.Context, inputs []*OpsInsertErrorLogInput) (int64, error)
+	FindCyberPolicyBanCandidate(ctx context.Context, accountID int64, since, until time.Time) (*CyberPolicyBanCandidate, error)
 	ListErrorLogs(ctx context.Context, filter *OpsErrorLogFilter) (*OpsErrorLogList, error)
 	GetErrorLogByID(ctx context.Context, id int64) (*OpsErrorLogDetail, error)
 	ListRequestDetails(ctx context.Context, filter *OpsRequestDetailFilter) ([]*OpsRequestDetail, int64, error)
@@ -59,6 +60,22 @@ type OpsRepository interface {
 	UpsertDailyMetrics(ctx context.Context, startTime, endTime time.Time) error
 	GetLatestHourlyBucketStart(ctx context.Context) (time.Time, bool, error)
 	GetLatestDailyBucketDate(ctx context.Context) (time.Time, bool, error)
+}
+
+type CyberPolicyBanCandidate struct {
+	UserID          int64
+	HitCount        int64
+	LastHitAt       time.Time
+	OpsErrorLogID   int64
+	RequestID       string
+	ClientRequestID string
+	APIKeyID        *int64
+	APIKeyPrefix    string
+	ClientIP        string
+	UserAgent       string
+	Model           string
+	RequestPath     string
+	InputExcerpt    string
 }
 
 type OpsInsertErrorLogInput struct {
