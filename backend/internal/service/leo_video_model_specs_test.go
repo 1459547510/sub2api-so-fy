@@ -47,6 +47,11 @@ func TestValidateLeoVideoRequestRejectsUnsupportedModelParameters(t *testing.T) 
 			body: `{"model":"seedance-2.0","prompt":"waves","duration":4.5}`,
 			want: "duration must be a whole number from 4 through 15",
 		},
+		{
+			name: "standard 1080p duration above range",
+			body: `{"model":"seedance-2.0","prompt":"waves","resolution":"1080p","duration":13}`,
+			want: "duration must be a whole number from 4 through 12",
+		},
 	}
 
 	for _, tt := range tests {
@@ -58,12 +63,24 @@ func TestValidateLeoVideoRequestRejectsUnsupportedModelParameters(t *testing.T) 
 }
 
 func TestValidateLeoVideoRequestAcceptsResolutionSpecificAspect(t *testing.T) {
-	info, err := ValidateLeoVideoRequest([]byte(`{"model":"seedance-2.0","prompt":"waves","resolution":"1080p","aspect_ratio":"9:21","duration":15}`))
+	info, err := ValidateLeoVideoRequest([]byte(`{"model":"seedance-2.0","prompt":"waves","resolution":"1080p","aspect_ratio":"9:21","duration":12}`))
 
 	require.NoError(t, err)
 	require.Equal(t, "1080p", info.Resolution)
 	require.Equal(t, "9:21", info.AspectRatio)
-	require.Equal(t, 15, info.DurationSeconds)
+	require.Equal(t, 12, info.DurationSeconds)
+}
+
+func TestValidateLeoVideoRequestKeepsFifteenSecondsForOtherSupportedModes(t *testing.T) {
+	for _, body := range []string{
+		`{"model":"seedance-2.0","prompt":"waves","resolution":"720p","duration":15}`,
+		`{"model":"seedance-2.0-fast","prompt":"waves","resolution":"720p","duration":15}`,
+	} {
+		info, err := ValidateLeoVideoRequest([]byte(body))
+
+		require.NoError(t, err)
+		require.Equal(t, 15, info.DurationSeconds)
+	}
 }
 
 func TestValidateLeoVideoRequestRejectsPromptAndGuidanceLimits(t *testing.T) {
@@ -95,4 +112,8 @@ func TestValidateLeoVideoRequestUsesMappedModelSpec(t *testing.T) {
 	require.NoError(t, err)
 	_, err = ValidateLeoVideoRequestForModel(body, "seedance-2.0-fast")
 	require.ErrorContains(t, err, "resolution is not supported")
+
+	body = []byte(`{"model":"public-seedance","prompt":"waves","resolution":"1080p","duration":13}`)
+	_, err = ValidateLeoVideoRequestForModel(body, "seedance-2.0")
+	require.ErrorContains(t, err, "duration must be a whole number from 4 through 12")
 }

@@ -323,6 +323,7 @@ interface VideoModelCapability {
   resolutions: readonly VideoResolution[]
   defaultResolution: VideoResolution
   durations: readonly number[]
+  maxDurationByResolution?: Partial<Record<VideoResolution, number>>
   defaultDuration: number
   aspectsByResolution: Partial<Record<VideoResolution, readonly VideoAspectRatio[]>>
   defaultAspectRatio: VideoAspectRatio
@@ -337,6 +338,7 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     resolutions: ['480p', '720p', '1080p'],
     defaultResolution: '720p',
     durations: allDurationOptions,
+    maxDurationByResolution: { '1080p': 12 },
     defaultDuration: 8,
     aspectsByResolution: {
       '480p': allAspectRatioOptions,
@@ -382,7 +384,7 @@ const selectedKey = computed(() => leoKeys.value.find((key) => key.id === select
 const effectiveApiKey = computed(() => apiKeyMode.value === 'custom' ? customApiKey.value.trim() : selectedKey.value?.key || '')
 const currentModelCapability = computed(() => videoModelCapabilities[model.value])
 const resolutionOptions = computed(() => currentModelCapability.value?.resolutions || [])
-const durationOptions = computed(() => currentModelCapability.value?.durations || [])
+const durationOptions = computed(() => supportedDurations(currentModelCapability.value, resolution.value))
 const aspectRatioOptions = computed(() => currentModelCapability.value?.aspectsByResolution[resolution.value] || [])
 const activeJobs = computed(() => jobs.value.filter((job) => ['pending', 'running', 'settling'].includes(job.status)))
 const selectedJob = computed(() => jobs.value.find((job) => job.job_id === selectedJobId.value) || jobs.value[0] || null)
@@ -723,12 +725,18 @@ function errorMessage(error: unknown) {
   return error instanceof Error && error.message ? error.message : t('common.error')
 }
 
+function supportedDurations(capability: VideoModelCapability | undefined, resolutionValue: VideoResolution) {
+  if (!capability) return []
+  const maxDuration = capability.maxDurationByResolution?.[resolutionValue]
+  return maxDuration ? capability.durations.filter((value) => value <= maxDuration) : capability.durations
+}
+
 function supportsModelParameters(modelValue: string, resolutionValue: VideoResolution, durationValue: number, aspectRatioValue: VideoAspectRatio) {
   const capability = videoModelCapabilities[modelValue]
   return Boolean(
     capability &&
     capability.resolutions.includes(resolutionValue) &&
-    capability.durations.includes(durationValue) &&
+    supportedDurations(capability, resolutionValue).includes(durationValue) &&
     capability.aspectsByResolution[resolutionValue]?.includes(aspectRatioValue)
   )
 }
@@ -744,6 +752,7 @@ watch(resolution, () => {
   const capability = currentModelCapability.value
   if (!capability) return
   const supportedAspects = capability.aspectsByResolution[resolution.value] || []
+  if (!supportedDurations(capability, resolution.value).includes(duration.value)) duration.value = capability.defaultDuration
   if (!supportedAspects.includes(aspectRatio.value)) aspectRatio.value = capability.defaultAspectRatio
 }, { flush: 'sync' })
 

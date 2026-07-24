@@ -889,7 +889,7 @@ export default {
         model: 'Model ID, such as seedance-2.0, seedance-2.0-fast, or seedance-2.0-mini.',
         prompt: 'Describe the scene, action, camera, and visual style in up to 5,000 characters.',
         resolution: 'The workbench filters resolutions by model: seedance-2.0 supports 480p, 720p, and 1080p; seedance-2.0-fast supports 480p and 720p; seedance-2.0-mini supports 720p only.',
-        duration: 'Choose a whole number of seconds from 4 through 15. The default is 8 seconds.',
+        duration: 'Choose a whole number of seconds. seedance-2.0 at 1080p supports 4 through 12 seconds; other currently supported model and resolution combinations support 4 through 15. The default is 8 seconds.',
         aspectRatio: 'Aspect ratios are filtered by model and resolution. seedance-2.0-mini supports 16:9 only; 720p on other models does not support 9:21.',
         audio: 'Whether to request generated audio. Defaults to false.',
         imageUrl: 'One absolute HTTP(S) start-frame URL, including a value returned by the upload endpoint.',

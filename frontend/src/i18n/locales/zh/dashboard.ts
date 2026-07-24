@@ -894,7 +894,7 @@ export default {
         model: '模型标识，例如 seedance-2.0、seedance-2.0-fast 或 seedance-2.0-mini。',
         prompt: '场景、动作、镜头和风格描述，最多 5000 个字符。',
         resolution: '工作台按模型过滤分辨率：seedance-2.0 支持 480p、720p、1080p；seedance-2.0-fast 支持 480p、720p；seedance-2.0-mini 仅支持 720p。',
-        duration: '视频秒数，只能选择 4 到 15 之间的整数，默认 8 秒。',
+        duration: '视频秒数必须为整数；seedance-2.0 的 1080p 支持 4 到 12 秒，其他当前支持的模型与分辨率组合支持 4 到 15 秒，默认 8 秒。',
         aspectRatio: '画面比例按模型和分辨率过滤；seedance-2.0-mini 仅支持 16:9，其他模型的 720p 不支持 9:21。',
         audio: '是否请求生成音频，默认 false。',
         imageUrl: '单张首帧绝对 HTTP(S) 地址，可使用上传接口返回值。',

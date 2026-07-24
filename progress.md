@@ -3008,3 +3008,56 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verifies the prompt limit in addition to the existing Mini `720p` and `16:9` UI constraint.
 - `progress.md`: records this implementation and its verification evidence.
 - Rollback point: `c0e60c7b3bd90f1289f49f4f46f87a57b0849ed8`. Before committing, restore the tracked files listed above from that revision and remove `backend/internal/service/leo_video_model_specs.go`, `backend/internal/service/leo_video_model_specs_test.go`, and `docs/LEO_VIDEO_MODEL_SPECS.md`; remove only this final progress entry.
+
+## 2026-07-24 - Task: Limit Seedance 2.0 1080p duration to 12 seconds
+
+### What was done
+- Limited standard `seedance-2.0` requests at `1080p` to whole-second durations from 4 through 12 while keeping standard 480p/720p, Fast, and Mini at 4 through 15 seconds.
+- Synchronized the video workbench so the 1080p duration selector ends at 12 seconds and an existing 13-15 second selection falls back to the valid 8-second default when switching resolutions.
+- Enforced the same rule in backend request validation, including account-mapped model aliases, so direct API calls cannot bypass the workbench constraint.
+- Updated the formal model specification and the Chinese/English API documentation shown on the video documentation subpage.
+
+### Testing
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1` passed; coverage includes 1080p duration 12 acceptance, duration 13 rejection, mapped-model rejection, and continued 15-second acceptance for standard 720p and Fast 720p.
+- From `frontend/`, the video generation and API documentation suites passed: 2 files and 23 tests. Coverage includes 1080p options ending at 12, automatic fallback after a resolution change, and prevention of programmatically injected 1080p/13-second submissions before upload or job creation.
+- From `frontend/`, `vue-tsc --noEmit`, `vue-tsc -b`, and targeted ESLint checks passed.
+- The production Vite build passed. Only existing Browserslist, dynamic-import, and chunk-size warnings were reported.
+- `gofmt` and `git diff --check` passed. No paid video generation, commit, push, tag, or deployment was performed.
+
+### Notes
+- `backend/internal/service/leo_video_model_specs.go`: adds the standard model's 1080p-specific maximum and enforces it after model and resolution normalization.
+- `backend/internal/service/leo_video_model_specs_test.go`: covers the 12/13-second boundary, unaffected 15-second modes, and mapped-model validation.
+- `backend/internal/handler/leo_video_test.go`: verifies the HTTP entry point rejects a standard 1080p 13-second request with HTTP 400.
+- `frontend/src/views/user/VideoGenerationView.vue`: filters duration options by resolution, validates the selected combination, and resets an invalid duration after resolution changes.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers duration option filtering, fallback behavior, and client-side rejection before network calls.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updates the English API duration description.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updates the Chinese API duration description.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records the 4-12 second range for standard 1080p.
+- `progress.md`: records this implementation, verification evidence, file list, and rollback point.
+- Rollback point: `52468162b71774e2066874e982b24948f12520e6`. Run `git restore --source=52468162b71774e2066874e982b24948f12520e6 -- backend/internal/handler/leo_video_test.go backend/internal/service/leo_video_model_specs.go backend/internal/service/leo_video_model_specs_test.go docs/LEO_VIDEO_MODEL_SPECS.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts progress.md` to revert this task; the unrelated `.superpowers/` directory remains untouched.
+
+## 2026-07-24 - Task: Release Seedance 2.0 1080p duration cap as v0.1.163-fy.5
+### What was done
+- Revalidated and prepared the current 1080p duration-limit changes for `v0.1.163-fy.5`.
+- Kept the release scoped to the current branch and excluded the unrelated untracked `.superpowers/` directory.
+
+### Testing
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1` passed.
+- From `backend/`, `gofmt` passed for the changed Go files.
+- From `frontend/`, the video generation and API test suites passed.
+- From `frontend/`, `pnpm run typecheck` passed.
+- From `frontend/`, targeted ESLint passed for the changed Vue and locale files.
+- From `frontend/`, `pnpm run build` passed.
+- `git diff --check` passed. No paid video generation or production deployment was performed.
+
+### Notes
+- `backend/internal/handler/leo_video_test.go`: records HTTP rejection coverage for standard 1080p duration 13.
+- `backend/internal/service/leo_video_model_specs.go`: enforces the standard 1080p 4-12 second limit.
+- `backend/internal/service/leo_video_model_specs_test.go`: covers the 1080p boundary, unaffected modes, and mapped-model validation.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: documents the resolution-specific duration range.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updates English duration guidance.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updates Chinese duration guidance.
+- `frontend/src/views/user/VideoGenerationView.vue`: filters duration options and resets invalid values after resolution changes.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers the 1080p duration selector and client-side guard.
+- `progress.md`: records this release preparation and verification evidence.
+- Rollback point before the release commit: `52468162b71774e2066874e982b24948f12520e6`; revert the release commit after it is created, or restore the nine listed files from that revision.

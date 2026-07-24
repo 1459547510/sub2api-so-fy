@@ -5,7 +5,7 @@ aligned with LeoStudio commit `2fd5c21b01a049817962812cf4675ade7727cc12`.
 
 | Model | Resolutions | Duration | Aspect ratios | Prompt limit |
 |---|---|---:|---|---:|
-| `seedance-2.0` | 480p, 720p, 1080p | 4-15 seconds, default 8 | 480p/1080p: `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`, `9:21`; 720p excludes `9:21` | 5000 characters |
+| `seedance-2.0` | 480p, 720p, 1080p | 480p/720p: 4-15 seconds; 1080p: 4-12 seconds; default 8 | 480p/1080p: `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`, `9:21`; 720p excludes `9:21` | 5000 characters |
 | `seedance-2.0-fast` | 480p, 720p | 4-15 seconds, default 8 | 480p: all seven Seedance ratios; 720p excludes `9:21` | 5000 characters |
 | `seedance-2.0-mini` | 720p | 4-15 seconds, default 8 | `16:9` only | 5000 characters |
 

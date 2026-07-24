@@ -11,13 +11,17 @@ import (
 const leoVideoMaxPromptLength = 5000
 
 type leoVideoModelSpec struct {
-	resolutions []string
-	aspects     map[string][]string
+	resolutions             []string
+	aspects                 map[string][]string
+	maxDurationByResolution map[string]int
 }
 
 var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 	"seedance-2.0": {
 		resolutions: []string{"480p", "720p", "1080p"},
+		maxDurationByResolution: map[string]int{
+			"1080p": 12,
+		},
 		aspects: map[string][]string{
 			"480p":  {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"},
 			"720p":  {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9"},
@@ -142,6 +146,9 @@ func validateLeoVideoRequest(body []byte, effectiveModel string) (LeoVideoReques
 		}
 		if !containsLeoVideoValue(spec.aspects[normalizedResolution], info.AspectRatio) {
 			return LeoVideoRequestInfo{}, newLeoVideoValidationError("aspect_ratio is not supported by the selected video model and resolution")
+		}
+		if maxDuration, limited := spec.maxDurationByResolution[normalizedResolution]; limited && info.DurationSeconds > maxDuration {
+			return LeoVideoRequestInfo{}, newLeoVideoValidationError("duration must be a whole number from 4 through %d seconds for the selected video model and resolution", maxDuration)
 		}
 	}
 

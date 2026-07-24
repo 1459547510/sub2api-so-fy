@@ -108,14 +108,23 @@ describe('VideoGenerationView', () => {
     expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9'])
   })
 
-  it('uses LeoStudio discrete duration options instead of free numeric input', async () => {
+  it('limits standard 1080p to 12 seconds and keeps other resolutions at 15 seconds', async () => {
     const wrapper = mountView()
     await flushPromises()
 
     const duration = wrapper.get('[data-testid="video-duration"]')
+    const resolution = wrapper.get('[data-testid="video-resolution"]')
     expect(duration.element.tagName).toBe('SELECT')
     expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
     expect((duration.element as HTMLSelectElement).value).toBe('8')
+
+    await duration.setValue('15')
+    await resolution.setValue('1080p')
+    expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12])
+    expect((duration.element as HTMLSelectElement).value).toBe('8')
+
+    await resolution.setValue('720p')
+    expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
     expect(wrapper.get('[data-testid="video-prompt"]').attributes('maxlength')).toBe('5000')
   })
 
@@ -145,7 +154,8 @@ describe('VideoGenerationView', () => {
     await wrapper.get('[data-testid="video-prompt"]').setValue('This invalid request must stay in the browser')
 
     const setupState = (wrapper.vm as any).$?.setupState
-    setupState.duration = 16
+    setupState.resolution = '1080p'
+    setupState.duration = 13
     await wrapper.vm.$nextTick()
     expect(wrapper.get('[data-testid="submit-video"]').attributes('disabled')).toBeDefined()
     await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
