@@ -9,6 +9,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/securityaudit"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
+	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
@@ -48,9 +49,68 @@ func TestRunSecurityAuditDoesNotSkipSubsequentWebSocketTurns(t *testing.T) {
 	require.Equal(t, int64(2), engine.enqueues.Load(), "subsequent WebSocket turns must be audited again")
 }
 
+func TestRunSecurityAuditBypassesAuthenticatedAdmin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	legacy := &countingLegacyEngine{decision: &securityaudit.LegacyDecision{
+		Blocked: true, StatusCode: http.StatusForbidden, ErrorCode: "content_policy_violation",
+	}}
+	prompt := &turnCountingEngine{mode: securityaudit.ModeBlocking}
+	coordinator := securityaudit.NewCoordinator(legacy, prompt)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
+	apiKey := &service.APIKey{
+		ID: 9, UserID: 7,
+		User: &service.User{ID: 7, Role: service.RoleAdmin},
+	}
+
+	decision := runSecurityAudit(c, nil, coordinator, nil, apiKey, middleware2.AuthSubject{UserID: 7},
+		"openai_responses", "gpt-test", []byte(`{"input":"blocked keyword"}`), "http")
+
+	require.Nil(t, decision)
+	require.Zero(t, legacy.checks.Load())
+	require.Zero(t, prompt.evaluations.Load())
+	require.Zero(t, prompt.enqueues.Load())
+}
+
+func TestRunSecurityAuditStillChecksRegularUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	legacy := &countingLegacyEngine{decision: &securityaudit.LegacyDecision{
+		Blocked: true, StatusCode: http.StatusForbidden, ErrorCode: "content_policy_violation",
+	}}
+	coordinator := securityaudit.NewCoordinator(legacy, nil)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
+	apiKey := &service.APIKey{
+		ID: 9, UserID: 7,
+		User: &service.User{ID: 7, Role: service.RoleUser},
+	}
+
+	decision := runSecurityAudit(c, nil, coordinator, nil, apiKey, middleware2.AuthSubject{UserID: 7},
+		"openai_responses", "gpt-test", []byte(`{"input":"blocked keyword"}`), "http")
+
+	require.NotNil(t, decision)
+	require.False(t, decision.AllowNextStage)
+	require.Equal(t, int64(1), legacy.checks.Load())
+}
+
+type countingLegacyEngine struct {
+	checks   atomic.Int64
+	decision *securityaudit.LegacyDecision
+}
+
+func (e *countingLegacyEngine) Check(context.Context, securityaudit.Request) (*securityaudit.LegacyDecision, error) {
+	e.checks.Add(1)
+	return e.decision, nil
+}
+
 type turnCountingEngine struct {
-	mode     securityaudit.Mode
-	enqueues atomic.Int64
+	mode        securityaudit.Mode
+	enqueues    atomic.Int64
+	evaluations atomic.Int64
 }
 
 func (e *turnCountingEngine) EffectiveMode() securityaudit.Mode { return e.mode }
@@ -59,5 +119,6 @@ func (e *turnCountingEngine) Enqueue(context.Context, securityaudit.Request) err
 	return nil
 }
 func (e *turnCountingEngine) Evaluate(context.Context, securityaudit.Request) (*securityaudit.PromptDecision, error) {
+	e.evaluations.Add(1)
 	return &securityaudit.PromptDecision{Kind: securityaudit.DecisionAllow, AllowNextStage: true}, nil
 }

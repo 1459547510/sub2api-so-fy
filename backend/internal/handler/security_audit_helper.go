@@ -50,6 +50,9 @@ func runSecurityAudit(c *gin.Context, reqLog *zap.Logger, coordinator *securitya
 	if c == nil || c.Request == nil {
 		return nil
 	}
+	if authenticatedAdminBypassesSecurityAudit(apiKey, subject) {
+		return nil
+	}
 	cacheCompletion := cachesSecurityAuditCompletion(stage)
 	if cacheCompletion {
 		if completed, exists := c.Get(securityAuditCompletedContextKey); exists && completed == true {
@@ -95,6 +98,15 @@ func runSecurityAudit(c *gin.Context, reqLog *zap.Logger, coordinator *securitya
 			zap.String("stage", request.Stage))
 	}
 	return &decision
+}
+
+func authenticatedAdminBypassesSecurityAudit(apiKey *service.APIKey, subject middleware2.AuthSubject) bool {
+	if subject.UserID <= 0 || apiKey == nil || apiKey.User == nil {
+		return false
+	}
+	return apiKey.UserID == subject.UserID &&
+		apiKey.User.ID == subject.UserID &&
+		apiKey.User.Role == service.RoleAdmin
 }
 
 func buildSecurityAuditRequest(c *gin.Context, apiKey *service.APIKey, subject middleware2.AuthSubject, protocol, model string, body []byte, stage string) securityaudit.Request {

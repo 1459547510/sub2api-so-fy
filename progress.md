@@ -3204,3 +3204,23 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - The release file set is the cyber-policy enforcement, audit persistence, Security Audit UI, supporting tests and documentation already listed in the preceding task entries, plus this `progress.md` release record.
 - `.superpowers/` remains untracked and is not part of the release.
 - Rollback point before this release: `122aeb81dcd10e2411a65aa9878d052789066fbf`; after publication, revert the release commit or reinstall `v0.1.164-fy.1`.
+
+## 2026-07-24 - Task: Exempt authenticated administrators from content auditing
+### What was done
+- Restored production administrator user `xl` (ID `1`) through the risk-control unban operation and verified the account role remains `admin` with status `active`.
+- Added one trusted-role bypass at the unified gateway security-audit entry so an authenticated administrator skips local keyword checks, legacy moderation, prompt audit, violation counting, hit notifications, and moderation-triggered automatic disabling.
+- Kept the bypass limited to requests where the authenticated user ID, API key owner ID, and loaded user record ID match; ordinary users continue through the existing moderation path.
+
+### Testing
+- Production request `ec622e1f-cc79-429e-aecf-d6e53c5edf60` was confirmed as a `keyword_block` for administrator user ID `1`, while its moderation record showed `auto_banned=false`; the follow-up unban and user readback both returned status `active`.
+- From `backend/`, focused administrator-bypass and regular-user regression tests passed.
+- From `backend/`, the complete `go test ./... -count=1` suite passed.
+- `gofmt` and `git diff --check` passed for the changed Go files and repository diff.
+
+### Notes
+- `.gitignore`: allows the content-moderation behavior document to be tracked.
+- `backend/internal/handler/security_audit_helper.go`: bypasses the unified audit coordinator only for a matching authenticated administrator identity.
+- `backend/internal/handler/security_audit_helper_test.go`: proves both audit engines remain untouched for administrators and that regular users are still blocked.
+- `docs/CONTENT_MODERATION.md`: documents the administrator bypass and its trusted identity boundary.
+- `progress.md`: records the production recovery, implementation, verification evidence, file list, and rollback point.
+- Rollback point before this task: `a9351087d`. Revert the task commit or restore the four source/documentation files from that revision and remove `docs/CONTENT_MODERATION.md`; leave the unrelated `.superpowers/` directory untouched. Production code rollback is `v0.1.164-fy.2`.
