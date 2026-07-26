@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import VideoGenerationView from '@/views/user/VideoGenerationView.vue'
 import { keysAPI } from '@/api'
 import {
@@ -70,6 +70,10 @@ describe('VideoGenerationView', () => {
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
     vi.mocked(keysAPI.list).mockResolvedValue({ items: [leoKey, grokKey] } as any)
     vi.mocked(listVideoJobs).mockResolvedValue({ data: [] })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('only shows active Leo keys in the workbench selector', async () => {
@@ -319,6 +323,85 @@ describe('VideoGenerationView', () => {
     ] })
   })
 
+  it('uploads reference video and audio files and builds media guidance without UUIDs', async () => {
+    const originalLoad = HTMLMediaElement.prototype.load
+    HTMLMediaElement.prototype.load = function () {
+      Object.defineProperty(this, 'duration', { configurable: true, value: 5 })
+      this.onloadedmetadata?.(new Event('loadedmetadata'))
+    }
+    class MockAudio {
+      duration = 5
+      onloadedmetadata: (() => void) | null = null
+      onerror: (() => void) | null = null
+      set src(_value: string) {
+        queueMicrotask(() => this.onloadedmetadata?.())
+      }
+    }
+    vi.stubGlobal('Audio', MockAudio)
+    vi.mocked(uploadVideoInput).mockImplementation(async (_key, file, kind = 'image') => ({
+      upload_id: file.name,
+      media_url: `http://127.0.0.1/internal/video-inputs/${file.name}`,
+      media_type: kind,
+      content_type: file.type,
+      size: file.size,
+    }))
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-media', status: 'pending', status_url: '/v1/videos/jobs/vidjob-media',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    const videoInput = wrapper.get('[data-testid="video-reference-file"]')
+    Object.defineProperty(videoInput.element, 'files', { configurable: true, value: [new File(['mp4'], 'reference.mp4', { type: 'video/mp4' })] })
+    await videoInput.trigger('change')
+    await flushPromises()
+
+    const audioInput = wrapper.get('[data-testid="audio-reference-file"]')
+    Object.defineProperty(audioInput.element, 'files', { configurable: true, value: [new File(['ID3'], 'reference.mp3', { type: 'audio/mpeg' })] })
+    await audioInput.trigger('change')
+    await flushPromises()
+    await wrapper.get('[data-testid="video-prompt"]').setValue('Match the reference media')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+    HTMLMediaElement.prototype.load = originalLoad
+
+    expect(uploadVideoInput).toHaveBeenCalledWith('sub2-leo-key', expect.any(File), 'video')
+    expect(uploadVideoInput).toHaveBeenCalledWith('sub2-leo-key', expect.any(File), 'audio')
+    const payload = vi.mocked(createVideoJob).mock.calls[0][1]
+    expect(payload.guidances).toEqual({
+      video_reference_base: [{ video: { url: 'http://127.0.0.1/internal/video-inputs/reference.mp4', type: 'UPLOADED' } }],
+      audio_reference: [{ audio: { url: 'http://127.0.0.1/internal/video-inputs/reference.mp3', type: 'UPLOADED' } }],
+    })
+    expect(JSON.stringify(payload)).not.toMatch(/"id"\s*:/)
+  })
+
+  it('warns immediately for unsupported reference media and blocks audio without a visual reference', async () => {
+    class MockAudio {
+      duration = 5
+      onloadedmetadata: (() => void) | null = null
+      onerror: (() => void) | null = null
+      set src(_value: string) {
+        queueMicrotask(() => this.onloadedmetadata?.())
+      }
+    }
+    vi.stubGlobal('Audio', MockAudio)
+    const wrapper = mountView()
+    await flushPromises()
+
+    const videoInput = wrapper.get('[data-testid="video-reference-file"]')
+    Object.defineProperty(videoInput.element, 'files', { configurable: true, value: [new File(['webm'], 'reference.webm', { type: 'video/webm' })] })
+    await videoInput.trigger('change')
+    expect(appStoreMocks.showError).toHaveBeenCalledWith('video.invalidVideo')
+
+    const audioInput = wrapper.get('[data-testid="audio-reference-file"]')
+    Object.defineProperty(audioInput.element, 'files', { configurable: true, value: [new File(['ID3'], 'reference.mp3', { type: 'audio/mpeg' })] })
+    await audioInput.trigger('change')
+    await flushPromises()
+    expect(appStoreMocks.showError).toHaveBeenCalledWith('video.audioNeedsVisualReference')
+    expect(createVideoJob).not.toHaveBeenCalled()
+  })
+
   it('disables local frame inputs and rejects frame selection after four reference images', async () => {
     const wrapper = mountView()
     await flushPromises()
@@ -356,6 +439,7 @@ describe('VideoGenerationView', () => {
       value: [new File(['start'], 'start.png', { type: 'image/png' })],
     })
     await startInput.trigger('change')
+    expect(wrapper.get('[data-testid="video-end-frame-file"]').attributes('disabled')).toBeUndefined()
 
     const referenceInput = wrapper.get('[data-testid="video-image-file"]')
     expect(referenceInput.attributes('disabled')).toBeDefined()
@@ -415,6 +499,7 @@ describe('VideoGenerationView', () => {
     await setFile('video-start-frame-file', start)
     await setFile('video-end-frame-file', end)
     await wrapper.get('[data-testid="video-prompt"]').setValue('Interpolate between both frames')
+    expect(wrapper.get('[data-testid="submit-video"]').attributes('disabled')).toBeUndefined()
     await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
     await Promise.resolve()
 

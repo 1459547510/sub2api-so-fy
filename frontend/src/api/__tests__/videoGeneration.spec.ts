@@ -13,7 +13,7 @@ describe('video generation API', () => {
   })
 
   it('uploads a local image without setting a manual multipart boundary', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ upload_id: 'upload-1' }), { status: 200 }))
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ upload_id: 'upload-1' }), { status: 200 })))
     vi.stubGlobal('fetch', fetchMock)
     const file = new File(['png'], 'frame.png', { type: 'image/png' })
 
@@ -24,6 +24,23 @@ describe('video generation API', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sub2-key')
     expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined()
     expect(init.body).toBeInstanceOf(FormData)
+  })
+
+  it('uses dedicated multipart fields for reference video and audio uploads', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ upload_id: 'upload-1' }), { status: 200 })))
+    vi.stubGlobal('fetch', fetchMock)
+    const video = new File(['mp4'], 'reference.mp4', { type: 'video/mp4' })
+    const audio = new File(['mp3'], 'reference.mp3', { type: 'audio/mpeg' })
+
+    await uploadVideoInput('sub2-key', video, 'video')
+    await uploadVideoInput('sub2-key', audio, 'audio')
+
+    const videoForm = fetchMock.mock.calls[0][1].body as FormData
+    const audioForm = fetchMock.mock.calls[1][1].body as FormData
+    expect(videoForm.get('video')).toBe(video)
+    expect(videoForm.get('image')).toBeNull()
+    expect(audioForm.get('audio')).toBe(audio)
+    expect(audioForm.get('image')).toBeNull()
   })
 
   it('submits an async video request with the selected API key', async () => {

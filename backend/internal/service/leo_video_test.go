@@ -73,6 +73,21 @@ func TestForwardLeoVideoMapsModelAndAddsBearer(t *testing.T) {
 	require.JSONEq(t, responseBody, rec.Body.String())
 }
 
+func TestForwardLeoVideoPassesMediaAndAudioReferenceURLs(t *testing.T) {
+	body := []byte(`{"model":"seedance","prompt":"city","guidances":{"image_reference":[{"image":{"url":"https://cdn.example/ref.png"}}],"video_reference_base":[{"video":{"url":"https://cdn.example/ref.mp4","type":"UPLOADED"}}],"audio_reference":[{"audio":{"url":"https://cdn.example/ref.mp3","type":"UPLOADED"}}]}}`)
+	responseBody := `{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"RESOLUTION_720","duration":8}}`
+	upstream := &leoVideoHTTPUpstream{response: leoVideoResponse(http.StatusOK, responseBody)}
+	svc := &OpenAIGatewayService{httpUpstream: upstream}
+	_, c := newLeoVideoTestContext()
+
+	result, err := svc.ForwardLeoVideo(context.Background(), c, newLeoVideoTestAccount(), body)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, "https://cdn.example/ref.mp4", gjson.GetBytes(upstream.requestBody, "guidances.video_reference_base.0.video.url").String())
+	require.Equal(t, "https://cdn.example/ref.mp3", gjson.GetBytes(upstream.requestBody, "guidances.audio_reference.0.audio.url").String())
+}
+
 func TestParseLeoVideoRequestCollectsNewGuidanceImageURLs(t *testing.T) {
 	body := []byte(`{
 		"model":"seedance-2.0","prompt":"city",
@@ -93,6 +108,21 @@ func TestParseLeoVideoRequestCollectsNewGuidanceImageURLs(t *testing.T) {
 		"https://cdn.example/ref-2.png",
 		"https://cdn.example/ref-3.png",
 	}, info.ImageURLs)
+}
+
+func TestParseLeoVideoRequestCollectsMediaAndAudioURLs(t *testing.T) {
+	body := []byte(`{
+		"model":"seedance-2.0","prompt":"city",
+		"guidances":{
+			"video_reference_base":[{"video":{"url":"https://cdn.example/ref.mp4"}}],
+			"audio_reference":[{"audio":{"url":"https://cdn.example/ref.mp3"}}]
+		}
+	}`)
+
+	info, err := ParseLeoVideoRequest(body)
+	require.NoError(t, err)
+	require.Empty(t, info.ImageURLs)
+	require.Equal(t, []string{"https://cdn.example/ref.mp4", "https://cdn.example/ref.mp3"}, LeoVideoReferenceURLs(body))
 }
 
 func TestForwardLeoVideoFallsBackToRequestMetadata(t *testing.T) {

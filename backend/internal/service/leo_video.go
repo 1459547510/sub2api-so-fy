@@ -35,7 +35,7 @@ func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
 	if !gjson.ValidBytes(body) {
 		return LeoVideoRequestInfo{}, fmt.Errorf("invalid leo video JSON request")
 	}
-	imageURLs := LeoVideoReferenceURLs(body)
+	imageURLs := LeoVideoImageURLs(body)
 	info := LeoVideoRequestInfo{
 		Model:       strings.TrimSpace(gjson.GetBytes(body, "model").String()),
 		Prompt:      strings.TrimSpace(gjson.GetBytes(body, "prompt").String()),
@@ -57,6 +57,34 @@ func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
 }
 
 func LeoVideoReferenceURLs(body []byte) []string {
+	urls := LeoVideoImageURLs(body)
+	seen := make(map[string]struct{}, len(urls)+2)
+	for _, raw := range urls {
+		seen[raw] = struct{}{}
+	}
+	add := func(raw string) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return
+		}
+		if _, ok := seen[raw]; ok {
+			return
+		}
+		seen[raw] = struct{}{}
+		urls = append(urls, raw)
+	}
+	for _, path := range []string{
+		"guidances.video_reference_base.#.video.url",
+		"guidances.audio_reference.#.audio.url",
+	} {
+		for _, item := range gjson.GetBytes(body, path).Array() {
+			add(item.String())
+		}
+	}
+	return urls
+}
+
+func LeoVideoImageURLs(body []byte) []string {
 	seen := make(map[string]struct{})
 	urls := make([]string, 0, 6)
 	add := func(raw string) {

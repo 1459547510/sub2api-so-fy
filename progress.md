@@ -3264,3 +3264,186 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/CYBER_POLICY_REVOCATION_BAN.md`: documents new-hit retention, visibility, redaction, limits, and the historical-data boundary.
 - `progress.md`: records the implementation, verification evidence, changed files, and rollback point.
 - Rollback point: no commit was created. Run `git restore --source=HEAD -- backend/internal/handler/openai_chat_completions.go backend/internal/handler/openai_gateway_cyber_test.go backend/internal/handler/openai_gateway_handler.go backend/internal/service/content_moderation.go backend/internal/service/content_moderation_cyber_test.go docs/CYBER_POLICY_REVOCATION_BAN.md progress.md` to remove only this uncommitted task; leave `.superpowers/` untouched.
+
+## 2026-07-24 - Task: Create customer-facing Seedance API guide
+
+### What was done
+- Created a standalone Chinese Seedance API guide that can be sent directly to customers.
+- Documented Bearer authentication, asynchronous task creation, image upload, task polling, cancellation, MP4 download, supported model parameters, Python usage, and retry guidance.
+- Removed internal provider, account, and administrator configuration details while retaining customer-relevant troubleshooting for invalid aspect ratios and interrupted chunked responses.
+
+### Testing
+- Read the completed file explicitly as UTF-8 and confirmed the Chinese content is intact.
+- Verified the guide contains the production Base URL, `Prefer: respond-async`, the `Auto` restriction, and `incomplete chunked read` troubleshooting.
+- Verified Markdown fenced code blocks are balanced and all fenced JSON examples parse successfully.
+- `git diff --check` passed after the documentation and progress-log changes.
+
+### Notes
+- `docs/SEEDANCE_API_CLIENT_GUIDE_CN.md`: adds the standalone customer-facing Seedance API guide.
+- `progress.md`: records the document scope, verification evidence, changed files, and rollback instructions.
+- Rollback point: delete `docs/SEEDANCE_API_CLIENT_GUIDE_CN.md` and remove this appended task block from `progress.md`; preserve all earlier unrelated working-tree changes.
+
+## 2026-07-24 - Task: Align customer Seedance API guide with current runtime behavior
+
+### What was done
+- Updated the customer guide with the current request-field constraints, upload lifecycle, completed-job and list response examples, and list limit behavior.
+- Corrected the distinction between local HTTP 400 validation failures and upstream HTTP 422 rejections, and documented oversized upload and incomplete request-body errors.
+- Clarified asynchronous status handling, authenticated output download, lack of idempotency keys, and balance reservation, settlement, and release behavior.
+
+### Testing
+- Compared the documented routes, statuses, request validation, upload behavior, list limits, output handling, cancellation rules, and billing lifecycle against the current backend implementation.
+- Verified all fenced JSON examples parse successfully and all Markdown fenced code blocks are balanced.
+- Verified the documented model matrix matches the current Seedance model specifications and `git diff --check` passes.
+
+### Notes
+- `docs/SEEDANCE_API_CLIENT_GUIDE_CN.md`: aligns the customer-facing contract and examples with the current REST API implementation.
+- `progress.md`: records the documentation correction, verification evidence, changed files, and rollback instructions.
+- Rollback point: restore the preceding version of `docs/SEEDANCE_API_CLIENT_GUIDE_CN.md` and remove this appended task block from `progress.md`; preserve all unrelated working-tree changes.
+
+## 2026-07-24 - Task: Release cyber-policy request excerpts as v0.1.164-fy.4
+
+### What was done
+- Published commit `179b71842` as `v0.1.164-fy.4`, excluding the unrelated local Seedance guide and `.superpowers/` artifacts.
+- Installed the checksum-verified Linux release on `api.fflink.top` through the built-in updater and restarted the service.
+
+### Testing
+- Before release, focused service and handler tests, the full `go test ./... -count=1` suite, targeted race detection, `gofmt -d`, and `git diff --check` passed.
+- The release exposed both `checksums.txt` and the 35,323,880-byte Linux amd64 archive, and the production updater completed its checksum-verifying replacement path.
+- After restart, public `GET /health` returned HTTP `200` and the admin version endpoint returned `0.1.164-fy.4`.
+
+### Notes
+- `progress.md`: records the isolated release, production deployment, verification evidence, and rollback point.
+- No database migration or risk-control configuration was changed.
+- Production rollback: call `POST /api/v1/admin/system/rollback` with `{"version":"0.1.164-fy.3"}`, then call `POST /api/v1/admin/system/restart`; source rollback is tag `v0.1.164-fy.3`.
+
+## 2026-07-26 - Task: Align current Leo video integration with LeoStudio feat/web-admin
+
+### What was done
+- Compared the latest remote LeoStudio `feat/web-admin` commit `3ed1f43438325e56635f4435ff23b4c91c4b2db9` with the current Sub2 contract without modifying the local LeoStudio checkout.
+- Synchronized exposed `seedance-2.0-mini` capabilities to LeoStudio's current Standard/HD matrix: `480p` and `720p`, each with `16:9`, `1:1`, and `9:16`.
+- Updated frontend workbench selectors, backend validation, channel pricing forms, model pricing resolution, and billing snapshots for Mini's two supported tiers.
+- Kept the user-requested standard `seedance-2.0` 1080p maximum of 12 seconds and kept Happy Horse/Grok out of Sub2 because their addition was previously deferred.
+- Preserved compatibility with existing Mini 720p-only channel pricing: 720p remains billable through the old entry, while Mini 480p is rejected until its 480p price is configured; new pricing entries require both supported tiers.
+- Refreshed Leo model specification, channel operations, and Chinese/English API parameter documentation to the upstream capability source.
+
+### Testing
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1` ran with the service package passing; after updating the two stale Mini aspect assertions, `go test ./internal/handler -count=1` passed. The handler failure in the first combined run was the expected old `9:16` rejection assertion, not a runtime failure.
+- From `frontend/`, the workbench, API docs, channel pricing types, and pricing card suites passed: 4 files and 40 tests.
+- From `frontend/`, `vue-tsc --noEmit` and targeted ESLint checks passed.
+- From `frontend/`, the production Vite build passed with the repository's existing Browserslist, dynamic-import, and chunk-size warnings.
+- `gofmt` and `git diff --check` passed. No paid video generation, LeoStudio checkout mutation, commit, push, tag, or deployment was performed.
+
+### Notes
+- `backend/internal/service/leo_video_model_specs.go`: expands Mini validation to 480p/720p and three supported aspect ratios.
+- `backend/internal/service/leo_video_model_specs_test.go`: covers Mini Standard/HD acceptance and unsupported aspect rejection.
+- `backend/internal/service/video_billing_resolution.go`: exposes Mini's 480p and 720p pricing tiers.
+- `backend/internal/service/video_billing_resolution_test.go`: verifies the updated Mini capability and pricing tier list.
+- `backend/internal/service/model_pricing_resolver.go`: resolves model-specific tier pointers and reads legacy Mini 720p-only entries.
+- `backend/internal/service/model_pricing_resolver_test.go`: covers new two-tier pricing and legacy 720p-only compatibility.
+- `backend/internal/service/video_job_billing.go`: requires the price for the requested resolution, allowing legacy Mini 720p while blocking unpriced 480p.
+- `backend/internal/service/channel_service_test.go`: validates the new Mini 480p+720p channel pricing shape.
+- `backend/internal/handler/leo_video_test.go`: updates the stale unsupported Mini aspect regression to 21:9.
+- `backend/internal/handler/leo_video_async_test.go`: updates the asynchronous stale unsupported Mini aspect regression to 21:9.
+- `frontend/src/views/user/VideoGenerationView.vue`: exposes Mini 480p/720p and synchronized aspect options.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verifies the Mini workbench matrix.
+- `frontend/src/components/admin/channel/types.ts`: generates Mini 480p/720p pricing intervals.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: covers Mini two-tier pricing validation.
+- `frontend/src/components/admin/channel/__tests__/PricingEntryCard.spec.ts`: covers Mini two-price rendering.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updates English Mini resolution and aspect descriptions.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updates Chinese Mini resolution and aspect descriptions.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records the latest upstream source and Mini matrix.
+- `docs/LEO_VIDEO_CHANNEL.md`: updates Mini pricing, model matrix, upstream commit, and legacy pricing behavior.
+- `progress.md`: appends this implementation and verification record without rewriting prior entries.
+- Rollback point: `HEAD` before this task. Run `git restore --source=HEAD -- backend/internal/handler/leo_video_async_test.go backend/internal/handler/leo_video_test.go backend/internal/service/channel_service_test.go backend/internal/service/leo_video_model_specs.go backend/internal/service/leo_video_model_specs_test.go backend/internal/service/model_pricing_resolver.go backend/internal/service/model_pricing_resolver_test.go backend/internal/service/video_billing_resolution.go backend/internal/service/video_billing_resolution_test.go backend/internal/service/video_job_billing.go docs/LEO_VIDEO_CHANNEL.md docs/LEO_VIDEO_MODEL_SPECS.md frontend/src/components/admin/channel/__tests__/PricingEntryCard.spec.ts frontend/src/components/admin/channel/__tests__/types.spec.ts frontend/src/components/admin/channel/types.ts frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts` to revert only the code/document changes; remove only this appended block from `progress.md`, preserving the pre-existing uncommitted progress entries and `.superpowers/`.
+
+## 2026-07-26 - Task: Synchronize LeoStudio media and audio references
+
+### What was done
+- Rechecked LeoStudio `feat/web-admin` at remote commit `3ed1f43438325e56635f4435ff23b4c91c4b2db9` and corrected the prior scope: Mini remains `720p` and `16:9`; Mini `480p` was not retained.
+- Added backend validation and passthrough coverage for `guidances.video_reference_base[].video` and `guidances.audio_reference[].audio`, including UUID/absolute HTTP(S) URL formats, `UPLOADED` URL types, video duration rejection, audio UUID duration limits, URL duration omission, and the required visual reference for audio.
+- Included video/audio reference URLs in local input-token lifecycle tracking without treating them as image moderation inputs.
+- Added video/audio request examples and synchronized Chinese/English API documentation with the latest media-reference contract.
+
+### Testing
+- Targeted backend media/audio, request parsing, and input-store tests passed.
+- `go test ./internal/service ./internal/handler -count=1` passed.
+- Frontend API-docs, video-generation, and video-generation workbench tests passed (27 tests); `npm run typecheck` and targeted ESLint passed.
+- `gofmt` and `git diff --check` passed before the final build rerun.
+
+### Notes
+- `backend/internal/service/leo_video.go`: separates image URLs from video/audio reference URLs and keeps all reference tokens tracked.
+- `backend/internal/service/leo_video_model_specs.go`: validates the latest LeoStudio video/audio guidance contract.
+- `backend/internal/service/leo_video_model_specs_test.go`: covers accepted and rejected media/audio guidance inputs.
+- `backend/internal/service/leo_video_test.go`: verifies JSON passthrough and reference URL parsing.
+- `backend/internal/service/video_input_store_test.go`: verifies media/audio local input token retention.
+- `frontend/src/views/user/VideoApiDocsView.vue`: adds video and audio reference request examples.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies the new examples render.
+- `frontend/src/i18n/locales/en/dashboard.ts`: documents media/audio guidance rules in English.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: documents media/audio guidance rules in Chinese.
+- `docs/LEO_VIDEO_CHANNEL.md`: records the upstream contract and URL/UUID lifecycle.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records media/audio field and duration rules while keeping Mini at 720p/16:9.
+- `progress.md`: records this synchronization and its verification evidence.
+- Rollback point: no commit was created. Run `git restore --source=HEAD -- backend/internal/service/leo_video.go backend/internal/service/leo_video_model_specs.go backend/internal/service/leo_video_model_specs_test.go backend/internal/service/leo_video_test.go backend/internal/service/video_input_store_test.go docs/LEO_VIDEO_CHANNEL.md docs/LEO_VIDEO_MODEL_SPECS.md frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/VideoApiDocsView.vue frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts` and remove only this appended block from `progress.md`; preserve unrelated `.superpowers/` and earlier progress entries.
+
+## 2026-07-26 - Task: Add customer-facing video and audio reference uploads
+
+### What was done
+- Extended `POST /v1/videos/uploads` to accept legacy image uploads plus dedicated video/audio fields and `file + media_type`, returning an opaque `media_url` with compatibility URL fields.
+- Added server-side MP4/MOV, MP3, and PCM 16/24-bit WAV validation. Enforced 10 MiB image, 100 MiB video, and 15 MiB audio limits; enforced 2-30 second audio duration for both WAV and MP3 frame streams.
+- Updated the video workbench so customers select reference videos and audio files directly. The page previews selected media, rejects unsupported files promptly, enforces the LeoStudio reference counts, uploads media in parallel, and builds only `video_reference_base`/`audio_reference` guidance with `type: "UPLOADED"`.
+- Prevented audio-only reference submissions, kept image and start/end frame compatibility, and kept provider UUIDs out of the customer workflow.
+- Updated the standalone API documentation page, English/Chinese copy, and `docs/` contract notes with upload fields, limits, media guidance, and the audio visual-reference requirement.
+
+### Testing
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1` passed, including new MP4/MOV/MP3/WAV store and multipart handler coverage.
+- From `frontend/`, the three focused Vitest files passed: 30 tests total, including media upload guidance, unsupported-format prompts, audio visual-reference blocking, and UUID absence.
+- From `frontend/`, `npm run typecheck`, targeted ESLint, and `npm run build` passed. The build retained the repository's existing dynamic-import and large-chunk warnings.
+- `gofmt` and `git diff --check` passed. No production API key was used; no commit, push, or deployment was performed.
+
+### Notes
+- `backend/internal/handler/video_input.go`: parses image/video/audio multipart fields, maps validation errors, and returns media metadata.
+- `backend/internal/handler/video_input_test.go`: covers video and audio multipart uploads and response fields.
+- `backend/internal/service/video_input_store.go`: stores typed media and validates containers, WAV encoding, MP3 duration, limits, and restart MIME detection.
+- `backend/internal/service/video_input_store_test.go`: covers valid and invalid media formats, duration bounds, size limits, and restart behavior.
+- `frontend/src/api/videoGeneration.ts`: adds typed media upload responses and media-kind multipart uploads.
+- `frontend/src/api/__tests__/videoGeneration.spec.ts`: verifies dedicated video/audio multipart fields.
+- `frontend/src/views/user/VideoGenerationView.vue`: adds media selectors, previews, client validation, parallel uploads, and guidance assembly.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verifies media guidance, format warnings, audio pairing, and UUID absence.
+- `frontend/src/views/user/VideoApiDocsView.vue` and its spec: documents all upload fields and media guidance examples.
+- `frontend/src/i18n/locales/en/dashboard.ts` and `frontend/src/i18n/locales/zh/dashboard.ts`: add media limits, format, and validation copy.
+- `docs/LEO_VIDEO_CHANNEL.md` and `docs/LEO_VIDEO_MODEL_SPECS.md`: record the customer media upload contract.
+- `progress.md`: records this task without rewriting prior history.
+- Rollback point: no commit was created. Because this worktree already contained earlier Leo parameter changes, do not run a whole-file `git restore` or reset; review `git diff` and reverse only the new video/audio upload hunks while preserving the earlier changes and `.superpowers/`.
+
+## 2026-07-26 - Task: Confirm independent start/end frame selection
+
+### What was done
+- Confirmed the customer-facing video page treats start-frame and end-frame images as independent inputs that can be uploaded together, while keeping reference images mutually exclusive with either frame input.
+- Added regression assertions for end-frame availability after selecting a start frame and for submit availability when both frames are present.
+
+### Testing
+- From `frontend/`, `npm run test:run -- src/views/user/__tests__/VideoGenerationView.spec.ts` passed: 24 tests.
+
+### Notes
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: locks the intended frame-selection and submit-button behavior.
+- `progress.md`: records this verification.
+- Rollback point: revert only the two added assertions in `VideoGenerationView.spec.ts` and remove this appended progress block; no production code or prior Leo changes are affected.
+
+## 2026-07-26 - Task: Clarify frame-mode behavior in the web workbench and API docs
+
+### What was done
+- Updated the English and Chinese workbench guidance so customers can see that start and end frames may be submitted together, while reference images cannot be combined with either frame.
+- Synchronized the same rule in the customer-facing API documentation description and the formal Leo video model specification.
+
+### Testing
+- Frontend focused Vitest suites passed: 30 tests across video API, workbench, and API-doc pages.
+- Frontend `npm run typecheck`, targeted ESLint, and `npm run build` passed. Build output retained only the repository's existing dynamic-import, chunk-size, and Browserslist warnings.
+- Backend `go test ./internal/service ./internal/handler -count=1` passed.
+- `git diff --check` passed.
+
+### Notes
+- `frontend/src/i18n/locales/en/dashboard.ts`: clarifies English frame/reference input guidance.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: clarifies Chinese frame/reference input guidance.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records independent frame submission and reference-image exclusion.
+- `progress.md`: records the release preparation verification.
+- Rollback point: revert the latest documentation-only hunks in the two dashboard locale files and `LEO_VIDEO_MODEL_SPECS.md`, then remove this appended block; preserve the earlier Leo implementation and `.superpowers/`.

@@ -105,6 +105,51 @@ func TestValidateLeoVideoRequestRejectsPromptAndGuidanceLimits(t *testing.T) {
 	require.ErrorContains(t, err, "start frame must be supplied only once")
 }
 
+func TestValidateLeoVideoRequestAcceptsMediaAndAudioReferenceURLs(t *testing.T) {
+	body := []byte(`{
+		"model":"seedance-2.0","prompt":"waves",
+		"guidances":{
+			"image_reference":[{"image":{"url":"https://example.com/reference.png","type":"UPLOADED"}}],
+			"video_reference_base":[{"video":{"url":"https://example.com/reference.mp4","type":"UPLOADED"}}],
+			"audio_reference":[{"audio":{"url":"https://example.com/reference.mp3","type":"UPLOADED"}}]
+		}
+	}`)
+
+	_, err := ValidateLeoVideoRequest(body)
+	require.NoError(t, err)
+}
+
+func TestValidateLeoVideoRequestValidatesMediaAndAudioReferences(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "video generated URL",
+			body: `{"model":"seedance-2.0","prompt":"waves","guidances":{"video_reference_base":[{"video":{"url":"https://example.com/reference.mp4","type":"GENERATED"}}]}}`,
+			want: "video.url requires type UPLOADED",
+		},
+		{
+			name: "audio duration with URL",
+			body: `{"model":"seedance-2.0","prompt":"waves","guidances":{"image_reference":[{"image":{"url":"https://example.com/reference.png"}}],"audio_reference":[{"audio":{"url":"https://example.com/reference.mp3","duration":3}}]}}`,
+			want: "audio.duration must be omitted when audio.url is used",
+		},
+		{
+			name: "audio without visual reference",
+			body: `{"model":"seedance-2.0","prompt":"waves","guidances":{"audio_reference":[{"audio":{"id":"33333333-3333-3333-3333-333333333333"}}]}}`,
+			want: "guidances.audio_reference requires an image_reference or video_reference_base",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ValidateLeoVideoRequest([]byte(tt.body))
+			require.ErrorContains(t, err, tt.want)
+		})
+	}
+}
+
 func TestValidateLeoVideoRequestUsesMappedModelSpec(t *testing.T) {
 	body := []byte(`{"model":"public-seedance","prompt":"waves","resolution":"1080p"}`)
 

@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"net/url"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -9,6 +11,8 @@ import (
 )
 
 const leoVideoMaxPromptLength = 5000
+
+var leoVideoAssetIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 type leoVideoModelSpec struct {
 	resolutions             []string
@@ -155,6 +159,9 @@ func validateLeoVideoRequest(body []byte, effectiveModel string) (LeoVideoReques
 	if err := validateLeoVideoGuidanceCounts(body); err != nil {
 		return LeoVideoRequestInfo{}, err
 	}
+	if err := validateLeoVideoMediaGuidances(body); err != nil {
+		return LeoVideoRequestInfo{}, err
+	}
 	return info, nil
 }
 
@@ -200,6 +207,114 @@ func validateLeoVideoGuidanceCounts(body []byte) error {
 		}
 	}
 	return nil
+}
+
+func validateLeoVideoMediaGuidances(body []byte) error {
+	videoReferences := gjson.GetBytes(body, "guidances.video_reference_base")
+	for index, item := range videoReferences.Array() {
+		asset := item.Get("video")
+		if err := validateLeoVideoMediaAsset(asset, "video"); err != nil {
+			return newLeoVideoValidationError("guidances.video_reference_base[%d] %s", index, err.Error())
+		}
+	}
+
+	audioReferences := gjson.GetBytes(body, "guidances.audio_reference")
+	for index, item := range audioReferences.Array() {
+		asset := item.Get("audio")
+		if err := validateLeoVideoAudioAsset(asset); err != nil {
+			return newLeoVideoValidationError("guidances.audio_reference[%d] %s", index, err.Error())
+		}
+	}
+	if len(audioReferences.Array()) > 0 {
+		imageReferences := len(gjson.GetBytes(body, "image_urls").Array()) + len(gjson.GetBytes(body, "guidances.image_reference").Array())
+		videoReferenceCount := len(videoReferences.Array())
+		if imageReferences == 0 && videoReferenceCount == 0 {
+			return newLeoVideoValidationError("guidances.audio_reference requires an image_reference or video_reference_base")
+		}
+	}
+	return nil
+}
+
+func validateLeoVideoMediaAsset(value gjson.Result, kind string) error {
+	if !value.Exists() || !value.IsObject() {
+		return fmt.Errorf("requires %s.id or %s.url", kind, kind)
+	}
+	id := strings.TrimSpace(value.Get("id").String())
+	rawURL := strings.TrimSpace(value.Get("url").String())
+	if id == "" && rawURL == "" {
+		return fmt.Errorf("requires %s.id or %s.url", kind, kind)
+	}
+	if id != "" && rawURL != "" {
+		return fmt.Errorf("%s.id and %s.url cannot both be set", kind, kind)
+	}
+	if value.Get("duration").Exists() {
+		return fmt.Errorf("%s.duration is not supported", kind)
+	}
+	typeName := strings.ToUpper(strings.TrimSpace(value.Get("type").String()))
+	if id != "" {
+		if !leoVideoAssetIDPattern.MatchString(id) {
+			return fmt.Errorf("%s.id must be a UUID", kind)
+		}
+		if typeName == "" {
+			typeName = "UPLOADED"
+		}
+		if typeName != "UPLOADED" && typeName != "GENERATED" {
+			return fmt.Errorf("%s.type is invalid", kind)
+		}
+		return nil
+	}
+	if typeName == "" {
+		typeName = "UPLOADED"
+	}
+	if typeName != "UPLOADED" {
+		return fmt.Errorf("%s.url requires type UPLOADED", kind)
+	}
+	if !isAbsoluteHTTPURL(rawURL) {
+		return fmt.Errorf("%s.url must be an absolute HTTP(S) URL", kind)
+	}
+	return nil
+}
+
+func validateLeoVideoAudioAsset(value gjson.Result) error {
+	if !value.Exists() || !value.IsObject() {
+		return fmt.Errorf("requires audio.id or audio.url")
+	}
+	id := strings.TrimSpace(value.Get("id").String())
+	rawURL := strings.TrimSpace(value.Get("url").String())
+	if id == "" && rawURL == "" {
+		return fmt.Errorf("requires audio.id or audio.url")
+	}
+	if id != "" && rawURL != "" {
+		return fmt.Errorf("audio.id and audio.url cannot both be set")
+	}
+	duration := value.Get("duration")
+	if rawURL != "" && duration.Exists() {
+		return fmt.Errorf("audio.duration must be omitted when audio.url is used")
+	}
+	if duration.Exists() {
+		if duration.Type != gjson.Number || duration.Float() < 2 || duration.Float() > 30 {
+			return fmt.Errorf("audio.duration must be between 2 and 30 seconds")
+		}
+	}
+	typeName := strings.ToUpper(strings.TrimSpace(value.Get("type").String()))
+	if typeName == "" {
+		typeName = "UPLOADED"
+	}
+	if typeName != "UPLOADED" {
+		return fmt.Errorf("audio.type must be UPLOADED")
+	}
+	if id != "" && !leoVideoAssetIDPattern.MatchString(id) {
+		return fmt.Errorf("audio.id must be a UUID")
+	}
+	if rawURL != "" && !isAbsoluteHTTPURL(rawURL) {
+		return fmt.Errorf("audio.url must be an absolute HTTP(S) URL")
+	}
+	return nil
+}
+
+func isAbsoluteHTTPURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	return err == nil && parsed.Host != "" && (parsed.Scheme == "http" || parsed.Scheme == "https")
 }
 
 func leoVideoArrayLength(body []byte, path string) (int, error) {

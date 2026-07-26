@@ -36,7 +36,11 @@ export interface VideoGenerationRequest {
 
 export interface VideoUploadResponse {
   upload_id: string
-  image_url: string
+  media_url?: string
+  media_type: 'image' | 'video' | 'audio' | string
+  image_url?: string
+  video_url?: string
+  audio_url?: string
   content_type: string
   size: number
 }
@@ -91,9 +95,9 @@ async function parseVideoError(response: Response): Promise<Error> {
   }
 }
 
-export async function uploadVideoInput(apiKey: string, file: File): Promise<VideoUploadResponse> {
+export async function uploadVideoInput(apiKey: string, file: File, kind: 'image' | 'video' | 'audio' = 'image'): Promise<VideoUploadResponse> {
   const form = new FormData()
-  form.append('image', file)
+  form.append(kind, file)
   const response = await fetch(buildGatewayUrl('/v1/videos/uploads'), {
     method: 'POST',
     headers: authHeaders(apiKey),

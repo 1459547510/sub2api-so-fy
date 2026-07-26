@@ -186,6 +186,46 @@
 
             <p v-if="imageMode !== 'none'" class="text-xs text-gray-500 dark:text-dark-400">{{ t('video.imageInputExclusive') }}</p>
 
+            <div class="space-y-3 border-t border-gray-100 pt-4 dark:border-dark-700">
+              <div>
+                <span class="input-label">{{ t('video.videoReference') }}</span>
+                <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('video.videoReferenceHint') }}</p>
+              </div>
+              <label
+                class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300"
+                :class="referenceVideoFiles.length >= 3 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'"
+                :title="referenceVideoFiles.length >= 3 ? t('video.tooManyVideoReferences') : undefined"
+              >
+                <Icon name="upload" size="sm" />
+                <span>{{ t('video.chooseVideoReference') }}</span>
+                <input type="file" accept=".mp4,.mov,video/mp4,video/quicktime" multiple class="sr-only" :disabled="referenceVideoFiles.length >= 3 || submitting || uploading" data-testid="video-reference-file" @change="onReferenceVideoChange" />
+              </label>
+              <div v-if="referenceVideoPreviewUrls.length" class="grid gap-2 sm:grid-cols-3">
+                <div v-for="(preview, index) in referenceVideoPreviewUrls" :key="preview" class="relative overflow-hidden rounded-lg border border-gray-200 bg-black dark:border-dark-700">
+                  <video :src="preview" controls muted playsinline class="aspect-video w-full object-cover"></video>
+                  <button type="button" class="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white hover:bg-black/80" :title="t('video.removeVideoReference')" @click="removeReferenceVideo(index)">
+                    <Icon name="x" size="sm" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <span class="input-label">{{ t('video.audioReference') }}</span>
+                <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('video.audioReferenceHint') }}</p>
+              </div>
+              <label class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300" :class="referenceAudioFile ? 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'">
+                <Icon name="upload" size="sm" />
+                <span>{{ referenceAudioFile ? t('video.replaceAudioReference') : t('video.chooseAudioReference') }}</span>
+                <input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" class="sr-only" :disabled="submitting || uploading" data-testid="audio-reference-file" @change="onReferenceAudioChange" />
+              </label>
+              <div v-if="referenceAudioPreviewUrl" class="flex items-center gap-2 rounded-lg border border-gray-200 p-2 dark:border-dark-700">
+                <audio :src="referenceAudioPreviewUrl" controls class="min-w-0 flex-1" data-testid="audio-reference-preview"></audio>
+                <button type="button" class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-red-600 dark:text-dark-300 dark:hover:bg-dark-800 dark:hover:text-red-300" :title="t('video.removeAudioReference')" @click="removeReferenceAudio">
+                  <Icon name="x" size="sm" />
+                </button>
+              </div>
+            </div>
+
             <button type="submit" class="btn btn-primary flex w-full items-center justify-center gap-2" :disabled="!canSubmit || submitting || uploading" data-testid="submit-video">
               <Icon :name="submitting || uploading ? 'refresh' : 'play'" size="sm" :class="submitting || uploading ? 'animate-spin' : ''" />
               {{ submitting ? t('video.submitting') : uploading ? t('video.uploading') : t('video.submit') }}
@@ -305,6 +345,10 @@ const startFramePreviewUrl = ref('')
 const endFramePreviewUrl = ref('')
 const startFrameUrlText = ref('')
 const endFrameUrlText = ref('')
+const referenceVideoFiles = ref<File[]>([])
+const referenceVideoPreviewUrls = ref<string[]>([])
+const referenceAudioFile = ref<File | null>(null)
+const referenceAudioPreviewUrl = ref('')
 const loadingKeys = ref(false)
 const loadingJobs = ref(false)
 const submitting = ref(false)
@@ -395,6 +439,9 @@ const hasLocalReferences = computed(() => localFiles.value.length > 0)
 const hasLocalFrames = computed(() => Boolean(startFrameFile.value || endFrameFile.value))
 const hasRemoteReferences = computed(() => remoteImageUrls.value.length > 0)
 const hasRemoteFrames = computed(() => Boolean(remoteStartFrameUrl.value || remoteEndFrameUrl.value))
+const hasAudioVisualReference = computed(() => Boolean(
+  referenceVideoFiles.value.length || hasLocalReferences.value || hasRemoteReferences.value,
+))
 const hasMixedImageInputs = computed(() => (
   imageMode.value === 'local'
     ? hasLocalReferences.value && hasLocalFrames.value
@@ -408,6 +455,7 @@ const hasValidModelParameters = computed(() => supportsModelParameters(model.val
 const canSubmit = computed(() => Boolean(
   effectiveApiKey.value && prompt.value.trim() && hasValidModelParameters.value &&
   !hasMixedImageInputs.value &&
+  (!referenceAudioFile.value || hasAudioVisualReference.value) &&
   (imageMode.value !== 'url' || (
     (remoteImageUrls.value.length > 0 || remoteStartFrameUrl.value || remoteEndFrameUrl.value) &&
     remoteImageUrls.value.length <= 4 &&
@@ -469,12 +517,18 @@ async function submitJob() {
     appStore.showError(t('video.imageInputConflict'))
     return
   }
+  if (referenceAudioFile.value && !hasAudioVisualReference.value) {
+    appStore.showError(t('video.audioNeedsVisualReference'))
+    return
+  }
   if (!canSubmit.value || !apiKey || submitting.value || uploading.value) return
   submitting.value = true
   try {
     let selectedImageUrls: string[] = []
     let startFrameUrl = imageMode.value === 'url' ? remoteStartFrameUrl.value : ''
     let endFrameUrl = imageMode.value === 'url' ? remoteEndFrameUrl.value : ''
+    let selectedVideoUrls: string[] = []
+    let selectedAudioUrl = ''
     const referenceFiles = [...localFiles.value]
     const startFile = startFrameFile.value
     const endFile = endFrameFile.value
@@ -486,13 +540,23 @@ async function submitJob() {
         ...(endFile ? [endFile] : []),
       ]
       const uploaded = await Promise.all(uploadFiles.map((file) => uploadVideoInput(apiKey, file)))
-      selectedImageUrls = uploaded.slice(0, referenceFiles.length).map((item) => item.image_url)
+      selectedImageUrls = uploaded.slice(0, referenceFiles.length).map(uploadedMediaUrl).filter(Boolean)
       const startUploadIndex = referenceFiles.length
-      if (startFile) startFrameUrl = uploaded[startUploadIndex]?.image_url || ''
-      if (endFile) endFrameUrl = uploaded[startUploadIndex + (startFile ? 1 : 0)]?.image_url || ''
+      if (startFile) startFrameUrl = uploadedMediaUrl(uploaded[startUploadIndex])
+      if (endFile) endFrameUrl = uploadedMediaUrl(uploaded[startUploadIndex + (startFile ? 1 : 0)])
       uploading.value = false
     } else if (imageMode.value === 'url') {
       selectedImageUrls = remoteImageUrls.value
+    }
+    if (referenceVideoFiles.value.length || referenceAudioFile.value) {
+      uploading.value = true
+      const [uploadedVideos, uploadedAudio] = await Promise.all([
+        Promise.all(referenceVideoFiles.value.map((file) => uploadVideoInput(apiKey, file, 'video'))),
+        referenceAudioFile.value ? uploadVideoInput(apiKey, referenceAudioFile.value, 'audio') : Promise.resolve(null),
+      ])
+      selectedVideoUrls = uploadedVideos.map(uploadedMediaUrl).filter(Boolean)
+      selectedAudioUrl = uploadedMediaUrl(uploadedAudio || undefined)
+      uploading.value = false
     }
     const payload: VideoGenerationRequest = {
       model: requestParameters.model,
@@ -504,7 +568,7 @@ async function submitJob() {
     }
     if (startFrameUrl) payload.start_frame_url = startFrameUrl
     if (endFrameUrl) payload.end_frame_url = endFrameUrl
-    if (selectedImageUrls.length === 1 && !startFrameUrl && !endFrameUrl) {
+    if (selectedImageUrls.length === 1 && !startFrameUrl && !endFrameUrl && !selectedAudioUrl) {
       payload.image_url = selectedImageUrls[0]
     } else if (selectedImageUrls.length) {
       payload.guidances = {
@@ -515,6 +579,18 @@ async function submitJob() {
         })),
       }
     }
+    if (selectedVideoUrls.length) {
+      payload.guidances = {
+        ...payload.guidances,
+        video_reference_base: selectedVideoUrls.map((url) => ({ video: { url, type: 'UPLOADED' } })),
+      }
+    }
+    if (selectedAudioUrl) {
+      payload.guidances = {
+        ...payload.guidances,
+        audio_reference: [{ audio: { url: selectedAudioUrl, type: 'UPLOADED' } }],
+      }
+    }
     const accepted = await createVideoJob(apiKey, payload)
     const now = new Date().toISOString()
     const job: VideoJob = { ...accepted, model: accepted.model || requestParameters.model, prompt: accepted.prompt || payload.prompt, created_at: accepted.created_at || now, updated_at: accepted.updated_at || now }
@@ -523,6 +599,7 @@ async function submitJob() {
     updatePolling()
     appStore.showSuccess(t('video.submitSuccess'))
     if (imageMode.value === 'local') clearImageInputs()
+    clearMediaInputs()
   } catch (error) {
     appStore.showError(errorMessage(error))
   } finally {
@@ -601,6 +678,164 @@ function onEndFrameChange(event: Event) {
   removeEndFrame()
   endFrameFile.value = file
   endFramePreviewUrl.value = URL.createObjectURL(file)
+}
+
+async function onReferenceVideoChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length) return
+  const remaining = 3 - referenceVideoFiles.value.length
+  if (remaining <= 0) {
+    appStore.showError(t('video.tooManyVideoReferences'))
+    return
+  }
+  for (const file of files.slice(0, remaining)) {
+    if (!isSupportedVideoFile(file) || !await canReadVideoFile(file)) {
+      appStore.showError(t('video.invalidVideo'))
+      continue
+    }
+    referenceVideoFiles.value = [...referenceVideoFiles.value, file]
+    referenceVideoPreviewUrls.value = [...referenceVideoPreviewUrls.value, URL.createObjectURL(file)]
+  }
+  if (files.length > remaining) appStore.showError(t('video.tooManyVideoReferences'))
+}
+
+async function onReferenceAudioChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!isSupportedAudioFile(file)) {
+    appStore.showError(t('video.invalidAudio'))
+    return
+  }
+  if (file.size > 15 * 1024 * 1024) {
+    appStore.showError(t('video.audioTooLarge'))
+    return
+  }
+  if (file.name.toLowerCase().endsWith('.wav') && !await isSupportedPCMWave(file)) {
+    appStore.showError(t('video.invalidAudio'))
+    return
+  }
+  const durationSeconds = await readAudioDuration(file)
+  if (durationSeconds !== null && (durationSeconds < 2 || durationSeconds > 30)) {
+    appStore.showError(t('video.audioDuration'))
+    return
+  }
+  removeReferenceAudio()
+  referenceAudioFile.value = file
+  referenceAudioPreviewUrl.value = URL.createObjectURL(file)
+  if (!hasAudioVisualReference.value) appStore.showError(t('video.audioNeedsVisualReference'))
+}
+
+function removeReferenceVideo(index: number) {
+  const preview = referenceVideoPreviewUrls.value[index]
+  if (preview) URL.revokeObjectURL(preview)
+  referenceVideoPreviewUrls.value = referenceVideoPreviewUrls.value.filter((_, itemIndex) => itemIndex !== index)
+  referenceVideoFiles.value = referenceVideoFiles.value.filter((_, itemIndex) => itemIndex !== index)
+}
+
+function removeReferenceAudio() {
+  if (referenceAudioPreviewUrl.value) URL.revokeObjectURL(referenceAudioPreviewUrl.value)
+  referenceAudioPreviewUrl.value = ''
+  referenceAudioFile.value = null
+}
+
+function clearMediaInputs() {
+  for (const preview of referenceVideoPreviewUrls.value) URL.revokeObjectURL(preview)
+  referenceVideoPreviewUrls.value = []
+  referenceVideoFiles.value = []
+  removeReferenceAudio()
+}
+
+function isSupportedVideoFile(file: File) {
+  const extension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
+  return ['.mp4', '.mov'].includes(extension) && (!file.type || ['video/mp4', 'video/quicktime'].includes(file.type))
+}
+
+function isSupportedAudioFile(file: File) {
+  const extension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
+  return ['.mp3', '.wav'].includes(extension) && (!file.type || ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave'].includes(file.type))
+}
+
+function canReadVideoFile(file: File): Promise<boolean> {
+  if (typeof document === 'undefined') return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    let settled = false
+    let timer: number | undefined
+    const finish = (value: boolean) => {
+      if (settled) return
+      settled = true
+      if (timer !== undefined) window.clearTimeout(timer)
+      URL.revokeObjectURL(url)
+      resolve(value)
+    }
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => finish(Number.isFinite(video.duration) || video.duration === Infinity)
+    video.onerror = () => finish(false)
+    video.src = url
+    timer = window.setTimeout(() => finish(false), 3000)
+    try {
+      video.load()
+    } catch {
+      finish(false)
+    }
+  })
+}
+
+async function isSupportedPCMWave(file: File): Promise<boolean> {
+  try {
+    const buffer = await file.arrayBuffer()
+    const view = new DataView(buffer)
+    if (view.byteLength < 12 || readAscii(view, 0, 4) !== 'RIFF' || readAscii(view, 8, 4) !== 'WAVE') return false
+    let offset = 12
+    while (offset + 8 <= view.byteLength) {
+      const chunkSize = view.getUint32(offset + 4, true)
+      const chunkStart = offset + 8
+      if (chunkStart + chunkSize > view.byteLength) return false
+      if (readAscii(view, offset, 4) === 'fmt ' && chunkSize >= 16) {
+        return view.getUint16(chunkStart, true) === 1 && [16, 24].includes(view.getUint16(chunkStart + 14, true))
+      }
+      offset = chunkStart + chunkSize + (chunkSize % 2)
+    }
+  } catch {
+    return false
+  }
+  return false
+}
+
+function readAudioDuration(file: File): Promise<number | null> {
+  if (typeof Audio === 'undefined') return Promise.resolve(null)
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const audioElement = new Audio()
+    let settled = false
+    let timer: number | undefined
+    const finish = (value: number | null) => {
+      if (settled) return
+      settled = true
+      if (timer !== undefined) window.clearTimeout(timer)
+      URL.revokeObjectURL(url)
+      resolve(value)
+    }
+    audioElement.onloadedmetadata = () => finish(Number.isFinite(audioElement.duration) ? audioElement.duration : null)
+    audioElement.onerror = () => finish(null)
+    audioElement.src = url
+    timer = window.setTimeout(() => finish(null), 3000)
+  })
+}
+
+function readAscii(view: DataView, offset: number, length: number) {
+  let value = ''
+  for (let index = 0; index < length; index += 1) value += String.fromCharCode(view.getUint8(offset + index))
+  return value
+}
+
+function uploadedMediaUrl(item?: { media_url?: string; image_url?: string; video_url?: string; audio_url?: string }) {
+  return item?.media_url || item?.image_url || item?.video_url || item?.audio_url || ''
 }
 
 function removeLocalImage(index: number) {
@@ -780,5 +1015,6 @@ onBeforeUnmount(() => {
   stopPolling()
   clearSelectedVideo()
   clearImageInputs()
+  clearMediaInputs()
 })
 </script>

@@ -54,20 +54,23 @@
             </div>
           </section>
 
-          <section id="upload-image" class="scroll-mt-6 border-t border-gray-200 pt-10 dark:border-dark-700">
-            <SectionHeading :title="t('video.apiDocs.upload.title')" :description="t('video.apiDocs.upload.description')" />
+          <section id="upload-media" class="scroll-mt-6 border-t border-gray-200 pt-10 dark:border-dark-700">
+            <SectionHeading :title="t('video.apiDocs.uploadMediaTitle')" :description="t('video.apiDocs.uploadMediaDescription')" />
             <EndpointTitle method="POST" path="/v1/videos/uploads" class="mt-5" />
-            <p class="mt-3 text-sm leading-6 text-gray-600 dark:text-dark-300">{{ t('video.apiDocs.upload.constraints') }}</p>
+            <p class="mt-3 text-sm leading-6 text-gray-600 dark:text-dark-300">{{ t('video.apiDocs.uploadMediaConstraints') }}</p>
             <div class="mt-4">
               <ApiCodeBlock :label="t('video.apiDocs.examples.upload')" :code="uploadExample" />
             </div>
             <div class="mt-4">
               <ApiCodeBlock :label="t('video.apiDocs.examples.uploadResponse')" :code="uploadResponseExample" />
             </div>
+            <div class="mt-4">
+              <ApiCodeBlock :label="t('video.apiDocs.examples.uploadMedia')" :code="uploadMediaExample" />
+            </div>
           </section>
 
           <section id="create-job" class="scroll-mt-6 border-t border-gray-200 pt-10 dark:border-dark-700">
-            <SectionHeading :title="t('video.apiDocs.create.title')" :description="t('video.apiDocs.create.description')" />
+            <SectionHeading :title="t('video.apiDocs.create.title')" :description="t('video.apiDocs.createMediaDescription')" />
             <EndpointTitle method="POST" path="/v1/videos/generations" class="mt-5" />
             <div class="mt-5 overflow-x-auto rounded-lg border border-gray-200 dark:border-dark-700">
               <table class="min-w-[720px] w-full text-left text-sm">
@@ -93,6 +96,8 @@
               <ApiCodeBlock :label="t('video.apiDocs.examples.singleImage')" :code="singleImageExample" />
               <ApiCodeBlock :label="t('video.apiDocs.examples.framePair')" :code="framePairExample" />
               <ApiCodeBlock :label="t('video.apiDocs.examples.multiImage')" :code="multiImageExample" />
+              <ApiCodeBlock :label="t('video.apiDocs.examples.videoReference')" :code="videoReferenceExample" />
+              <ApiCodeBlock :label="t('video.apiDocs.examples.audioReference')" :code="audioReferenceExample" />
             </div>
           </section>
 
@@ -167,7 +172,7 @@ const baseUrl = (() => {
 
 const navigation = [
   { href: '#quick-start', label: 'video.apiDocs.nav.quick' },
-  { href: '#upload-image', label: 'video.apiDocs.nav.upload' },
+  { href: '#upload-media', label: 'video.apiDocs.nav.upload' },
   { href: '#create-job', label: 'video.apiDocs.nav.create' },
   { href: '#job-operations', label: 'video.apiDocs.nav.jobs' },
   { href: '#status-errors', label: 'video.apiDocs.nav.status' },
@@ -183,7 +188,7 @@ const requestFields = [
   { name: 'image_url', type: 'string', required: false, description: 'video.apiDocs.fields.imageUrl' },
   { name: 'start_frame_url', type: 'string', required: false, description: 'video.apiDocs.fields.startFrameUrl' },
   { name: 'end_frame_url', type: 'string', required: false, description: 'video.apiDocs.fields.endFrameUrl' },
-  { name: 'guidances', type: 'object', required: false, description: 'video.apiDocs.fields.guidances' },
+  { name: 'guidances', type: 'object', required: false, description: 'video.apiDocs.fields.guidancesPublic' },
 ]
 
 const jobEndpoints = [
@@ -237,10 +242,17 @@ const uploadExample = `curl -X POST "${baseUrl}/v1/videos/uploads" \\\n  -H "Aut
 
 const uploadResponseExample = `{
   "upload_id": "local-input-token",
-  "image_url": "http://127.0.0.1:8080/internal/video-inputs/local-input-token",
-  "content_type": "image/png",
+  "media_url": "http://127.0.0.1:8080/internal/video-inputs/local-input-token",
+  "media_type": "video",
+  "video_url": "http://127.0.0.1:8080/internal/video-inputs/local-input-token",
+  "content_type": "video/mp4",
   "size": 428516
 }`
+
+const uploadMediaExample = [
+  `curl -X POST "${baseUrl}/v1/videos/uploads" -H "Authorization: Bearer $SUB2_API_KEY" -F "video=@./reference.mp4"`,
+  `curl -X POST "${baseUrl}/v1/videos/uploads" -H "Authorization: Bearer $SUB2_API_KEY" -F "audio=@./reference.mp3"`,
+].join('\n\n')
 
 const singleImageExample = `{
   "model": "seedance-2.0",
@@ -286,4 +298,46 @@ const multiImageExample = `{
 const pollExample = `curl "${baseUrl}/v1/videos/jobs/vidjob_example" \\\n  -H "Authorization: Bearer $SUB2_API_KEY"
 
 curl -o output.mp4 "${baseUrl}/v1/videos/jobs/vidjob_example/content" \\\n  -H "Authorization: Bearer $SUB2_API_KEY"`
+const videoReferenceExample = `{
+  "model": "seedance-2.0",
+  "prompt": "Preserve the motion and timing of the reference video",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "guidances": {
+    "video_reference_base": [
+      {
+        "video": {
+          "url": "https://media.example/reference.mp4",
+          "type": "UPLOADED"
+        }
+      }
+    ]
+  }
+}`
+
+const audioReferenceExample = `{
+  "model": "seedance-2.0",
+  "prompt": "Match the rhythm and pacing of the reference audio",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "guidances": {
+    "image_reference": [
+      {
+        "image": { "url": "https://media.example/character.png", "type": "UPLOADED" },
+        "strength": "MID"
+      }
+    ],
+    "audio_reference": [
+      {
+        "audio": {
+          "url": "https://media.example/reference.mp3",
+          "type": "UPLOADED"
+        }
+      }
+    ]
+  }
+}`
 </script>

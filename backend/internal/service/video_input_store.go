@@ -1,8 +1,10 @@
 package service
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -16,19 +18,35 @@ import (
 	"net/http"
 )
 
-const VideoInputMaxBytes = 10 * 1024 * 1024
+const (
+	VideoInputMaxBytes       = 10 * 1024 * 1024
+	VideoReferenceMaxBytes   = 100 * 1024 * 1024
+	AudioReferenceMaxBytes   = 15 * 1024 * 1024
+	AudioReferenceMinSeconds = 2
+	AudioReferenceMaxSeconds = 30
+)
+
+type VideoInputKind string
+
+const (
+	VideoInputKindImage VideoInputKind = "image"
+	VideoInputKindVideo VideoInputKind = "video"
+	VideoInputKindAudio VideoInputKind = "audio"
+)
 
 // Seven 32-byte tokens plus delimiters fit the existing VARCHAR(255) job field.
 const videoInputTokenStorageLimit = 7
 
 var (
-	ErrVideoInputTooLarge        = errors.New("video input is too large")
-	ErrVideoInputUnsupportedType = errors.New("video input type is not supported")
-	ErrVideoInputNotFound        = errors.New("video input not found")
+	ErrVideoInputTooLarge            = errors.New("video input is too large")
+	ErrVideoInputUnsupportedType     = errors.New("video input type is not supported")
+	ErrVideoInputUnsupportedDuration = errors.New("audio input duration must be between 2 and 30 seconds")
+	ErrVideoInputNotFound            = errors.New("video input not found")
 )
 
 type VideoInput struct {
 	Token       string
+	Kind        VideoInputKind
 	ContentType string
 	Size        int64
 	URL         string
@@ -70,19 +88,27 @@ func NewVideoInputStore(dataDir string, port int) *VideoInputStore {
 }
 
 func (s *VideoInputStore) Save(reader io.Reader) (*VideoInput, error) {
+	return s.SaveMedia(reader, VideoInputKindImage, "")
+}
+
+func (s *VideoInputStore) SaveMedia(reader io.Reader, kind VideoInputKind, filename string) (*VideoInput, error) {
 	if s == nil || reader == nil {
 		return nil, ErrVideoInputNotFound
 	}
-	data, err := io.ReadAll(io.LimitReader(reader, VideoInputMaxBytes+1))
+	limit, ok := videoInputMaxBytes(kind)
+	if !ok {
+		return nil, ErrVideoInputUnsupportedType
+	}
+	data, err := io.ReadAll(io.LimitReader(reader, limit+1))
 	if err != nil {
 		return nil, err
 	}
-	if len(data) > VideoInputMaxBytes {
+	if int64(len(data)) > limit {
 		return nil, ErrVideoInputTooLarge
 	}
-	contentType := http.DetectContentType(data)
-	if contentType != "image/png" && contentType != "image/jpeg" && contentType != "image/webp" {
-		return nil, ErrVideoInputUnsupportedType
+	contentType, err := validateVideoInputData(data, kind, filename)
+	if err != nil {
+		return nil, err
 	}
 	if err := os.MkdirAll(s.root, 0o700); err != nil {
 		return nil, err
@@ -99,7 +125,7 @@ func (s *VideoInputStore) Save(reader io.Reader) (*VideoInput, error) {
 	s.mu.Lock()
 	s.entries[token] = videoInputEntry{contentType: contentType, createdAt: now}
 	s.mu.Unlock()
-	return &VideoInput{Token: token, ContentType: contentType, Size: int64(len(data)), URL: s.InternalURL(token), Data: data}, nil
+	return &VideoInput{Token: token, Kind: kind, ContentType: contentType, Size: int64(len(data)), URL: s.InternalURL(token), Data: data}, nil
 }
 
 func (s *VideoInputStore) Open(token string) (*VideoInput, error) {
@@ -114,13 +140,219 @@ func (s *VideoInputStore) Open(token string) (*VideoInput, error) {
 	if err != nil {
 		return nil, err
 	}
-	contentType := http.DetectContentType(data)
+	contentType := detectStoredMediaType(data)
 	s.mu.RLock()
 	if entry, ok := s.entries[token]; ok && entry.contentType != "" {
 		contentType = entry.contentType
 	}
 	s.mu.RUnlock()
 	return &VideoInput{Token: token, ContentType: contentType, Size: int64(len(data)), URL: s.InternalURL(token), Data: data}, nil
+}
+
+func videoInputMaxBytes(kind VideoInputKind) (int64, bool) {
+	switch kind {
+	case VideoInputKindImage:
+		return VideoInputMaxBytes, true
+	case VideoInputKindVideo:
+		return VideoReferenceMaxBytes, true
+	case VideoInputKindAudio:
+		return AudioReferenceMaxBytes, true
+	default:
+		return 0, false
+	}
+}
+
+func validateVideoInputData(data []byte, kind VideoInputKind, filename string) (string, error) {
+	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(filename)))
+	switch kind {
+	case VideoInputKindImage:
+		contentType := http.DetectContentType(data)
+		if contentType != "image/png" && contentType != "image/jpeg" && contentType != "image/webp" {
+			return "", ErrVideoInputUnsupportedType
+		}
+		return contentType, nil
+	case VideoInputKindVideo:
+		if !isISOBaseMedia(data) || (ext != ".mp4" && ext != ".mov") {
+			return "", ErrVideoInputUnsupportedType
+		}
+		if ext == ".mov" || isQuickTimeBrand(data) {
+			return "video/quicktime", nil
+		}
+		return "video/mp4", nil
+	case VideoInputKindAudio:
+		switch ext {
+		case ".mp3":
+			duration, ok := parseMP3Duration(data)
+			if !ok {
+				return "", ErrVideoInputUnsupportedType
+			}
+			if duration < AudioReferenceMinSeconds || duration > AudioReferenceMaxSeconds {
+				return "", ErrVideoInputUnsupportedDuration
+			}
+			return "audio/mpeg", nil
+		case ".wav":
+			duration, ok := parsePCM16Or24WAVDuration(data)
+			if !ok {
+				return "", ErrVideoInputUnsupportedType
+			}
+			if duration < AudioReferenceMinSeconds || duration > AudioReferenceMaxSeconds {
+				return "", ErrVideoInputUnsupportedDuration
+			}
+			return "audio/wav", nil
+		default:
+			return "", ErrVideoInputUnsupportedType
+		}
+	default:
+		return "", ErrVideoInputUnsupportedType
+	}
+}
+
+func detectStoredMediaType(data []byte) string {
+	if contentType := http.DetectContentType(data); strings.HasPrefix(contentType, "image/") {
+		return contentType
+	}
+	if isISOBaseMedia(data) {
+		if isQuickTimeBrand(data) {
+			return "video/quicktime"
+		}
+		return "video/mp4"
+	}
+	if _, ok := parsePCM16Or24WAVDuration(data); ok {
+		return "audio/wav"
+	}
+	if isMP3(data) {
+		return "audio/mpeg"
+	}
+	return "application/octet-stream"
+}
+
+func isISOBaseMedia(data []byte) bool {
+	return len(data) >= 12 && string(data[4:8]) == "ftyp"
+}
+
+func isQuickTimeBrand(data []byte) bool {
+	return len(data) >= 12 && string(data[8:12]) == "qt  "
+}
+
+func isMP3(data []byte) bool {
+	if bytes.HasPrefix(data, []byte("ID3")) {
+		return true
+	}
+	limit := len(data)
+	if limit > 4096 {
+		limit = 4096
+	}
+	for index := 0; index+1 < limit; index++ {
+		if data[index] == 0xff && data[index+1]&0xe0 == 0xe0 && data[index+1]&0x06 != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func parseMP3Duration(data []byte) (float64, bool) {
+	start := 0
+	if bytes.HasPrefix(data, []byte("ID3")) && len(data) >= 10 {
+		size := int(data[6]&0x7f)<<21 | int(data[7]&0x7f)<<14 | int(data[8]&0x7f)<<7 | int(data[9]&0x7f)
+		start = 10 + size
+	}
+	if start >= len(data) {
+		return 0, false
+	}
+	frames := 0
+	var duration float64
+	for offset := start; offset+4 <= len(data); {
+		header := binary.BigEndian.Uint32(data[offset : offset+4])
+		frameLength, frameSamples, sampleRate, ok := mp3FrameInfo(header)
+		if !ok || offset+frameLength > len(data) {
+			if frames == 0 {
+				offset++
+				continue
+			}
+			break
+		}
+		frames++
+		duration += float64(frameSamples) / float64(sampleRate)
+		offset += frameLength
+	}
+	if frames == 0 {
+		return 0, false
+	}
+	return duration, true
+}
+
+func mp3FrameInfo(header uint32) (int, int, int, bool) {
+	if header>>21 != 0x7ff {
+		return 0, 0, 0, false
+	}
+	version := (header >> 19) & 0x3
+	layer := (header >> 17) & 0x3
+	bitrateIndex := (header >> 12) & 0xf
+	sampleRateIndex := (header >> 10) & 0x3
+	if version == 1 || layer != 1 || bitrateIndex == 0 || bitrateIndex == 15 || sampleRateIndex == 3 {
+		return 0, 0, 0, false
+	}
+	bitratesV1 := [...]int{0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0}
+	bitratesV2 := [...]int{0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0}
+	bitrate := bitratesV1[bitrateIndex]
+	samplesPerFrame := 1152
+	coefficient := 144
+	if version != 3 {
+		bitrate = bitratesV2[bitrateIndex]
+		samplesPerFrame = 576
+		coefficient = 72
+	}
+	sampleRates := [...]int{44100, 48000, 32000}
+	sampleRate := sampleRates[sampleRateIndex]
+	if version == 2 {
+		sampleRate /= 2
+	} else if version == 0 {
+		sampleRate /= 4
+	}
+	padding := int((header >> 9) & 1)
+	frameLength := coefficient*bitrate*1000/sampleRate + padding
+	if frameLength < 4 {
+		return 0, 0, 0, false
+	}
+	return frameLength, samplesPerFrame, sampleRate, true
+}
+
+func parsePCM16Or24WAVDuration(data []byte) (float64, bool) {
+	if len(data) < 12 || string(data[0:4]) != "RIFF" || string(data[8:12]) != "WAVE" {
+		return 0, false
+	}
+	var byteRate uint32
+	var bitsPerSample uint16
+	var dataSize uint32
+	fmtFound, dataFound := false, false
+	for offset := 12; offset+8 <= len(data); {
+		chunkSize := int(binary.LittleEndian.Uint32(data[offset+4 : offset+8]))
+		chunkStart := offset + 8
+		if chunkStart > len(data) || chunkSize > len(data)-chunkStart {
+			return 0, false
+		}
+		switch string(data[offset : offset+4]) {
+		case "fmt ":
+			if chunkSize < 16 {
+				return 0, false
+			}
+			format := binary.LittleEndian.Uint16(data[chunkStart : chunkStart+2])
+			byteRate = binary.LittleEndian.Uint32(data[chunkStart+8 : chunkStart+12])
+			bitsPerSample = binary.LittleEndian.Uint16(data[chunkStart+14 : chunkStart+16])
+			fmtFound = format == 1 && (bitsPerSample == 16 || bitsPerSample == 24) && byteRate > 0
+		case "data":
+			dataSize = uint32(chunkSize)
+			dataFound = true
+		}
+		if fmtFound && dataFound {
+			return float64(dataSize) / float64(byteRate), true
+		}
+		offset = chunkStart + chunkSize
+		if chunkSize%2 != 0 {
+			offset++
+		}
+	}
+	return 0, false
 }
 
 func (s *VideoInputStore) MarkTerminal(token string, at time.Time) error {
