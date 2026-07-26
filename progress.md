@@ -3447,3 +3447,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_MODEL_SPECS.md`: records independent frame submission and reference-image exclusion.
 - `progress.md`: records the release preparation verification.
 - Rollback point: revert the latest documentation-only hunks in the two dashboard locale files and `LEO_VIDEO_MODEL_SPECS.md`, then remove this appended block; preserve the earlier Leo implementation and `.superpowers/`.
+
+## 2026-07-26 - Task: Publish Leo video reference workflow v0.1.164-fy.5
+
+### What was done
+- Committed the Leo video reference-media workflow, frame-mode clarification, web/API documentation, tests, and release preparation as `722c3c524`.
+- Pushed `codex/leo-video-channel` to `origin` and published tag `v0.1.164-fy.5`.
+- GitHub Release completed with the Linux amd64 archive and `checksums.txt`.
+
+### Testing
+- Full backend `go test ./... -count=1` passed.
+- Frontend focused tests, typecheck, targeted ESLint, and production build passed before release.
+- Release archive download returned HTTP 200 with the expected `application/octet-stream` content and 35,333,993-byte length.
+- `https://api.fflink.top/health` returned HTTP 200 with `{"status":"ok"}`.
+- Production binary replacement was not performed: this environment has no authenticated SSH or admin updater credential. No production state was changed.
+
+### Notes
+- `progress.md`: records the commit, tag, release assets, verification evidence, and deployment boundary.
+- Rollback point: source rollback is `git revert 722c3c524`; release rollback target is `v0.1.164-fy.4`. The production server remains on its existing version because no online replacement was attempted.
