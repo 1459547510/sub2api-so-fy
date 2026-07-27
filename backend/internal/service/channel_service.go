@@ -712,9 +712,15 @@ func checkVideoBillingModeRequirements(p ChannelModelPricing) error {
 	}
 	requiredResolutions := LeoVideoPricingResolutions(p.Models[0])
 	if len(p.Intervals) != len(requiredResolutions) {
+		resolutionList := strings.Join(requiredResolutions, ", ")
+		if len(requiredResolutions) == 2 {
+			resolutionList = strings.Join(requiredResolutions, " and ")
+		} else if len(requiredResolutions) > 2 {
+			resolutionList = strings.Join(requiredResolutions[:len(requiredResolutions)-1], ", ") + ", and " + requiredResolutions[len(requiredResolutions)-1]
+		}
 		return infraerrors.BadRequest(
 			"VIDEO_PRICING_INVALID_TIERS",
-			fmt.Sprintf("video pricing requires exactly %s intervals", strings.Join(requiredResolutions, ", ")),
+			fmt.Sprintf("video pricing requires exactly %s intervals", resolutionList),
 		)
 	}
 

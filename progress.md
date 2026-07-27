@@ -3465,3 +3465,204 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - `progress.md`: records the commit, tag, release assets, verification evidence, and deployment boundary.
 - Rollback point: source rollback is `git revert 722c3c524`; release rollback target is `v0.1.164-fy.4`. The production server remains on its existing version because no online replacement was attempted.
+
+## 2026-07-27 - Task: Merge upstream v0.1.165 and prepare fork release
+
+### What was done
+- Merged `upstream/main` at `7d3a896fc` into `codex/leo-video-channel`, advancing the upstream base to `0.1.165` while retaining the fork-owned Leo video channel, token incentive, updater, and other custom behavior.
+- Integrated upstream ChatGPT Live gateway support, Claude Opus 5 compatibility, request-driven Ollama Cloud usage refresh, session ID persistence, announcement preview/styling, email-alias registration deduplication, scheduler and gateway fixes, and migrations 187 through 190.
+- Resolved `backend/internal/service/admin_group.go` by retaining both the fork's Leo video price validation and upstream's `AllowLive` create/update normalization.
+- Regenerated `frontend/pnpm-lock.yaml` so the fork's Axios/PostCSS requirements and upstream's PostCSS security override resolve together at PostCSS 8.5.23.
+- Added the two missing Live capability mocks required by the existing GroupsView tests and aligned the existing Leo pricing validation message with its test contract.
+
+### Testing
+- `go test ./... -count=1` passed.
+- The unchanged Redis subscriber timing test passed 10 consecutive isolated repetitions after one transient failure observed only while the full backend and frontend suites were competing for resources.
+- Frontend Vitest passed: 197 files and 1,366 tests.
+- `go test -tags unit ./internal/repository -count=1` passed.
+- The first tagged service run exposed the Leo error-message mismatch; after the wording-only correction, `go test -tags unit ./internal/service -count=1` passed.
+- `pnpm.cmd typecheck`, `pnpm.cmd lint:check`, and `pnpm.cmd run build` passed.
+- `gofmt` and `git diff --check` passed; no unresolved conflict markers or sensitive configuration files were found.
+- Control-flow parity appears preserved: fork-owned Leo validation remains active, upstream Live normalization is active, and full backend/frontend regression suites pass.
+
+### Notes
+- `README.md`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `README_CN.md`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `README_JA.md`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `assets/partners/logos/apikl.png`: 按上游 v0.1.165 清理已移除的资产。
+- `assets/partners/logos/miyaip.png`: 按上游 v0.1.165 清理已移除的资产。
+- `assets/partners/logos/tokeneum.png`: 按上游 v0.1.165 清理已移除的资产。
+- `backend/cmd/server/VERSION`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/group.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/group/group.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/group/where.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/group_create.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/group_update.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/migrate/schema.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/mutation.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/runtime/runtime.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/ent/schema/group.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/config/config.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/domain/constants.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/admin/account_ollama_cloud_usage_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/admin/group_handler.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/auth_oauth_pending_flow_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/batch_image_handler.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/dto/mappers.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/dto/types.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/gateway_handler.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/gateway_handler_chat_completions.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/gateway_handler_responses.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/gemini_v1beta_handler.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/grok_media.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/openai_alpha_search.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/openai_chat_completions.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/openai_embeddings.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/openai_gateway_handler.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/openai_images.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/openai_images_failover_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/handler/openai_live.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/handler/openai_live_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/handler/user_handler_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/pkg/claude/constants.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/platform/liveattestation/attestation.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/platform/liveattestation/attestation_darwin.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/platform/liveattestation/attestation_unsupported.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/platform/liveattestation/attestation_unsupported_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/repository/account_repo_ollama_cloud_usage.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/account_repo_ollama_cloud_usage_integration_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/account_repo_ollama_cloud_usage_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/api_key_repo.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/batch_image_repo.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/concurrency_cache.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/concurrency_cache_integration_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/concurrency_cache_live_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/repository/gateway_cache.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/gateway_cache_live_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/repository/group_repo.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/integration_harness_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/migrations_schema_integration_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/usage_log_repo_insert.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/usage_log_repo_query.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/usage_log_repo_request_type_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/usage_log_session_id_integration_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/repository/usage_log_session_id_unit_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/repository/user_repo.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/repository/user_repo_email_alias_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/server/api_contract_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/server/middleware/admin_auth_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/server/routes/admin.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/server/routes/gateway.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/server/routes/prompt_audit_route_coverage_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/account.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/admin_group.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/admin_group_duplicate.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/admin_group_duplicate_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/admin_service.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/admin_service_apikey_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/admin_service_delete_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/admin_service_email_identity_sync_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/admin_service_group_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/api_key_auth_cache.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/api_key_auth_cache_impl.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/auth_oauth_email_flow.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/auth_service.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/auth_service_email_bind_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/auth_service_register_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/batch_image.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/batch_image_processor_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/batch_image_public.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/batch_image_public_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/batch_image_settlement.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/batch_image_settlement_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/bedrock_request.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/billing_service.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/claude_opus5_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/content_moderation_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/gateway_anthropic_apikey_passthrough_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/gateway_anthropic_passthrough.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/gateway_forward.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/gateway_upstream_response.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/gateway_usage_billing.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/gemini_chat_completions_compat_service.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/gemini_chat_completions_compat_service_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/gemini_messages_compat_service.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/group.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/ollama_cloud_usage.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/ollama_cloud_usage_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_account_runtime_block_fastpath.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_account_runtime_block_fastpath_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_codex_transform.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_gateway_apikey_item_id_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/openai_gateway_forward.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_gateway_grok.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_gateway_grok_cache.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_gateway_grok_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_gateway_scheduling.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_gateway_service.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_gateway_usage.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_live.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/openai_live_attestation.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/openai_live_lifecycle_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/openai_live_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/openai_live_types.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/openai_oauth_passthrough_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_responses_item_id.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/openai_responses_namespace.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_responses_namespace_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_responses_rejected_field_retry_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_upstream_transport_error.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_upstream_transport_error_handle_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/openai_ws_forwarder_success_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/pricing_service.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/pricing_service_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/registration_email_alias.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/registration_email_alias_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/session_id.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/session_id_test.go`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/usage_log.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/user_service.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/internal/service/user_service_test.go`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `backend/migrations/187_add_usage_log_session_id.sql`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/migrations/188_allow_live_usage_request_type.sql`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/migrations/189_add_group_allow_live.sql`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/migrations/190_add_users_email_alias_dedup_index_notx.sql`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/resources/model-pricing/model_prices_and_context_window.json`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `deploy/config.example.yaml`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/package.json`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/pnpm-lock.yaml`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/api/__tests__/admin.accounts.ollamaCloudUsage.spec.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/api/admin/groups.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/components/account/AccountStatusIndicator.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/components/admin/usage/UsageFilters.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/components/admin/usage/UsageTable.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/components/common/AnnouncementBell.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/components/common/AnnouncementPopup.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/components/common/__tests__/AnnouncementPopup.spec.ts`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `frontend/src/composables/useModelWhitelist.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/i18n/locales/en/admin/overview.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/i18n/locales/en/admin/resources.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/i18n/locales/en/admin/settings.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/i18n/locales/en/dashboard.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/i18n/locales/zh/admin/overview.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/i18n/locales/zh/admin/resources.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/i18n/locales/zh/admin/settings.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/i18n/locales/zh/dashboard.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/styles/announcement-markdown.css`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `frontend/src/types/index.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/utils/errorBadges.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/utils/usageRequestType.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/views/admin/AnnouncementsView.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/views/admin/GroupsView.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/views/admin/SettingsView.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/views/admin/UsageView.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/views/admin/__tests__/SettingsView.spec.ts`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/views/user/AffiliateView.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/views/user/UsageView.vue`: 同步上游 v0.1.165 的实现或测试改动，并保留当前分支持有功能。
+- `frontend/src/views/user/__tests__/AffiliateView.spec.ts`: 新增上游 v0.1.165 的实现、迁移或回归测试资产。
+- `backend/internal/service/channel_service.go`: 对齐 Leo 视频价格区间校验错误文案与既有测试预期，不改变计费规则。
+- `frontend/src/views/admin/__tests__/GroupsView.columnSettings.spec.ts`: 补充 Live 能力查询 mock，覆盖合并后的分组页测试依赖。
+- `frontend/src/views/admin/__tests__/GroupsView.duplicate.spec.ts`: 补充 Live 能力查询 mock，覆盖合并后的分组复制测试依赖。
+- `progress.md`: 追加本轮合并、验证、文件清单和回滚记录。
+- `.superpowers/`: remains untracked and is explicitly excluded from the merge commit and release.
+- Rollback point: before commit, run `git merge --abort`; after commit, run `git revert -m 1 <merge_commit>`. The exact pre-merge source point is `a5cabf05253d06f358df019d52c0ffd3c720945a`.
