@@ -28,12 +28,12 @@ type LeoVideoRequestInfo struct {
 var publicVideoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio)\b`)
 
 func PublicVideoErrorMessage(message string) string {
-	return strings.TrimSpace(publicVideoProviderNamePattern.ReplaceAllString(message, "video provider"))
+	return strings.TrimSpace(publicVideoProviderNamePattern.ReplaceAllString(message, "video service"))
 }
 
 func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
 	if !gjson.ValidBytes(body) {
-		return LeoVideoRequestInfo{}, fmt.Errorf("invalid leo video JSON request")
+		return LeoVideoRequestInfo{}, fmt.Errorf("invalid video JSON request")
 	}
 	imageURLs := LeoVideoImageURLs(body)
 	info := LeoVideoRequestInfo{
@@ -176,7 +176,7 @@ func (s *OpenAIGatewayService) ForwardLeoVideo(
 		return s.handleLeoVideoErrorResponse(ctx, c, account, resp, responseBody)
 	}
 	if _, _, _, err := parseVideoOutputResult(responseBody); err != nil {
-		return nil, fmt.Errorf("LeoStudio returned no usable video output")
+		return nil, fmt.Errorf("video service returned no usable video output")
 	}
 
 	writeOpenAIPassthroughResponseHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
@@ -233,7 +233,7 @@ func (s *OpenAIGatewayService) handleLeoVideoErrorResponse(
 
 	message := PublicVideoErrorMessage(sanitizeUpstreamErrorMessage(strings.TrimSpace(extractUpstreamErrorMessage(body))))
 	if message == "" {
-		message = fmt.Sprintf("Video provider rejected the request with HTTP %d", resp.StatusCode)
+		message = fmt.Sprintf("Video service rejected the request with HTTP %d", resp.StatusCode)
 	}
 	writeOpenAIPassthroughResponseHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 	c.JSON(resp.StatusCode, gin.H{

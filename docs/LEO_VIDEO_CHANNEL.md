@@ -41,7 +41,7 @@ Sub2API 的连接测试会请求去掉 `/v1` 后的 `/health`；视频生成会�
 2. 开启“允许当前分组生成视频”。
 3. 在分组中填写 480p、720p、1080p 三档 USD/秒回退价格。Leo 分组三档都必填，`0` 表示免费。
 4. 在“渠道管理”中创建或编辑关联该分组的渠道，并进入 `Leo` 平台的模型定价。
-5. 为 `seedance-2.0`、`seedance-2.0-fast` 和 `seedance-2.0-mini` 分别添加一条“视频（按秒）”定价。前两个模型填写各自的 480p、720p、1080p 三档 USD/秒价格；Mini 只填写 720p USD/秒价格。每条只能绑定一个精确模型，不能使用通配符；不要配置在账号统计定价规则中。点击“添加”会依次预填这三个模型，同步 Leo 模型时也会拆成独立定价条目。
+5. 为已经配置计费的模型分别添加“视频（按秒）”定价。当前定价编辑器仍只有 480p、720p、1080p 三档，因此不要把 `happy-horse-1.1` 或 `grok-imagine-1.5` 加入旧的三档定价目录，除非计费结构同时扩展到 400p、544p、960p。每条只能绑定一个精确模型，不能使用通配符；不要配置在账号统计定价规则中。
 6. 创建平台为 `Leo`、类型为 `API Key` 的账号。
 7. 填写 LeoStudio `/v1` Base URL、Bearer API Key、代理和并发。
 8. 保留或调整默认模型映射：
@@ -54,20 +54,20 @@ seedance-2.0-mini -> seedance-2.0-mini
 
 9. 执行账号连接测试，确认 `/health` 返回成功。
 
-模型映射只改写请求 JSON 中的 `model`，提示词、分辨率、时长、音频和 guidance 字段原样转发。LeoStudio `3ed1f43` 新增的视频输入字段均可通过同步或异步 Sub2 API 使用：
+模型映射只改写请求 JSON 中的 `model`，提示词、分辨率、时长、音频和 guidance 字段原样转发。当前公开模型及其参数矩阵见 `docs/LEO_VIDEO_MODEL_SPECS.md`。同步和异步 Sub2 API 均使用同一套模型校验：
 
 - `image_url`：兼容字段，表示单张首帧图片；
 - `start_frame_url`、`end_frame_url`：分别表示首帧和尾帧；
 - `image_urls`：图片参考 URL 数组，与 `guidances.image_reference` 合计最多 4 张；
-- `guidances.start_frame`、`end_frame`、`image_reference`：接受图片 URL 或 Leonardo UUID；
-- `guidances.video_reference_base`：接受池内账号可访问的 Leonardo 视频 UUID，或由 LeoStudio 服务端可访问的 MP4/MOV 绝对 URL；URL 模式的 `type` 必须为 `UPLOADED`。
-- `guidances.audio_reference`：接受池内账号可访问的 Leonardo 音频 UUID，或由 LeoStudio 服务端可访问的 MP3/WAV 绝对 URL；URL 模式的 `type` 必须为 `UPLOADED`。直接使用 UUID 时可附带 2–30 秒 `duration`，URL 模式必须省略。
+- `guidances.start_frame`、`end_frame`、`image_reference`：使用上传接口返回的媒体 URL；
+- `guidances.video_reference_base`：使用上传接口返回的 MP4/MOV 媒体 URL，URL 对象的 `type` 必须为 `UPLOADED`；
+- `guidances.audio_reference`：使用上传接口返回的 MP3/WAV 媒体 URL，URL 对象的 `type` 必须为 `UPLOADED`，并且不在 URL 对象中提交客户端时长。
 
-图片、视频和音频 URL 必须是 LeoStudio 服务端可以访问的绝对 `http`/`https` URL。生成接口不接受 data URL、Base64 或 multipart 媒体；参考音频必须同时搭配 `image_reference` 或 `video_reference_base`。Sub2 的 `/v1/videos/uploads` 仍只用于页面本地图片上传，媒体和音频参考应使用可访问 URL 或已有 UUID。
+图片、视频和音频 URL 必须是视频服务端可以访问的绝对 `http`/`https` URL。生成接口不接受 data URL、Base64 或 multipart 媒体；参考音频必须同时搭配 `image_reference` 或 `video_reference_base`。Sub2 的 `/v1/videos/uploads` 支持图片、视频和音频三类上传，客户只需使用返回的 `media_url`。
 
 首尾帧与参考图是两种独立输入模式：首帧和尾帧可以一起提交，但不能再附带 `image_urls` 或 `guidances.image_reference`；参考图请求也不能同时携带首帧或尾帧字段。
 
-用户工作台提交单张图片时使用兼容性已验证的 `image_url` 首帧链路；提交 2 到 4 张图片时使用 `guidances.image_reference`，并按数组位置显式写入从 `0` 开始的连续 `order`。直接调用 API 时可以省略非负整数 `order`，最新版 LeoStudio 会按引用顺序补齐未指定项；外部 API 仍兼容 `image_urls`，但调用方应优先使用上述两种明确语义。
+用户工作台提交单张图片时使用兼容性已验证的 `image_url` 首帧链路；提交多张图片时使用 `guidances.image_reference`，并按数组位置显式写入从 `0` 开始的连续 `order`。参考图模式与首尾帧模式互斥，服务端会再次校验该组合。
 
 ## 用户端菜单开关
 
@@ -116,8 +116,8 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 前端用户端新增 `/video-generation` 工作台。页面可以使用当前用户已保存的 Leo 分组 Sub2API API Key，也可以临时输入其他 Sub2API API Key；自定义 Key 只保存在当前页面内存，不写入浏览器存储或用户账号。切换 Key 来源或修改自定义 Key 会清空当前任务列表并停止旧轮询，提交、参考图上传、任务查询、取消以及视频预览下载统一使用当前 Key。页面不会显示 LeoStudio API Key、Cookie、上游账号或上游任务 ID。工作台支持：
 
 - 文生视频；
-- 最多 4 张远程 `http`/`https` 参考图片 URL；
-- 最多 4 张 PNG、JPEG、WebP 本地参考图片，每次选择一张并按选择顺序累计，每张最大 10 MiB；
+- 按当前模型显示对应数量的远程 `http`/`https` 参考图片 URL；
+- PNG、JPEG、WebP 本地参考图片，Seedance 最多 4 张、Happy Horse 最多 9 张，每张最大 10 MiB；
 - 独立首帧和尾帧图片，可同时选择并并行上传，分别写入 `start_frame_url` 和 `end_frame_url`；首尾帧模式与参考图模式互斥；
 - `pending`、`running`、`settling`、`completed`、`failed`、`canceled` 状态查询；
 - 只有 `pending` 任务可取消，`running` 和终态任务不能取消；
@@ -125,17 +125,19 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 
 ### 工作台模型参数约束
 
-工作台按当前 LeoStudio 模型能力注册表过滤参数，默认分辨率为 `720p`、默认时长为 `8` 秒：
+工作台按当前 LeoStudio 模型能力注册表过滤参数；完整矩阵见
+`docs/LEO_VIDEO_MODEL_SPECS.md`。模型切换后会重置分辨率、时长和画面比例，
+提交前服务端会再次校验相同组合：
 
 | 模型 | 可选分辨率 | 说明 |
 | --- | --- | --- |
-| `seedance-2.0` | `480p`、`720p`、`1080p` | 按 LeoStudio `3ed1f43` 模型能力表开放；Sub2 额外将 1080p 时长限制为最多 12 秒。 |
-| `seedance-2.0-fast` | `480p`、`720p` | LeoStudio `3ed1f43` 已明确不支持 `1080p`。 |
-| `seedance-2.0-mini` | `720p` | Mini 当前只开放 `720p`，画幅仅 `16:9`。 |
+| `seedance-2.0` | `480p`、`720p`、`1080p` | 4–15 秒；1080p 为 4–12 秒。 |
+| `seedance-2.0-fast` | `480p`、`720p` | 4–15 秒，不显示 1080p。 |
+| `seedance-2.0-mini` | `480p`、`720p` | 两档均支持 `16:9`、`1:1`、`9:16`。 |
+| `happy-horse-1.1` | `720p`、`1080p` | 3–15 秒，最多 9 张参考图；不支持尾帧、参考视频和参考音频。 |
+| `grok-imagine-1.5` | `400p`、`544p`、`720p`、`960p` | 3–15 秒，必须提供一张首帧；不支持其他参考 guidance。 |
 
-三个模型默认分辨率均为 `720p`。标准 `seedance-2.0` 的 `480p`、`720p` 时长为 `4`–`15` 秒，`1080p` 为 `4`–`12` 秒；Fast 和 Mini 的可用分辨率时长为 `4`–`15` 秒。Mini 只支持 `720p` 和 `16:9`；其他模型的 `480p` 和 `1080p` 支持 `16:9`、`9:16`、`1:1`、`4:3`、`3:4`、`21:9`、`9:21`，`720p` 不支持 `9:21`。Fast 因不支持 `1080p`，不会展示 `1080p` 的画幅选项。
-
-切换模型时，工作台会重置到该模型的默认分辨率、时长和画面比例；切换分辨率后，若原画面比例不再受支持，则回退到 `16:9`。页面提交前会再次校验模型、分辨率、时长和画面比例的组合，并固定本次请求参数，非法组合不会上传图片或创建任务。该矩阵是工作台约束；直接调用公共 API 的客户端仍须自行确保参数符合目标模型和上游账号能力。
+工作台会为每个模型设置一个可用的默认分辨率和时长；页面提交前会再次校验模型、分辨率、时长、画面比例和 guidance 组合，非法组合不会上传媒体或创建任务。直接调用公共 API 的客户端也会得到同样的服务端校验。
 
 提交工作台任务时，浏览器请求 Sub2API：
 
@@ -178,17 +180,25 @@ LeoStudio 报告任务完成后，Sub2API 会先从结果中的 `source_url`、`
 
 ## 运维边界
 
-当前实现对应 LeoStudio 上游提交 `3ed1f43438325e56635f4435ff23b4c91c4b2db9` 的模型目录、媒体 URL guidance 与异步协议：`POST /v1/videos/generations`、`GET /v1/videos/jobs/:id` 和 `DELETE /v1/videos/jobs/:id`。Sub2API 将完成视频保存到本地数据目录并提供 API Key 鉴权读取；不提供 Webhook、SSE、WebSocket、编辑、扩展或任务删除功能。
+当前实现对应 LeoStudio 最新模型目录、媒体 URL guidance 与异步协议：`POST /v1/videos/generations`、`GET /v1/videos/jobs/:id` 和 `DELETE /v1/videos/jobs/:id`。Sub2API 将完成视频保存到本地数据目录并提供 API Key 鉴权读取；不提供 Webhook、SSE、WebSocket、编辑、扩展或任务删除功能。
 
 ### API key quota settlement
 
 When a custom Sub2API API Key has a positive USD quota, a successfully settled Leo video also increments that key's `quota_used` through the shared atomic quota updater. Failed, canceled, or incomplete video jobs do not consume the key quota.
 
-### Seedance 2.0 Mini
+### Newly exposed models
 
-`seedance-2.0-mini` is available in the Leo account model presets and the video workbench. LeoStudio supports `4`–`15` seconds, `720p`, and `16:9` for this model. Mini requests do not use a Seedance 2.0-specific `parameters.mode` field.
+`happy-horse-1.1` and `grok-imagine-1.5` are available in the video workbench and
+public video API. Happy Horse supports `720p`/`1080p`, 3–15 seconds, up to nine
+reference images, and prompt enhancement. Grok supports `400p`/`544p`/`720p`/`960p`,
+3–15 seconds, and requires one start frame. Their unsupported guidance inputs
+are rejected before dispatch. `seedance-2.0-mini` now supports both `480p` and
+`720p`, with `16:9`, `1:1`, and `9:16` at each resolution.
 
-Channel model pricing entries follow the model capability matrix: regular Seedance models require `480p`, `720p`, and `1080p` USD-per-second tiers, while `seedance-2.0-mini` requires a single `720p` USD-per-second tier.
+Channel model pricing entries continue to use the existing 480p/720p/1080p
+tiers for the Seedance models. Happy Horse and Grok are exposed in the
+workbench/API but are not added to this legacy pricing directory until billing
+tiers for 400p, 544p, and 960p are available.
 
 ### Production pricing snapshot
 
@@ -207,12 +217,14 @@ As of 2026-07-24, production channel `Seedance 2 视频专用渠道` (channel ID
 `POST /v1/videos/uploads` accepts `image`, `video`, `audio`, or `file` with
 `media_type`. Existing `image` clients remain compatible. The response exposes
 an opaque `media_url` for use in the generation request; clients do not need to
-handle LeoStudio UUIDs.
+handle upstream identifiers.
 
 - Images: PNG, JPEG, or WebP, up to 10 MiB.
-- Videos: MP4 or MOV, up to 100 MiB, with at most three video references.
-- Audio: MP3 or PCM 16/24-bit WAV, up to 15 MiB, between 2 and 30 seconds, with
-  at most one audio reference.
+- Videos: the filename must end in MP4 or MOV, the bytes must be a readable ISO
+  Base Media container with an `ftyp` header, the file is limited to 100 MiB,
+  and a generation may contain at most three video references.
+- Audio: MP3 with readable frames or RIFF/WAVE PCM 16/24-bit WAV, up to 15 MiB,
+  between 2 and 30 seconds, with at most one audio reference.
 
 Uploaded media is placed in `guidances.video_reference_base` or
 `guidances.audio_reference` with `type: "UPLOADED"`. An audio reference must

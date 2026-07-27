@@ -3715,3 +3715,152 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - `progress.md`: records the copy-fix release and release verification.
 - Rollback point: source rollback is `git revert 967787768`; release rollback target is `v0.1.165-fy.1`.
+
+## 2026-07-27 - Task: Remove upstream implementation details from customer video surfaces
+
+### What was done
+- Removed the upstream brand, internal upload address example, and internal-field privacy notice from the video generation page and API documentation.
+- Changed the customer model/specification and API guide wording to require uploaded media URLs only; customer materials no longer describe UUID compatibility fields or upstream provider terminology.
+- Sanitized completed asynchronous video results before returning them to API clients, recursively removing provider metadata, UUIDs, source CDN URLs, provider task/account identifiers, and credential-shaped fields while retaining the platform job and local content URLs.
+
+### Testing
+- `pnpm test:run -- src/views/user/__tests__/VideoApiDocsView.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed.
+- `pnpm typecheck`: passed.
+- `go test ./internal/handler ./internal/service -run 'TestLeoVideo|TestVideoOutputStore|TestVideoJob' -count=1`: passed.
+- `git diff --check`: passed.
+- Searched customer video views, API client types, locale strings, and customer docs for UUID, LeoStudio, upstream/provider wording, and internal upload paths; no matches remain.
+
+### Notes
+- `backend/internal/handler/leo_video_async.go`: recursively strips upstream metadata from public completed-job results.
+- `backend/internal/handler/leo_video_async_test.go`: adds public-result leakage regression coverage and updates provider-name sanitization assertions.
+- `frontend/src/views/user/VideoApiDocsView.vue`: removes the internal privacy callout and internal upload URL example.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: prevents upstream/internal terms from returning to rendered API docs.
+- `frontend/src/api/videoGeneration.ts`: removes the provider field from the public result type.
+- `frontend/src/i18n/locales/en/dashboard.ts`: removes upstream video wording from the English customer UI.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: removes upstream video wording from the Chinese customer UI.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: documents only the customer upload-URL contract and platform capability rules.
+- `docs/SEEDANCE_API_CLIENT_GUIDE_CN.md`: removes internal upload URLs and upstream/provider wording from the customer integration guide.
+- Rollback point: changes are uncommitted; reverse only the hunks listed above (or apply a saved patch in reverse) and preserve unrelated working-tree changes. Do not restore whole files because they contain other pending work.
+
+## 2026-07-27 - Task: Detail video and audio reference upload conditions
+
+### What was done
+- Added the verified media constraints to the customer video workbench and API documentation: readable MP4/MOV video containers up to 100 MiB and at most three references; readable MP3 or PCM 16/24-bit WAV audio up to 15 MiB, 2–30 seconds, and at most one reference.
+- Added the media-format details to the model specification: ISO Base Media `ftyp` requirement for video, MP3 frame or RIFF/WAVE PCM validation for audio, and the required audio-plus-visual reference pairing.
+- Added immediate client-side rejection and a localized message for reference videos over 100 MiB; backend validation remains the final enforcement layer.
+
+### Testing
+- `pnpm test:run -- src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: passed.
+- `pnpm typecheck`: passed.
+- `go test ./internal/service ./internal/handler -run 'TestVideoInput|TestLeoVideo' -count=1`: passed.
+- `git diff --check`: passed.
+
+### Notes
+- `frontend/src/views/user/VideoGenerationView.vue`: rejects reference videos over 100 MiB before upload.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: details Chinese video/audio file, size, count, encoding, duration, and pairing rules.
+- `frontend/src/i18n/locales/en/dashboard.ts`: details English video/audio file, size, count, encoding, duration, and pairing rules.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers the immediate oversized-video warning.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records the byte/container/encoding validation contract without exposing upstream identifiers.
+- Rollback point: changes are uncommitted; reverse only this task's hunks in the listed files and preserve earlier pending work in the same files. Do not restore whole files.
+
+## 2026-07-27 - Task: Reconcile complete reference-media upload conditions
+
+### What was done
+- Rechecked the local LeoStudio media uploader, guidance normalizer, upload tests, and the current official Seedance API guides to separate documented limits from local validation and live observations.
+- Expanded the model specification with direct URL requirements, queue-time URL reachability, MP4/MOV `ftyp` validation, supported audio response types, URL-mode duration backfill, and the absence of a published universal video duration/frame-rate/codec/dimension whitelist.
+- Recorded the verified dimension observation that `640x360` was rejected with `INVALID_HEIGHT` while `864x496` succeeded, without turning that observation into an unsupported full allowlist.
+- Updated Chinese and English customer-facing page/API copy with the complete, platform-neutral media conditions; no upstream brand, provider identifier, UUID, account, or internal URL was added.
+
+### Testing
+- `pnpm exec vitest run src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts --reporter=verbose`: 2 files and 25 tests passed.
+- `pnpm exec vue-tsc --noEmit`: passed.
+- `go test ./internal/service ./internal/handler -run 'TestVideoInput|TestLeoVideo' -count=1`: passed.
+- `git diff --check`: passed.
+- Direct inspection of LeoStudio `internal/leonardo/media.go`, `internal/service/video_guidance.go`, upload tests, and the official Seedance 2.0/ Fast/ Mini guides completed; no explicit upstream frame-rate, codec, duration, or complete reference-video dimension whitelist was found.
+
+### Notes
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records the verified local/upload and direct-URL media conditions, including the observed dimension compatibility fact.
+- `frontend/src/i18n/locales/en/dashboard.ts`: expands English workbench and API documentation media requirements.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: expands Chinese workbench and API documentation media requirements.
+- `progress.md`: records this source reconciliation and verification evidence.
+- Rollback point: changes are uncommitted; reverse only this task's hunks in the three listed files (or apply the saved patch in reverse) and preserve earlier pending work. Do not restore whole files.
+
+## 2026-07-27 - Task: Finalize LeoStudio model and reference-media alignment
+
+### What was done
+- Completed the final capability alignment for Seedance 2.0, Fast, Mini, Happy Horse, and Grok, including model-specific resolution, duration, aspect-ratio, prompt, frame, and guidance limits.
+- Kept customer workbench/API documentation limited to platform upload responses and supported media conditions; removed the remaining upstream-identifier wording from the public model specification.
+- Completed public asynchronous-result sanitization and deterministic billing-resolution normalization for the expanded model set.
+
+### Testing
+- `go test ./internal/service ./internal/handler -run 'TestLeoVideo|TestValidateLeoVideo|TestVideoInput|TestNormalizeVideoBilling' -count=1`: passed.
+- `pnpm test:run -- src/views/user/__tests__/VideoApiDocsView.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts`: 31 tests passed.
+- `pnpm exec vue-tsc --noEmit`: passed.
+- `git diff --check`: passed.
+- Audited customer video views, API types, bilingual locale strings, and public docs for UUID, internal media paths, provider credentials, and upstream task identifiers; no customer-surface matches remain.
+
+### Notes
+- `backend/internal/handler/leo_video_async.go`: strips private provider-shaped fields from completed public results.
+- `backend/internal/handler/leo_video_async_test.go`: covers result sanitization and public error wording.
+- `backend/internal/handler/leo_video_test.go`: updates Leo video handler expectations.
+- `backend/internal/service/leo_video.go`: sanitizes synchronous video-service wording.
+- `backend/internal/service/leo_video_async.go`: sanitizes asynchronous video-service wording.
+- `backend/internal/service/leo_video_async_test.go`: updates asynchronous sanitization assertions.
+- `backend/internal/service/leo_video_model_specs.go`: defines the latest model and media guidance validation matrix.
+- `backend/internal/service/leo_video_model_specs_test.go`: covers model-specific parameter and guidance boundaries.
+- `backend/internal/service/leo_video_test.go`: updates video validation tests.
+- `backend/internal/service/video_billing_resolution.go`: normalizes nonstandard billing resolutions to available tiers.
+- `backend/internal/service/video_billing_resolution_test.go`: covers billing normalization.
+- `frontend/src/api/videoGeneration.ts`: aligns public request/result types and hides provider metadata.
+- `frontend/src/api/__tests__/videoGeneration.spec.ts`: verifies public API typing behavior.
+- `frontend/src/views/user/VideoGenerationView.vue`: exposes model-filtered parameters and media upload validation.
+- `frontend/src/views/user/VideoApiDocsView.vue`: documents supported models, media uploads, and public request examples.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers workbench parameter and upload constraints.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: guards against upstream details in rendered docs.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updates English video guidance and API documentation copy.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updates Chinese video guidance and API documentation copy.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records the public model and media contract.
+- `docs/LEO_VIDEO_CHANNEL.md`: records channel configuration and operational capability alignment.
+- `progress.md`: appends this final verification record.
+- Rollback point: changes remain uncommitted; export the target file hunks with `git diff HEAD -- <file> > rollback.patch` and apply only the selected hunks in reverse with `git apply -R rollback.patch`; do not restore whole files because they contain earlier pending work.
+
+## 2026-07-27 - Task: Prepare Leo model and media capability release v0.1.165-fy.3
+
+### What was done
+- Consolidated the pending Leo video model and reference-media capability changes for release: model-specific limits, Happy Horse/Grok support, Mini resolution/aspect expansion, prompt enhancement rules, frame/reference counts, media validation, and billing-tier normalization.
+- Sanitized synchronous and asynchronous public video responses and error messages so provider identifiers, credentials, upstream task IDs, and private media fields do not reach customers.
+- Updated the customer workbench, API types, bilingual copy, API documentation, and Leo operational specifications to match the validated public contract.
+
+### Testing
+- `go test ./internal/service ./internal/handler -run 'TestLeoVideo|TestValidateLeoVideo|TestVideoInput|TestNormalizeVideoBilling|TestVideoOutputStore|TestVideoJob' -count=1` passed.
+- Frontend Vitest passed with exit code 0; the command executed the complete repository suite while including the three Leo-focused files.
+- `pnpm.cmd typecheck` passed.
+- `pnpm.cmd lint:check` passed.
+- `pnpm.cmd run build` passed; only the repository's existing Browserslist, dynamic-import, and chunk-size warnings remained.
+- `gofmt -d` for all modified Go files produced no output, and `git diff --check` passed.
+
+### Notes
+- `backend/internal/handler/leo_video_async.go`: strips private fields from public completed-job results.
+- `backend/internal/handler/leo_video_async_test.go`: covers public result sanitization and error wording.
+- `backend/internal/handler/leo_video_test.go`: updates synchronous video handler expectations.
+- `backend/internal/service/leo_video.go`: sanitizes synchronous video-service errors and validates requests.
+- `backend/internal/service/leo_video_async.go`: sanitizes asynchronous video-service errors.
+- `backend/internal/service/leo_video_async_test.go`: covers asynchronous sanitization behavior.
+- `backend/internal/service/leo_video_model_specs.go`: defines model-specific resolution, duration, prompt, frame, and media limits.
+- `backend/internal/service/leo_video_model_specs_test.go`: covers the expanded model validation matrix.
+- `backend/internal/service/leo_video_test.go`: updates video request validation coverage.
+- `backend/internal/service/video_billing_resolution.go`: normalizes model resolution values to billable tiers.
+- `backend/internal/service/video_billing_resolution_test.go`: covers billing resolution normalization.
+- `frontend/src/api/videoGeneration.ts`: aligns public video request and result types.
+- `frontend/src/api/__tests__/videoGeneration.spec.ts`: verifies public API typing behavior.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updates English video capability and media guidance.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updates Chinese video capability and media guidance.
+- `frontend/src/views/user/VideoApiDocsView.vue`: updates customer-facing API examples and constraints.
+- `frontend/src/views/user/VideoGenerationView.vue`: exposes model-filtered parameters and media validation.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: prevents internal provider details from returning to API docs.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers workbench model and upload constraints.
+- `docs/LEO_VIDEO_CHANNEL.md`: records operational capability and billing alignment.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records the public model and media contract.
+- `progress.md`: records this release preparation and verification evidence.
+- `.superpowers/`: remains untracked and excluded from the commit and release.
+- Rollback point: before commit, preserve `HEAD` at `0c7690880e0`; after commit, use `git revert <release_commit>` or restore the prior release tag `v0.1.165-fy.2`. Do not restore whole files without preserving unrelated pending work.

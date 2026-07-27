@@ -98,6 +98,8 @@
               <ApiCodeBlock :label="t('video.apiDocs.examples.multiImage')" :code="multiImageExample" />
               <ApiCodeBlock :label="t('video.apiDocs.examples.videoReference')" :code="videoReferenceExample" />
               <ApiCodeBlock :label="t('video.apiDocs.examples.audioReference')" :code="audioReferenceExample" />
+              <ApiCodeBlock :label="t('video.apiDocs.examples.happyHorse')" :code="happyHorseExample" />
+              <ApiCodeBlock :label="t('video.apiDocs.examples.grok')" :code="grokExample" />
             </div>
           </section>
 
@@ -138,10 +140,6 @@
                 </dl>
               </div>
             </div>
-            <div class="mt-8 flex items-start gap-3 border-l-2 border-primary-500 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-900 dark:bg-primary-900/20 dark:text-primary-100">
-              <Icon name="shield" size="md" class="mt-0.5 flex-shrink-0" />
-              <p>{{ t('video.apiDocs.privacy') }}</p>
-            </div>
           </section>
         </main>
       </div>
@@ -152,7 +150,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import Icon from '@/components/icons/Icon.vue'
 import ApiCodeBlock from '@/components/video/ApiCodeBlock.vue'
 import EndpointTitle from '@/components/video/EndpointTitle.vue'
 import SectionHeading from '@/components/video/SectionHeading.vue'
@@ -185,6 +182,7 @@ const requestFields = [
   { name: 'duration', type: 'integer', required: false, description: 'video.apiDocs.fields.duration' },
   { name: 'aspect_ratio', type: 'string', required: false, description: 'video.apiDocs.fields.aspectRatio' },
   { name: 'audio', type: 'boolean', required: false, description: 'video.apiDocs.fields.audio' },
+  { name: 'prompt_enhance', type: 'string', required: false, description: 'video.apiDocs.fields.promptEnhance' },
   { name: 'image_url', type: 'string', required: false, description: 'video.apiDocs.fields.imageUrl' },
   { name: 'start_frame_url', type: 'string', required: false, description: 'video.apiDocs.fields.startFrameUrl' },
   { name: 'end_frame_url', type: 'string', required: false, description: 'video.apiDocs.fields.endFrameUrl' },
@@ -214,7 +212,7 @@ const errors = [
   { code: '404', description: 'video.apiDocs.errors.notFound' },
   { code: '409', description: 'video.apiDocs.errors.conflict' },
   { code: '422', description: 'video.apiDocs.errors.validation' },
-  { code: '502', description: 'video.apiDocs.errors.upstream' },
+  { code: '502', description: 'video.apiDocs.errors.serviceUnavailable' },
 ]
 
 const authHeaders = `-H "Authorization: Bearer $SUB2_API_KEY" \\\n  -H "Content-Type: application/json"`
@@ -241,10 +239,8 @@ Location: /v1/videos/jobs/vidjob_example
 const uploadExample = `curl -X POST "${baseUrl}/v1/videos/uploads" \\\n  -H "Authorization: Bearer $SUB2_API_KEY" \\\n  -F "image=@./reference.png"`
 
 const uploadResponseExample = `{
-  "upload_id": "local-input-token",
-  "media_url": "http://127.0.0.1:8080/internal/video-inputs/local-input-token",
+  "media_url": "https://media.example/uploaded/reference.mp4",
   "media_type": "video",
-  "video_url": "http://127.0.0.1:8080/internal/video-inputs/local-input-token",
   "content_type": "video/mp4",
   "size": 428516
 }`
@@ -339,5 +335,26 @@ const audioReferenceExample = `{
       }
     ]
   }
+}`
+
+const happyHorseExample = `{
+  "model": "happy-horse-1.1",
+  "prompt": "A horse runs through a sunlit meadow",
+  "resolution": "1080p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "prompt_enhance": "OFF",
+  "audio": true,
+  "start_frame_url": "https://media.example/start-frame.png"
+}`
+
+const grokExample = `{
+  "model": "grok-imagine-1.5",
+  "prompt": "A cinematic camera move through a neon city",
+  "resolution": "720p",
+  "duration": 6,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "start_frame_url": "https://media.example/start-frame.png"
 }`
 </script>

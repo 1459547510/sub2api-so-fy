@@ -128,7 +128,7 @@ func TestLeoVideoAsyncGenerationRejectsUnsupportedMiniAspect(t *testing.T) {
 	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(&handlerVideoJobRepo{})}
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
-	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", strings.NewReader(`{"model":"seedance-2.0-mini","prompt":"waves","aspect_ratio":"9:16"}`))
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", strings.NewReader(`{"model":"seedance-2.0-mini","prompt":"waves","aspect_ratio":"4:3"}`))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Request.Header.Set("Prefer", "respond-async")
 	setHandlerVideoAuth(c)
@@ -198,15 +198,40 @@ func TestLeoVideoJobErrorsHideUpstreamProviderName(t *testing.T) {
 	h.LeoVideoJob(c)
 
 	require.Equal(t, http.StatusOK, recorder.Code)
-	require.Contains(t, strings.ToLower(recorder.Body.String()), "video provider")
+	require.Contains(t, strings.ToLower(recorder.Body.String()), "video service")
 	require.NotContains(t, strings.ToLower(recorder.Body.String()), "leonardo")
 	require.NotContains(t, strings.ToLower(recorder.Body.String()), "leostudio")
+}
+
+func TestLeoVideoJobResultHidesUpstreamMetadata(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &handlerVideoJobRepo{job: &service.VideoJob{
+		JobID: "vidjob_completed", APIKeyID: 2, Status: service.VideoJobCompleted,
+		Result: json.RawMessage(`{"data":[{"mp4_url":"/v1/videos/jobs/vidjob_completed/content","url":"/v1/videos/jobs/vidjob_completed/content","local_url":"/v1/videos/jobs/vidjob_completed/content","video_url":"https://cdn.example/video.mp4","source_url":"https://cdn.example/video.mp4","generation_id":"provider-job-42","provider":{"uuid":"provider-uuid"}}],"provider":{"generation_id":"provider-job-42","account_id":"provider-account"}}`),
+	}}
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(repo)}
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/videos/jobs/vidjob_completed", nil)
+	c.Params = gin.Params{{Key: "job_id", Value: "vidjob_completed"}}
+	setHandlerVideoAuth(c)
+
+	h.LeoVideoJob(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	body := recorder.Body.String()
+	require.Contains(t, body, "/v1/videos/jobs/vidjob_completed/content")
+	require.NotContains(t, body, "provider")
+	require.NotContains(t, body, "cdn.example")
+	require.NotContains(t, body, "generation_id")
+	require.NotContains(t, body, "account_id")
+	require.NotContains(t, body, "uuid")
 }
 
 func TestLeoVideoPassthroughMessagesHideUpstreamProviderName(t *testing.T) {
 	message := "Leonardo.ai rejected the request through LeoStudio"
 
-	require.Equal(t, "video provider rejected the request through video provider", publicUpstreamErrorMessage(service.PlatformLeo, message))
+	require.Equal(t, "video service rejected the request through video service", publicUpstreamErrorMessage(service.PlatformLeo, message))
 	require.Equal(t, message, publicUpstreamErrorMessage(service.PlatformOpenAI, message))
 }
 
@@ -247,7 +272,7 @@ func TestLeoVideoAsyncJobHidesLegacyProviderNames(t *testing.T) {
 	h.LeoVideoJob(c)
 
 	require.Equal(t, http.StatusOK, recorder.Code)
-	require.Contains(t, recorder.Body.String(), "Video provider request rejected by Video provider")
+	require.Contains(t, recorder.Body.String(), "Video service request rejected by Video service")
 	require.NotContains(t, recorder.Body.String(), "Leonardo")
 	require.NotContains(t, recorder.Body.String(), "LeoStudio")
 }

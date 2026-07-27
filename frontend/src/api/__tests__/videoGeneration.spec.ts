@@ -53,7 +53,7 @@ describe('video generation API', () => {
       start_frame_url: 'https://example.com/start.png',
       end_frame_url: 'https://example.com/end.png',
       image_urls: ['https://example.com/ref-1.png', 'https://example.com/ref-2.png'],
-      guidances: { image_reference: [{ image: { id: 'asset-1', type: 'GENERATED' }, strength: 'HIGH' }] },
+      guidances: { image_reference: [{ image: { url: 'https://media.example/asset-1.png', type: 'UPLOADED' }, strength: 'HIGH' }] },
     })
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]

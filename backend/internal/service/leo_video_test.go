@@ -197,7 +197,7 @@ func TestPublicVideoErrorMessageHidesProviderNames(t *testing.T) {
 		require.NotContains(t, strings.ToLower(public), "leonardo")
 		require.NotContains(t, strings.ToLower(public), "leostudio")
 		require.NotContains(t, strings.ToLower(public), "leo studio")
-		require.Contains(t, public, "video provider")
+		require.Contains(t, public, "video service")
 	}
 }
 

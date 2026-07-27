@@ -109,8 +109,18 @@
               <input v-model="audio" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" :disabled="submitting || uploading" data-testid="video-audio" />
             </label>
 
+            <label v-if="currentModelCapability?.supportsPromptEnhance" class="block">
+              <span class="input-label">{{ t('video.promptEnhance') }}</span>
+              <select v-model="promptEnhance" class="input" :disabled="submitting || uploading" data-testid="video-prompt-enhance">
+                <option value="">{{ t('video.promptEnhanceAuto') }}</option>
+                <option value="AUTO">AUTO</option>
+                <option value="ON">ON</option>
+                <option value="OFF">OFF</option>
+              </select>
+            </label>
+
             <div>
-              <span class="input-label">{{ t('video.imageInput') }}</span>
+              <span class="input-label">{{ t('video.imageInput', { count: maxImageReferences }) }}</span>
               <div class="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1 dark:bg-dark-800" role="tablist">
                 <button v-for="option in imageModes" :key="option.value" type="button" class="rounded-md px-2 py-2 text-xs font-medium transition-colors" :class="imageMode === option.value ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-600 dark:text-primary-200' : 'text-gray-500 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'" :data-testid="`mode-${option.value}`" @click="imageMode = option.value">
                   {{ t(option.label) }}
@@ -121,12 +131,12 @@
             <div v-if="imageMode === 'local'" class="space-y-3">
               <label
                 class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300"
-                :class="hasLocalFrames ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'"
-                :title="hasLocalFrames ? t('video.imageInputConflict') : undefined"
+                :class="hasLocalFrames || maxImageReferences === 0 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'"
+                :title="hasLocalFrames ? t('video.imageInputConflict') : maxImageReferences === 0 ? t('video.modelGuidanceUnsupported') : undefined"
               >
                 <Icon name="upload" size="sm" />
                 <span>{{ localFiles.length ? t('video.addImage') : t('video.chooseImage') }}</span>
-                <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" :disabled="hasLocalFrames" data-testid="video-image-file" @change="onFileChange" />
+                <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" :disabled="hasLocalFrames || maxImageReferences === 0" data-testid="video-image-file" @change="onFileChange" />
               </label>
               <div v-if="previewUrls.length" class="grid grid-cols-2 gap-2">
                 <div v-for="(preview, index) in previewUrls" :key="preview" class="relative aspect-video overflow-hidden rounded-lg border border-gray-200 dark:border-dark-700">
@@ -154,7 +164,7 @@
                 >
                   <Icon name="upload" size="sm" class="relative z-10" />
                   <span class="relative z-10">{{ endFrameFile ? t('video.replaceEndFrame') : t('video.chooseEndFrame') }}</span>
-                  <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" :disabled="hasLocalReferences" data-testid="video-end-frame-file" @change="onEndFrameChange" />
+                  <input type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" :disabled="hasLocalReferences || currentModelCapability?.maxEndFrames === 0" data-testid="video-end-frame-file" @change="onEndFrameChange" />
                   <img v-if="endFramePreviewUrl" :src="endFramePreviewUrl" alt="" class="pointer-events-none absolute inset-1 h-[calc(100%-8px)] w-[calc(100%-8px)] rounded-md object-cover opacity-25" />
                 </label>
               </div>
@@ -170,7 +180,7 @@
 
             <label v-else-if="imageMode === 'url'" class="block" :title="hasRemoteFrames ? t('video.imageInputConflict') : undefined">
               <span class="sr-only">{{ t('video.imageUrl') }}</span>
-              <textarea v-model="imageUrlText" rows="4" class="input resize-y disabled:cursor-not-allowed disabled:opacity-50" :placeholder="t('video.imageUrlPlaceholder')" :disabled="hasRemoteFrames" data-testid="video-image-url"></textarea>
+              <textarea v-model="imageUrlText" rows="4" class="input resize-y disabled:cursor-not-allowed disabled:opacity-50" :placeholder="t('video.imageUrlPlaceholder')" :disabled="hasRemoteFrames || maxImageReferences === 0" data-testid="video-image-url"></textarea>
             </label>
 
             <div v-if="imageMode === 'url'" class="grid grid-cols-2 gap-3">
@@ -180,7 +190,7 @@
               </label>
               <label class="block" :title="hasRemoteReferences ? t('video.imageInputConflict') : undefined">
                 <span class="input-label">{{ t('video.endFrameUrl') }}</span>
-                <input v-model="endFrameUrlText" type="url" class="input disabled:cursor-not-allowed disabled:opacity-50" :placeholder="t('video.frameUrlPlaceholder')" :disabled="hasRemoteReferences" data-testid="video-end-frame-url" />
+                <input v-model="endFrameUrlText" type="url" class="input disabled:cursor-not-allowed disabled:opacity-50" :placeholder="t('video.frameUrlPlaceholder')" :disabled="hasRemoteReferences || currentModelCapability?.maxEndFrames === 0" data-testid="video-end-frame-url" />
               </label>
             </div>
 
@@ -193,12 +203,12 @@
               </div>
               <label
                 class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300"
-                :class="referenceVideoFiles.length >= 3 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'"
-                :title="referenceVideoFiles.length >= 3 ? t('video.tooManyVideoReferences') : undefined"
+                :class="referenceVideoFiles.length >= (currentModelCapability?.maxVideoRefs || 0) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'"
+                :title="referenceVideoFiles.length >= (currentModelCapability?.maxVideoRefs || 0) ? t('video.modelGuidanceUnsupported') : undefined"
               >
                 <Icon name="upload" size="sm" />
                 <span>{{ t('video.chooseVideoReference') }}</span>
-                <input type="file" accept=".mp4,.mov,video/mp4,video/quicktime" multiple class="sr-only" :disabled="referenceVideoFiles.length >= 3 || submitting || uploading" data-testid="video-reference-file" @change="onReferenceVideoChange" />
+                <input type="file" accept=".mp4,.mov,video/mp4,video/quicktime" multiple class="sr-only" :disabled="referenceVideoFiles.length >= (currentModelCapability?.maxVideoRefs || 0) || submitting || uploading" data-testid="video-reference-file" @change="onReferenceVideoChange" />
               </label>
               <div v-if="referenceVideoPreviewUrls.length" class="grid gap-2 sm:grid-cols-3">
                 <div v-for="(preview, index) in referenceVideoPreviewUrls" :key="preview" class="relative overflow-hidden rounded-lg border border-gray-200 bg-black dark:border-dark-700">
@@ -216,7 +226,7 @@
               <label class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300" :class="referenceAudioFile ? 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'">
                 <Icon name="upload" size="sm" />
                 <span>{{ referenceAudioFile ? t('video.replaceAudioReference') : t('video.chooseAudioReference') }}</span>
-                <input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" class="sr-only" :disabled="submitting || uploading" data-testid="audio-reference-file" @change="onReferenceAudioChange" />
+                <input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" class="sr-only" :disabled="currentModelCapability?.maxAudioRefs === 0 || submitting || uploading" data-testid="audio-reference-file" @change="onReferenceAudioChange" />
               </label>
               <div v-if="referenceAudioPreviewUrl" class="flex items-center gap-2 rounded-lg border border-gray-200 p-2 dark:border-dark-700">
                 <audio :src="referenceAudioPreviewUrl" controls class="min-w-0 flex-1" data-testid="audio-reference-preview"></audio>
@@ -335,6 +345,7 @@ const resolution = ref<VideoResolution>('720p')
 const duration = ref(8)
 const aspectRatio = ref<VideoAspectRatio>('16:9')
 const audio = ref(false)
+const promptEnhance = ref<'AUTO' | 'ON' | 'OFF' | ''>('')
 const imageMode = ref<'none' | 'local' | 'url'>('none')
 const imageUrlText = ref('')
 const localFiles = ref<File[]>([])
@@ -360,7 +371,7 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let videoOutputRequest = 0
 let jobsRequest = 0
 
-type VideoResolution = '480p' | '720p' | '1080p'
+type VideoResolution = '400p' | '480p' | '544p' | '720p' | '960p' | '1080p'
 type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '21:9' | '9:21'
 
 interface VideoModelCapability {
@@ -372,11 +383,22 @@ interface VideoModelCapability {
   aspectsByResolution: Partial<Record<VideoResolution, readonly VideoAspectRatio[]>>
   defaultAspectRatio: VideoAspectRatio
   maxPromptLength: number
+  maxStartFrames: number
+  maxEndFrames: number
+  maxImageRefs: number
+  maxVideoRefs: number
+  maxAudioRefs: number
+  requiresStartFrame?: boolean
+  supportsPromptEnhance?: boolean
 }
 
 const allDurationOptions = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+const shortVideoDurationOptions = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 const allAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '9:21']
 const hdAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
+const videoReferenceMaxBytes = 100 * 1024 * 1024
+const audioReferenceMaxBytes = 15 * 1024 * 1024
+const imageReferenceMaxBytes = 10 * 1024 * 1024
 const videoModelCapabilities: Record<string, VideoModelCapability> = {
   'seedance-2.0': {
     resolutions: ['480p', '720p', '1080p'],
@@ -391,6 +413,11 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 4,
+    maxVideoRefs: 3,
+    maxAudioRefs: 1,
   },
   'seedance-2.0-fast': {
     resolutions: ['480p', '720p'],
@@ -403,17 +430,66 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 4,
+    maxVideoRefs: 3,
+    maxAudioRefs: 1,
   },
   'seedance-2.0-mini': {
-    resolutions: ['720p'],
+    resolutions: ['480p', '720p'],
     defaultResolution: '720p',
     durations: allDurationOptions,
     defaultDuration: 8,
     aspectsByResolution: {
-      '720p': ['16:9'],
+      '480p': ['16:9', '1:1', '9:16'],
+      '720p': ['16:9', '1:1', '9:16'],
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 4,
+    maxVideoRefs: 3,
+    maxAudioRefs: 1,
+  },
+  'happy-horse-1.1': {
+    resolutions: ['720p', '1080p'],
+    defaultResolution: '1080p',
+    durations: shortVideoDurationOptions,
+    defaultDuration: 5,
+    aspectsByResolution: {
+      '720p': ['16:9', '4:3', '1:1', '3:4', '9:16'],
+      '1080p': ['16:9', '4:3', '1:1', '3:4', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 0,
+    maxImageRefs: 9,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    supportsPromptEnhance: true,
+  },
+  'grok-imagine-1.5': {
+    resolutions: ['400p', '544p', '720p', '960p'],
+    defaultResolution: '720p',
+    durations: shortVideoDurationOptions,
+    defaultDuration: 6,
+    aspectsByResolution: {
+      '400p': ['16:9', '9:16'],
+      '544p': ['1:1'],
+      '720p': ['16:9', '9:16'],
+      '960p': ['1:1'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 5000,
+    maxStartFrames: 1,
+    maxEndFrames: 0,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    requiresStartFrame: true,
   },
 }
 const modelOptions = Object.keys(videoModelCapabilities)
@@ -430,6 +506,7 @@ const currentModelCapability = computed(() => videoModelCapabilities[model.value
 const resolutionOptions = computed(() => currentModelCapability.value?.resolutions || [])
 const durationOptions = computed(() => supportedDurations(currentModelCapability.value, resolution.value))
 const aspectRatioOptions = computed(() => currentModelCapability.value?.aspectsByResolution[resolution.value] || [])
+const maxImageReferences = computed(() => currentModelCapability.value?.maxImageRefs || 0)
 const activeJobs = computed(() => jobs.value.filter((job) => ['pending', 'running', 'settling'].includes(job.status)))
 const selectedJob = computed(() => jobs.value.find((job) => job.job_id === selectedJobId.value) || jobs.value[0] || null)
 const remoteImageUrls = computed(() => imageUrlText.value.split(/[\r\n,]+/).map((value) => value.trim()).filter(Boolean))
@@ -447,6 +524,21 @@ const hasMixedImageInputs = computed(() => (
     ? hasLocalReferences.value && hasLocalFrames.value
     : imageMode.value === 'url' && hasRemoteReferences.value && hasRemoteFrames.value
 ))
+const hasUnsupportedModelGuidances = computed(() => {
+  const capability = currentModelCapability.value
+  if (!capability) return true
+  const startCount = Number(Boolean(startFrameFile.value || remoteStartFrameUrl.value))
+  const endCount = Number(Boolean(endFrameFile.value || remoteEndFrameUrl.value))
+  const imageCount = imageMode.value === 'local' ? localFiles.value.length : imageMode.value === 'url' ? remoteImageUrls.value.length : 0
+  return startCount > capability.maxStartFrames ||
+    endCount > capability.maxEndFrames ||
+    imageCount > capability.maxImageRefs ||
+    referenceVideoFiles.value.length > capability.maxVideoRefs ||
+    Number(Boolean(referenceAudioFile.value)) > capability.maxAudioRefs ||
+    (Boolean(promptEnhance.value) && !capability.supportsPromptEnhance) ||
+    (promptEnhance.value === 'ON' && startCount > 0) ||
+    Boolean(capability.requiresStartFrame && !startCount)
+})
 const currentVideoKey = computed(() => {
   const job = selectedJob.value
   return job && effectiveApiKey.value ? `${effectiveApiKey.value}\u0000${job.job_id}\u0000${job.status}` : ''
@@ -458,11 +550,11 @@ const canSubmit = computed(() => Boolean(
   (!referenceAudioFile.value || hasAudioVisualReference.value) &&
   (imageMode.value !== 'url' || (
     (remoteImageUrls.value.length > 0 || remoteStartFrameUrl.value || remoteEndFrameUrl.value) &&
-    remoteImageUrls.value.length <= 4 &&
+    remoteImageUrls.value.length <= maxImageReferences.value &&
     remoteImageUrls.value.every((value) => /^https?:\/\/\S+$/i.test(value)) &&
     (!remoteStartFrameUrl.value || /^https?:\/\/\S+$/i.test(remoteStartFrameUrl.value)) &&
     (!remoteEndFrameUrl.value || /^https?:\/\/\S+$/i.test(remoteEndFrameUrl.value))
-  ))
+  )) && !hasUnsupportedModelGuidances.value
 ))
 
 async function loadKeys() {
@@ -517,6 +609,10 @@ async function submitJob() {
     appStore.showError(t('video.imageInputConflict'))
     return
   }
+  if (hasUnsupportedModelGuidances.value) {
+    appStore.showError(t('video.modelGuidanceUnsupported'))
+    return
+  }
   if (referenceAudioFile.value && !hasAudioVisualReference.value) {
     appStore.showError(t('video.audioNeedsVisualReference'))
     return
@@ -566,6 +662,7 @@ async function submitJob() {
       aspect_ratio: requestParameters.aspectRatio,
       audio: requestParameters.audio,
     }
+    if (promptEnhance.value) payload.prompt_enhance = promptEnhance.value
     if (startFrameUrl) payload.start_frame_url = startFrameUrl
     if (endFrameUrl) payload.end_frame_url = endFrameUrl
     if (selectedImageUrls.length === 1 && !startFrameUrl && !endFrameUrl && !selectedAudioUrl) {
@@ -631,11 +728,15 @@ function onFileChange(event: Event) {
     appStore.showError(t('video.imageInputConflict'))
     return
   }
-  if (localFiles.value.length >= 4) {
-    appStore.showError(t('video.tooManyImages'))
+  if (localFiles.value.length >= maxImageReferences.value) {
+    appStore.showError(t('video.tooManyImages', { count: maxImageReferences.value }))
     return
   }
   const file = files[0]
+  if (file.size > imageReferenceMaxBytes) {
+    appStore.showError(t('video.imageTooLarge'))
+    return
+  }
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     appStore.showError(t('video.invalidImage'))
     return
@@ -653,6 +754,10 @@ function onStartFrameChange(event: Event) {
     appStore.showError(t('video.imageInputConflict'))
     return
   }
+  if (file.size > imageReferenceMaxBytes) {
+    appStore.showError(t('video.imageTooLarge'))
+    return
+  }
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     appStore.showError(t('video.invalidImage'))
     return
@@ -667,12 +772,20 @@ function onEndFrameChange(event: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
+  if (currentModelCapability.value?.maxEndFrames === 0) {
+    appStore.showError(t('video.modelGuidanceUnsupported'))
+    return
+  }
   if (hasLocalReferences.value) {
     appStore.showError(t('video.imageInputConflict'))
     return
   }
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     appStore.showError(t('video.invalidImage'))
+    return
+  }
+  if (file.size > imageReferenceMaxBytes) {
+    appStore.showError(t('video.imageTooLarge'))
     return
   }
   removeEndFrame()
@@ -685,12 +798,20 @@ async function onReferenceVideoChange(event: Event) {
   const files = Array.from(input.files || [])
   input.value = ''
   if (!files.length) return
-  const remaining = 3 - referenceVideoFiles.value.length
+  if (currentModelCapability.value?.maxVideoRefs === 0) {
+    appStore.showError(t('video.modelGuidanceUnsupported'))
+    return
+  }
+  const remaining = (currentModelCapability.value?.maxVideoRefs || 0) - referenceVideoFiles.value.length
   if (remaining <= 0) {
     appStore.showError(t('video.tooManyVideoReferences'))
     return
   }
   for (const file of files.slice(0, remaining)) {
+    if (file.size > videoReferenceMaxBytes) {
+      appStore.showError(t('video.videoTooLarge'))
+      continue
+    }
     if (!isSupportedVideoFile(file) || !await canReadVideoFile(file)) {
       appStore.showError(t('video.invalidVideo'))
       continue
@@ -706,11 +827,15 @@ async function onReferenceAudioChange(event: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
+  if (currentModelCapability.value?.maxAudioRefs === 0) {
+    appStore.showError(t('video.modelGuidanceUnsupported'))
+    return
+  }
   if (!isSupportedAudioFile(file)) {
     appStore.showError(t('video.invalidAudio'))
     return
   }
-  if (file.size > 15 * 1024 * 1024) {
+  if (file.size > audioReferenceMaxBytes) {
     appStore.showError(t('video.audioTooLarge'))
     return
   }
@@ -751,12 +876,12 @@ function clearMediaInputs() {
 
 function isSupportedVideoFile(file: File) {
   const extension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
-  return ['.mp4', '.mov'].includes(extension) && (!file.type || ['video/mp4', 'video/quicktime'].includes(file.type))
+  return ['.mp4', '.mov'].includes(extension)
 }
 
 function isSupportedAudioFile(file: File) {
   const extension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
-  return ['.mp3', '.wav'].includes(extension) && (!file.type || ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave'].includes(file.type))
+  return ['.mp3', '.wav'].includes(extension)
 }
 
 function canReadVideoFile(file: File): Promise<boolean> {
@@ -966,6 +1091,11 @@ function supportedDurations(capability: VideoModelCapability | undefined, resolu
   return maxDuration ? capability.durations.filter((value) => value <= maxDuration) : capability.durations
 }
 
+function defaultAspectRatioFor(capability: VideoModelCapability, resolutionValue: VideoResolution): VideoAspectRatio {
+  const supported = capability.aspectsByResolution[resolutionValue] || []
+  return supported.includes(capability.defaultAspectRatio) ? capability.defaultAspectRatio : (supported[0] || capability.defaultAspectRatio)
+}
+
 function supportsModelParameters(modelValue: string, resolutionValue: VideoResolution, durationValue: number, aspectRatioValue: VideoAspectRatio) {
   const capability = videoModelCapabilities[modelValue]
   return Boolean(
@@ -981,14 +1111,15 @@ watch(model, () => {
   if (!capability) return
   resolution.value = capability.defaultResolution
   duration.value = capability.defaultDuration
-  aspectRatio.value = capability.defaultAspectRatio
+  aspectRatio.value = defaultAspectRatioFor(capability, capability.defaultResolution)
+  promptEnhance.value = ''
 }, { flush: 'sync' })
 watch(resolution, () => {
   const capability = currentModelCapability.value
   if (!capability) return
   const supportedAspects = capability.aspectsByResolution[resolution.value] || []
   if (!supportedDurations(capability, resolution.value).includes(duration.value)) duration.value = capability.defaultDuration
-  if (!supportedAspects.includes(aspectRatio.value)) aspectRatio.value = capability.defaultAspectRatio
+  if (!supportedAspects.includes(aspectRatio.value)) aspectRatio.value = defaultAspectRatioFor(capability, resolution.value)
 }, { flush: 'sync' })
 
 watch(selectedKeyId, () => {

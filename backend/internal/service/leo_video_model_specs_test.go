@@ -33,8 +33,8 @@ func TestValidateLeoVideoRequestRejectsUnsupportedModelParameters(t *testing.T) 
 			want: "aspect_ratio is not supported",
 		},
 		{
-			name: "mini non 16:9 aspect",
-			body: `{"model":"seedance-2.0-mini","prompt":"waves","resolution":"720p","aspect_ratio":"9:16"}`,
+			name: "mini unsupported aspect",
+			body: `{"model":"seedance-2.0-mini","prompt":"waves","resolution":"720p","aspect_ratio":"4:3"}`,
 			want: "aspect_ratio is not supported",
 		},
 		{
@@ -45,6 +45,11 @@ func TestValidateLeoVideoRequestRejectsUnsupportedModelParameters(t *testing.T) 
 		{
 			name: "fractional duration",
 			body: `{"model":"seedance-2.0","prompt":"waves","duration":4.5}`,
+			want: "duration must be a whole number from 4 through 15",
+		},
+		{
+			name: "zero duration",
+			body: `{"model":"seedance-2.0","prompt":"waves","duration":0}`,
 			want: "duration must be a whole number from 4 through 15",
 		},
 		{
@@ -83,6 +88,74 @@ func TestValidateLeoVideoRequestKeepsFifteenSecondsForOtherSupportedModes(t *tes
 	}
 }
 
+func TestValidateLeoVideoRequestSupportsLatestModels(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "mini portrait at 480p",
+			body: `{"model":"seedance-2.0-mini","prompt":"waves","resolution":"480p","aspect_ratio":"9:16","duration":4}`,
+		},
+		{
+			name: "happy horse with prompt enhancement",
+			body: `{"model":"happy-horse-1.1","prompt":"waves","resolution":"1080p","duration":3,"prompt_enhance":"AUTO","guidances":{"image_reference":[{"image":{"url":"https://example.com/reference.png"}}]}}`,
+		},
+		{
+			name: "grok square resolution",
+			body: `{"model":"grok-imagine-1.5","prompt":"waves","resolution":"544p","aspect_ratio":"1:1","duration":15,"start_frame_url":"https://example.com/start.png"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ValidateLeoVideoRequest([]byte(tt.body))
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestValidateLeoVideoRequestRejectsLatestModelGuidanceLimits(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "happy horse end frame",
+			body: `{"model":"happy-horse-1.1","prompt":"waves","end_frame_url":"https://example.com/end.png"}`,
+			want: "guidances.end_frame supports at most 0",
+		},
+		{
+			name: "happy horse audio",
+			body: `{"model":"happy-horse-1.1","prompt":"waves","guidances":{"audio_reference":[{"audio":{"url":"https://example.com/reference.mp3"}}],"image_reference":[{"image":{"url":"https://example.com/reference.png"}}]}}`,
+			want: "guidances.audio_reference supports at most 0",
+		},
+		{
+			name: "grok requires start frame",
+			body: `{"model":"grok-imagine-1.5","prompt":"waves"}`,
+			want: "start frame is required",
+		},
+		{
+			name: "grok reference image",
+			body: `{"model":"grok-imagine-1.5","prompt":"waves","start_frame_url":"https://example.com/start.png","guidances":{"image_reference":[{"image":{"url":"https://example.com/reference.png"}}]}}`,
+			want: "reference images cannot be combined",
+		},
+		{
+			name: "happy horse prompt enhancement with start frame",
+			body: `{"model":"happy-horse-1.1","prompt":"waves","prompt_enhance":"ON","start_frame_url":"https://example.com/start.png"}`,
+			want: "prompt_enhance ON is not supported",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ValidateLeoVideoRequest([]byte(tt.body))
+			require.ErrorContains(t, err, tt.want)
+		})
+	}
+}
+
 func TestValidateLeoVideoRequestRejectsPromptAndGuidanceLimits(t *testing.T) {
 	longPrompt := `{"model":"seedance-2.0","prompt":"` + strings.Repeat("界", 5001) + `"}`
 	_, err := ValidateLeoVideoRequest([]byte(longPrompt))
@@ -103,6 +176,14 @@ func TestValidateLeoVideoRequestRejectsPromptAndGuidanceLimits(t *testing.T) {
 	}`)
 	_, err = ValidateLeoVideoRequest(duplicateStart)
 	require.ErrorContains(t, err, "start frame must be supplied only once")
+
+	mixedFrameAndReferences := []byte(`{
+		"model":"seedance-2.0","prompt":"waves",
+		"start_frame_url":"https://example.com/start.png",
+		"image_urls":["https://example.com/reference.png"]
+	}`)
+	_, err = ValidateLeoVideoRequest(mixedFrameAndReferences)
+	require.ErrorContains(t, err, "reference images cannot be combined")
 }
 
 func TestValidateLeoVideoRequestAcceptsMediaAndAudioReferenceURLs(t *testing.T) {

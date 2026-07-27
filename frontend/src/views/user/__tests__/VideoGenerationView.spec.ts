@@ -102,14 +102,36 @@ describe('VideoGenerationView', () => {
     expect((resolution.element as HTMLSelectElement).value).toBe('720p')
   })
 
-  it('limits Seedance Mini to 720p and 16:9', async () => {
+  it('limits Seedance Mini to 480p/720p and supported portrait ratios', async () => {
     const wrapper = mountView()
     await flushPromises()
 
     await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0-mini')
 
-    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['720p'])
-    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9'])
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p'])
+    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9', '1:1', '9:16'])
+  })
+
+  it('exposes Happy Horse and Grok capability-specific controls', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="video-model"]').setValue('happy-horse-1.1')
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['720p', '1080p'])
+    expect(wrapper.get('[data-testid="video-duration"]').findAll('option').map((option) => Number(option.attributes('value')))[0]).toBe(3)
+    expect(wrapper.get('[data-testid="video-prompt"]').attributes('maxlength')).toBe('2500')
+    expect(wrapper.get('[data-testid="video-prompt-enhance"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="video-end-frame-file"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="video-reference-file"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="audio-reference-file"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('[data-testid="video-model"]').setValue('grok-imagine-1.5')
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['400p', '544p', '720p', '960p'])
+    await wrapper.get('[data-testid="video-resolution"]').setValue('544p')
+    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['1:1'])
+    expect(wrapper.get('[data-testid="video-start-frame-file"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-testid="video-image-file"]').attributes('disabled')).toBeDefined()
   })
 
   it('limits standard 1080p to 12 seconds and keeps other resolutions at 15 seconds', async () => {
@@ -393,6 +415,12 @@ describe('VideoGenerationView', () => {
     Object.defineProperty(videoInput.element, 'files', { configurable: true, value: [new File(['webm'], 'reference.webm', { type: 'video/webm' })] })
     await videoInput.trigger('change')
     expect(appStoreMocks.showError).toHaveBeenCalledWith('video.invalidVideo')
+
+    const oversizedVideo = new File(['mp4'], 'large-reference.mp4', { type: 'video/mp4' })
+    Object.defineProperty(oversizedVideo, 'size', { configurable: true, value: 100 * 1024 * 1024 + 1 })
+    Object.defineProperty(videoInput.element, 'files', { configurable: true, value: [oversizedVideo] })
+    await videoInput.trigger('change')
+    expect(appStoreMocks.showError).toHaveBeenCalledWith('video.videoTooLarge')
 
     const audioInput = wrapper.get('[data-testid="audio-reference-file"]')
     Object.defineProperty(audioInput.element, 'files', { configurable: true, value: [new File(['ID3'], 'reference.mp3', { type: 'audio/mpeg' })] })
