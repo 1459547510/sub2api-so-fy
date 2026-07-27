@@ -3700,3 +3700,18 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/i18n/locales/zh/dashboard.ts`: removes customer UUID wording from the Chinese upload description.
 - `progress.md`: records this customer-facing copy correction.
 - Rollback point: revert the next copy-fix commit and remove this appended block; preserve internal Leo compatibility documentation and the prior `v0.1.165-fy.1` release.
+
+## 2026-07-27 - Task: Publish customer-doc UUID wording fix as v0.1.165-fy.2
+
+### What was done
+- Published the Web documentation copy correction as commit `967787768` and tag `v0.1.165-fy.2`.
+- GitHub Release completed with the Linux amd64 archive and `checksums.txt`; the internal UUID compatibility path remains out of customer-facing copy.
+
+### Testing
+- Release workflow run 51 completed successfully.
+- Both release assets are present on the public release page.
+- The API docs test, locale ESLint, and frontend production build passed before release.
+
+### Notes
+- `progress.md`: records the copy-fix release and release verification.
+- Rollback point: source rollback is `git revert 967787768`; release rollback target is `v0.1.165-fy.1`.
