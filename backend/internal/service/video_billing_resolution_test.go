@@ -9,8 +9,8 @@ import (
 func TestNormalizeVideoBillingResolutionLeo(t *testing.T) {
 	require.Equal(t, VideoBillingResolution480P, NormalizeVideoBillingResolutionOrDefault("RESOLUTION_480"))
 	require.Equal(t, VideoBillingResolution480P, NormalizeVideoBillingResolutionOrDefault("400p"))
+	require.Equal(t, VideoBillingResolution480P, NormalizeVideoBillingResolutionOrDefault("544p"))
 	require.Equal(t, VideoBillingResolution720P, NormalizeVideoBillingResolutionOrDefault("RESOLUTION_720"))
-	require.Equal(t, VideoBillingResolution720P, NormalizeVideoBillingResolutionOrDefault("544p"))
 	require.Equal(t, VideoBillingResolution1080P, NormalizeVideoBillingResolutionOrDefault("RESOLUTION_1080"))
 	require.Equal(t, VideoBillingResolution1080P, NormalizeVideoBillingResolutionOrDefault("960p"))
 }

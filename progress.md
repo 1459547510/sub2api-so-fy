@@ -3880,3 +3880,50 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - `progress.md`: records the release commit, tag, package verification, and rollback point.
 - Rollback point: source rollback is `git revert 3799e5d321edea6b488869fd9c82d9ddffa4c239`; release rollback target is `v0.1.165-fy.2`. After removing the GitHub Release, withdraw the tag with `git push origin :refs/tags/v0.1.165-fy.3`.
+
+## 2026-07-27 - Task: Apply rightmost video retail prices to legacy billing tiers
+
+### What was done
+- Mapped the rightmost table values to the existing three video billing tiers: Happy Horse `0.15/0.15/0.19` and Grok Imagine 1.5 `0.10/0.17/0.17` USD/s for `480p/720p/1080p`.
+- Changed billing normalization so Grok `400p` and `544p` use the low tier, `720p` uses the middle tier, and `960p` uses the high tier.
+- Documented the compatibility mapping and the unsupported Happy Horse 480p placeholder tier.
+
+### Testing
+- `go test ./internal/service -run 'TestNormalizeVideoBillingResolutionLeo|TestLeoVideoPricingResolutions|TestVideoPriceConfigFromResolvedPricing|TestVideoJobBilling' -count=1`: passed.
+- `git diff --check`: passed; only existing line-ending warnings were reported.
+
+### Notes
+- `backend/internal/service/video_billing_resolution.go`: aligns 544p with the low compatibility tier.
+- `backend/internal/service/video_billing_resolution_test.go`: covers the 544p mapping.
+- `docs/LEO_VIDEO_CHANNEL.md`: records the rightmost-price mapping and its limitations.
+- `progress.md`: records this pricing change and verification status.
+- Rollback point: revert the latest hunks in the three files, or use `git diff HEAD -- <file> > rollback.patch` followed by `git apply -R rollback.patch`; preserve `.superpowers/` and unrelated work.
+
+## 2026-07-27 - Task: Merge upstream v0.1.166 and prepare fork release
+
+### What was done
+- Merged upstream `main` at official release `v0.1.166` (`59ce11c78000bde5bdd74930b5885753037a5841`) into the fork release branch.
+- Preserved the fork-specific Leo video, Token incentive, Cyber audit, update/restart, and related database migration and documentation paths; upstream release fixes for panel rate limiting, Antigravity, WebSocket turn billing, provider compatibility, settings, payments, usage statistics, Caddy SSE handling, and security dependencies were integrated.
+- Resolved the `req/v3` checksum conflict in favor of upstream `v3.59.0`, and combined OpenAI WebSocket turn model/billing mapping with the fork's Cyber input excerpt auditing.
+- Synchronized source metadata to `0.1.166` and upstream commit `59ce11c78000bde5bdd74930b5885753037a5841`; the planned fork release tag is `v0.1.166-fy.1`.
+
+### Testing
+- `go test ./...` (in `backend`): passed after resolving the video billing merge state.
+- `pnpm.cmd test:run` (in `frontend`): passed.
+- `pnpm.cmd typecheck` (in `frontend`): passed.
+- `pnpm.cmd lint:check` (in `frontend`): passed.
+- `pnpm.cmd run build` (in `frontend`): passed and regenerated embedded frontend assets; only existing Browserslist, dynamic-import, and chunk-size warnings remained.
+- `gofmt -w backend/internal/handler/openai_gateway_handler.go` and `git diff --check`: passed.
+
+### Notes
+- `backend/go.sum`: uses the upstream `github.com/imroc/req/v3 v3.59.0` checksums and retains adjacent dependency entries.
+- `backend/internal/handler/openai_gateway_handler.go`: combines upstream WebSocket per-turn channel/billing mapping with fork Cyber input excerpt recording.
+- `backend/internal/service/video_billing_resolution.go`: preserves the verified 544p-to-480p compatibility billing mapping.
+- `backend/internal/service/video_billing_resolution_test.go`: covers the 544p compatibility billing mapping.
+- `backend/cmd/server/VERSION`: records the upstream base version `0.1.166`.
+- `backend/cmd/server/UPSTREAM_COMMIT`: records upstream release commit `59ce11c78000bde5bdd74930b5885753037a5841`.
+- `docs/UPDATE_POLICY.md`: advances the documented upstream synchronization baseline to `v0.1.166`.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the current compatibility pricing tiers.
+- `progress.md`: records this merge and verification evidence.
+- Other staged files are the upstream `v0.1.166` backend, frontend, deployment, resource, README, and test changes included by the merge; `.superpowers/` remains untracked and excluded.
+- Rollback point: before commit, preserve `HEAD` at `e9f68492e052fcbc12958d58974009f10509601c`; after commit, use `git revert -m 1 <merge_commit>` for the upstream merge and `git revert <release_metadata_commit>` for release metadata/log changes. To withdraw the release, delete the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.1`.

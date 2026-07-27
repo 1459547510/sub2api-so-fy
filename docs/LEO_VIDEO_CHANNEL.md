@@ -197,8 +197,18 @@ are rejected before dispatch. `seedance-2.0-mini` now supports both `480p` and
 
 Channel model pricing entries continue to use the existing 480p/720p/1080p
 tiers for the Seedance models. Happy Horse and Grok are exposed in the
-workbench/API but are not added to this legacy pricing directory until billing
-tiers for 400p, 544p, and 960p are available.
+workbench/API and use the compatibility mapping below until billing tiers for
+400p, 544p, and 960p are represented as first-class labels.
+
+For the current rightmost retail-price table, the compatible channel tiers are:
+
+- Happy Horse: `480p = 0.15`, `720p = 0.15`, `1080p = 0.19` USD/s. The model
+  exposes only 720p and 1080p; the 480p value is a required compatibility tier
+  and is not selectable by the model.
+- Grok Imagine 1.5: `480p = 0.10`, `720p = 0.17`, `1080p = 0.17` USD/s.
+  The billing normalizer maps both 400p and 544p to the 480p tier, and maps
+  960p to the 1080p tier, so the table's 400p/544p and 720p/960p price pairs
+  remain aligned with the legacy three-tier snapshot.
 
 ### Production pricing snapshot
 
