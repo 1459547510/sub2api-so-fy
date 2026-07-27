@@ -3927,3 +3927,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this merge and verification evidence.
 - Other staged files are the upstream `v0.1.166` backend, frontend, deployment, resource, README, and test changes included by the merge; `.superpowers/` remains untracked and excluded.
 - Rollback point: before commit, preserve `HEAD` at `e9f68492e052fcbc12958d58974009f10509601c`; after commit, use `git revert -m 1 <merge_commit>` for the upstream merge and `git revert <release_metadata_commit>` for release metadata/log changes. To withdraw the release, delete the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.1`.
+
+## 2026-07-27 - Task: Publish fork release v0.1.166-fy.1
+
+### What was done
+- Pushed merge commit `41718f7c026fa396371e43b5e80a1a1af0030294` to `origin/codex/leo-video-channel` and annotated tag `v0.1.166-fy.1` to `origin`.
+- GitHub Actions Release workflow completed successfully and published the Linux amd64 archive and `checksums.txt`.
+
+### Testing
+- Release workflow `30255449166`: completed with conclusion `success`.
+- Public Release API returned a non-draft, non-prerelease release with both expected assets.
+- Downloaded `sub2api_0.1.166-fy.1_linux_amd64.tar.gz` successfully; size `35,488,010` bytes.
+- SHA256 `79fbb57f74cade487a3e00a84a62757481058e7e45a3fc5d7dda010eeaa8bbff` exactly matched `checksums.txt`.
+- Archive listing contains executable `sub2api`; remote tag and branch both resolve to `41718f7c026fa396371e43b5e80a1a1af0030294`.
+
+### Notes
+- `progress.md`: records the published release and package verification.
+- `.superpowers/`: remains untracked and excluded from the commit and release.
+- Rollback point: source rollback is `git revert 41718f7c026fa396371e43b5e80a1a1af0030294`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.1`.
