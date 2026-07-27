@@ -3864,3 +3864,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this release preparation and verification evidence.
 - `.superpowers/`: remains untracked and excluded from the commit and release.
 - Rollback point: before commit, preserve `HEAD` at `0c7690880e0`; after commit, use `git revert <release_commit>` or restore the prior release tag `v0.1.165-fy.2`. Do not restore whole files without preserving unrelated pending work.
+
+## 2026-07-27 - Task: Publish Leo model and media capability release v0.1.165-fy.3
+
+### What was done
+- Published commit `3799e5d321edea6b488869fd9c82d9ddffa4c239` and annotated tag `v0.1.165-fy.3` to `origin`.
+- GitHub Release completed with the Linux amd64 archive and `checksums.txt`.
+
+### Testing
+- The public Linux asset returned HTTP 200 and downloaded successfully.
+- `sub2api_0.1.165-fy.3_linux_amd64.tar.gz` is 35,416,050 bytes with SHA256 `0710a0b198b6201037f769b0607192304cfa3d21b4aa344618e4d719bd72b85b`, exactly matching `checksums.txt`.
+- The archive listing contains executable `sub2api` with an uncompressed size of 114,503,842 bytes.
+- Confirmed `v0.1.165-fy.3` points to commit `3799e5d321edea6b488869fd9c82d9ddffa4c239`; `.superpowers/` remains untracked and was not included.
+
+### Notes
+- `progress.md`: records the release commit, tag, package verification, and rollback point.
+- Rollback point: source rollback is `git revert 3799e5d321edea6b488869fd9c82d9ddffa4c239`; release rollback target is `v0.1.165-fy.2`. After removing the GitHub Release, withdraw the tag with `git push origin :refs/tags/v0.1.165-fy.3`.
