@@ -3666,3 +3666,20 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: 追加本轮合并、验证、文件清单和回滚记录。
 - `.superpowers/`: remains untracked and is explicitly excluded from the merge commit and release.
 - Rollback point: before commit, run `git merge --abort`; after commit, run `git revert -m 1 <merge_commit>`. The exact pre-merge source point is `a5cabf05253d06f358df019d52c0ffd3c720945a`.
+
+## 2026-07-27 - Task: Publish upstream merge as v0.1.165-fy.1
+
+### What was done
+- Created merge commit `b4791c850a225fb9dffe10c5b6dd5cff9944461d` with parents `a5cabf05253d06f358df019d52c0ffd3c720945a` and upstream `7d3a896fcd912e6141b9bbbe90ca5bd08ff49ea3`.
+- Pushed `codex/leo-video-channel`, created annotated tag `v0.1.165-fy.1`, and published the GitHub Release with the Linux amd64 archive and `checksums.txt`.
+
+### Testing
+- Both public Release asset URLs returned HTTP 200.
+- Downloaded `sub2api_0.1.165-fy.1_linux_amd64.tar.gz`; its size is 35,411,988 bytes and SHA256 is `fb92909529d85fc6b087bc45c23ae1df6dbe4dae4b979960fd280cb1701711df`, exactly matching `checksums.txt`.
+- Listed the archive successfully and confirmed it contains executable `sub2api` with an uncompressed size of 114,483,362 bytes.
+- Confirmed the remote annotated tag exists and the branch push completed successfully.
+
+### Notes
+- `progress.md`: records the merge commit, tag, public release assets, checksum verification, and rollback point.
+- `.superpowers/` remains untracked and was not included in the merge commit, tag, or release.
+- Rollback point: source rollback is `git revert -m 1 b4791c850a225fb9dffe10c5b6dd5cff9944461d`; release rollback target is `v0.1.164-fy.5`. To withdraw this tag after removing the GitHub Release, run `git push origin :refs/tags/v0.1.165-fy.1`.
