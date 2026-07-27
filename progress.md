@@ -3683,3 +3683,20 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the merge commit, tag, public release assets, checksum verification, and rollback point.
 - `.superpowers/` remains untracked and was not included in the merge commit, tag, or release.
 - Rollback point: source rollback is `git revert -m 1 b4791c850a225fb9dffe10c5b6dd5cff9944461d`; release rollback target is `v0.1.164-fy.5`. To withdraw this tag after removing the GitHub Release, run `git push origin :refs/tags/v0.1.165-fy.1`.
+
+## 2026-07-27 - Task: Remove internal UUID wording from customer video docs
+
+### What was done
+- Removed the customer-facing English and Chinese wording that discussed provider UUIDs from the video API documentation upload description.
+- Kept the customer instruction focused on uploading supported media and using the returned `media_url`.
+
+### Testing
+- `VideoApiDocsView.spec.ts`: 1 test passed.
+- Targeted ESLint for both dashboard locale files passed.
+- Confirmed no UUID wording remains in the customer-facing video docs or video locale strings.
+
+### Notes
+- `frontend/src/i18n/locales/en/dashboard.ts`: removes provider UUID wording from the English upload description.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: removes customer UUID wording from the Chinese upload description.
+- `progress.md`: records this customer-facing copy correction.
+- Rollback point: revert the next copy-fix commit and remove this appended block; preserve internal Leo compatibility documentation and the prior `v0.1.165-fy.1` release.

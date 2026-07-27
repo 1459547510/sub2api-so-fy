@@ -867,7 +867,7 @@ export default {
          constraints: 'Use image for PNG, JPEG, or WebP up to 10 MiB; video for MP4 or MOV up to 100 MiB; and audio for MP3 or PCM 16/24-bit WAV up to 15 MiB. Audio references must be 2–30 seconds and must be paired with an image_reference or video_reference_base. The returned address is an internal video-service URL.',
       },
       uploadMediaTitle: 'Upload reference media',
-      uploadMediaDescription: 'Upload images, reference videos, or reference audio and use the returned media_url in a generation request. Provider UUIDs are not needed for this workflow.',
+      uploadMediaDescription: 'Upload images, reference videos, or reference audio and use the returned media_url in a generation request.',
       uploadMediaConstraints: 'Use image for PNG, JPEG, or WebP up to 10 MiB; video for MP4 or MOV up to 100 MiB; and audio for MP3 or PCM 16/24-bit WAV up to 15 MiB. Audio references must be 2 to 30 seconds and paired with an image_reference or video_reference_base.',
       createMediaDescription: 'Text, frames, image references, video references, and audio references use the same endpoint. Start and end frames may be submitted together, but reference images cannot be combined with either frame. Use an absolute HTTP(S) URL returned by the upload endpoint for local media; audio_reference must be paired with an image_reference or video_reference_base.',
       create: {

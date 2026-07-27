@@ -872,7 +872,7 @@ export default {
         constraints: '表单字段名为 image；支持 PNG、JPEG 和 WebP，单文件最大 10 MiB。返回地址供视频服务内部读取，不应长期保存或公开分发。',
       },
       uploadMediaTitle: '上传参考媒体',
-      uploadMediaDescription: '上传图片、参考视频或参考音频后，使用返回的 media_url 创建视频任务；普通客户不需要填写 UUID。',
+      uploadMediaDescription: '上传图片、参考视频或参考音频后，使用返回的 media_url 创建视频任务。',
       uploadMediaConstraints: '图片支持 PNG、JPEG、WebP，单文件不超过 10 MiB；视频支持 MP4、MOV，单文件不超过 100 MiB；音频支持 MP3 或 PCM 16/24 位 WAV，单文件不超过 15 MiB，时长必须为 2 到 30 秒，并且必须搭配参考图或参考视频。',
       createMediaDescription: '文本、首尾帧、参考图片、参考视频和参考音频使用同一个创建接口；首帧和尾帧可以同时提交，但参考图不能与任一首尾帧同时使用。本地媒体请使用上传接口返回的绝对 HTTP(S) media_url，参考音频必须搭配参考图或参考视频。',
       create: {
