@@ -186,6 +186,25 @@ LeoStudio 报告任务完成后，Sub2API 会先从结果中的 `source_url`、`
 
 When a custom Sub2API API Key has a positive USD quota, a successfully settled Leo video also increments that key's `quota_used` through the shared atomic quota updater. Failed, canceled, or incomplete video jobs do not consume the key quota.
 
+### Production account model mapping
+
+The production Leo API-key account used by channel `5` must map every public
+video model to the same upstream model name. The verified account mapping is:
+
+```text
+seedance-2.0      -> seedance-2.0
+seedance-2.0-fast -> seedance-2.0-fast
+seedance-2.0-mini -> seedance-2.0-mini
+happy-horse-1.1   -> happy-horse-1.1
+grok-imagine-1.5  -> grok-imagine-1.5
+```
+
+If a public model has channel pricing but is absent from the account mapping,
+the scheduler returns `no available accounts` before creating a video job.
+Adding a mapping exposes the model to `/v1/models`; it does not prove that the
+LeoStudio upstream implementation is enabled, so a controlled generation test
+is still required before customer traffic is enabled.
+
 ### Newly exposed models
 
 `happy-horse-1.1` and `grok-imagine-1.5` are available in the video workbench and

@@ -3899,6 +3899,35 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this pricing change and verification status.
 - Rollback point: revert the latest hunks in the three files, or use `git diff HEAD -- <file> > rollback.patch` followed by `git apply -R rollback.patch`; preserve `.superpowers/` and unrelated work.
 
+## 2026-07-27 - Task: Configure production pricing for new video models
+
+### What was done
+- Confirmed production is running `0.1.166-fy.1`.
+- Updated production channel `5` (`Seedance 2 视频专用渠道`) with rightmost-table pricing for `happy-horse-1.1` and `grok-imagine-1.5`.
+- Preserved all three existing Seedance pricing entries and left group `25` fallback prices unchanged.
+
+### Testing
+- Read back channel `5` after the update: five unique video model pricing entries are present and both new entries have the expected three compatibility tiers.
+- No video generation task was submitted in this pricing operation.
+
+### Notes
+- Production configuration target: channel `5`; rollback by removing only the two added model pricing entries and restoring the pre-update channel payload.
+- `progress.md`: records the production pricing change and rollback target.
+
+## 2026-07-27 - Task: Repair UTF-8 channel metadata after pricing update
+
+### What was done
+- Restored production channel `5` name to `Seedance 2 视频专用渠道`.
+- Restored its description to `Seedance 2.0 / Fast Leo 视频专用渠道`.
+- Resent the update with explicit UTF-8 bytes and preserved all five model pricing entries.
+
+### Testing
+- Read back the channel after repair: Chinese name/description are intact; Happy Horse and Grok prices remain `0.15/0.15/0.19` and `0.10/0.17/0.17`.
+
+### Notes
+- Root cause: PowerShell string request bodies were encoded with the console code page instead of UTF-8, converting Chinese characters to `?`.
+- Rollback point: restore the prior channel metadata only; pricing entries were not changed by the repair.
+
 ## 2026-07-27 - Task: Merge upstream v0.1.166 and prepare fork release
 
 ### What was done
@@ -3945,3 +3974,86 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the published release and package verification.
 - `.superpowers/`: remains untracked and excluded from the commit and release.
 - Rollback point: source rollback is `git revert 41718f7c026fa396371e43b5e80a1a1af0030294`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.1`.
+
+## 2026-07-28 - Task: Add Happy Horse and Grok model mappings to production Leo account
+
+### What was done
+- Updated production Leo account `1682` without changing its API key, base URL, pool settings, status, concurrency, or existing Seedance mappings.
+- Added `happy-horse-1.1 -> happy-horse-1.1` and `grok-imagine-1.5 -> grok-imagine-1.5` to the account model mapping.
+- Documented the required production mapping and the distinction between model exposure and upstream capability.
+
+### Testing
+- Admin account readback returned all five mappings; account remained `active`, `schedulable=true`, with no error message.
+- Admin available-models endpoint returned all five video models.
+- The supplied ordinary API Key returned HTTP 200 from `/v1/models` and exposed both newly mapped models.
+- No video generation task was submitted during this change.
+
+### Notes
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the production Leo account mapping and its validation boundary.
+- `progress.md`: records this production configuration change and verification evidence.
+- Rollback point: update account `1682` with the prior three-entry `model_mapping` (`seedance-2.0`, `seedance-2.0-fast`, `seedance-2.0-mini`) while preserving the current credentials; do not delete or regenerate the account key.
+
+## 2026-07-28 - Task: Live-test Happy Horse and Grok Imagine production models
+
+### What was done
+- Submitted one minimal Happy Horse job and one minimal Grok Imagine job through the production video API using the supplied ordinary API Key.
+- Retried Grok once with a direct, no-redirect PNG after the first public Wikimedia URL failed during guidance upload.
+
+### Testing
+- Happy Horse: `720p`, `3s`, `16:9`, `audio=false`; completed successfully. Content endpoint returned HTTP `200`, `video/mp4`, `2,628,184` bytes.
+- Grok first attempt: `400p`, `3s`, `16:9`, Wikimedia start frame; failed with `Video service guidance upload failed`.
+- Grok retry: `400p`, `3s`, `16:9`, direct `placehold.co` PNG start frame; completed successfully. Content endpoint returned HTTP `200`, `video/mp4`, `3,063,693` bytes.
+- No additional retries were made after the successful Grok result.
+
+### Notes
+- `progress.md`: records the production generation test and the isolated public-image URL failure.
+- Rollback point: no source or production configuration rollback is required for this test; the two failed/completed test jobs remain in the API Key's video job history.
+
+## 2026-07-28 - Task: Document per-model video API requests in the Web API docs
+
+### What was done
+- Added a dedicated Web API documentation section with copy-ready `curl` requests for `seedance-2.0`, `seedance-2.0-fast`, `seedance-2.0-mini`, `happy-horse-1.1`, and `grok-imagine-1.5`.
+- Added per-model parameter descriptions for resolution, duration, aspect ratio, start-frame requirements, and guidance limits.
+- Kept Happy Horse reference-video guidance documented as unsupported because the production gateway currently rejects it with the model limit set to zero.
+- Added regression coverage that requires all five model request examples to remain present.
+
+### Testing
+- `pnpm.cmd exec vitest run src/views/user/__tests__/VideoApiDocsView.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts`: passed, 26 tests.
+- `pnpm.cmd typecheck`: passed.
+- ESLint passed for the changed API docs component and test.
+- `git diff --check`: passed.
+
+### Notes
+- `frontend/src/views/user/VideoApiDocsView.vue`: adds the per-model API request section and examples.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies all five model examples are rendered.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese model-example descriptions.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English model-example descriptions.
+- `progress.md`: records this documentation update and verification evidence.
+- Rollback point: revert the latest documentation and test hunks in the four files above; no production API or model configuration was changed.
+
+## 2026-07-28 - Task: Verify embedded frontend build after model API docs update
+
+### What was done
+- Rebuilt the frontend bundle so the per-model API documentation is compile-checked in the embedded web assets.
+
+### Testing
+- `pnpm.cmd run build`: passed; Vite transformed 975 modules and emitted the embedded frontend bundle. Existing dynamic-import and chunk-size warnings remain non-blocking.
+
+### Notes
+- `progress.md`: records the final build verification for the documentation change.
+- Rollback point: use the prior frontend build output and revert the documentation-only changes recorded in the preceding task entry.
+
+## 2026-07-28 - Task: Publish video group model announcement
+
+### What was done
+- Published production announcement ID `20` for the two newly exposed video models: `happy-horse-1.1` and `grok-imagine-1.5`.
+- Activated the announcement as an all-user popup and included the supported resolutions, duration range, and required image input constraints.
+
+### Testing
+- `GET /api/v1/admin/announcements/20` returned the expected Chinese title and model content with `status=active`, `notify_mode=popup`, and empty targeting for all users.
+- The temporary announcement payload was removed after the verified production write; no administrator credential was written to the repository.
+
+### Notes
+- `progress.md`: records the production announcement, readback evidence, and rollback operation.
+- Production state changed through the Admin API only; no source behavior, deployment, commit, or push was performed.
+- Rollback point: archive announcement ID `20` with `PUT /api/v1/admin/announcements/20` and `{"status":"archived"}`.

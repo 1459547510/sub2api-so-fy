@@ -847,9 +847,9 @@ export default {
       description: 'Use a Sub2API Key to create asynchronous videos, inspect jobs, and download locally stored outputs.',
       badge: 'REST API v1',
       tocLabel: 'Documentation contents',
-         nav: {
+      nav: {
         quick: 'Quick start',
-         upload: 'Upload media',
+        upload: 'Upload media',
         create: 'Create a job',
         jobs: 'Query and manage',
         status: 'Statuses and errors',
@@ -873,6 +873,15 @@ export default {
       create: {
         title: 'Create a video job',
         description: 'Text, frames, image references, video references, and audio references use the same endpoint. Video and audio URLs must be reachable by the video service; audio_reference must be paired with an image_reference or video_reference_base.',
+      },
+      models: {
+        title: 'Per-model request examples',
+        description: 'Each model below has a copy-ready curl request. Use only the resolutions, durations, aspect ratios, and reference inputs listed for that model; media_url values come from the upload endpoint.',
+        seedance20: 'Supports 480p/720p/1080p for 4-15 seconds; 1080p is limited to 12 seconds. This example is text-to-video.',
+        seedance20Fast: 'Supports 480p/720p for 4-15 seconds. This example is text-to-video.',
+        seedance20Mini: 'Supports 480p/720p for 4-15 seconds and 16:9, 1:1, or 9:16. This example is text-to-video.',
+        happyHorse: 'Supports 720p/1080p for 3-15 seconds. Use a start frame or reference images; reference video is currently rejected by the gateway.',
+        grokImagine: 'Supports 400p/544p/720p/960p for 3-15 seconds. Exactly one start-frame URL is required; other guidance inputs are rejected.',
       },
       examples: {
         textToVideo: 'Text-to-video request',

@@ -103,6 +103,19 @@
             </div>
           </section>
 
+          <section id="model-examples" class="scroll-mt-6 border-t border-gray-200 pt-10 dark:border-dark-700">
+            <SectionHeading :title="t('video.apiDocs.models.title')" :description="t('video.apiDocs.models.description')" />
+            <div class="mt-5 grid min-w-0 gap-5">
+              <div v-for="example in modelExamples" :key="example.model" class="min-w-0 border-b border-gray-200 pb-5 last:border-b-0 last:pb-0 dark:border-dark-700">
+                <h3 class="font-mono text-sm font-semibold text-gray-900 dark:text-white">{{ example.model }}</h3>
+                <p class="mt-1 text-sm leading-6 text-gray-600 dark:text-dark-300">{{ t(example.description) }}</p>
+                <div class="mt-3">
+                  <ApiCodeBlock :label="example.model" :code="example.code" />
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section id="job-operations" class="scroll-mt-6 border-t border-gray-200 pt-10 dark:border-dark-700">
             <SectionHeading :title="t('video.apiDocs.jobs.title')" :description="t('video.apiDocs.jobs.description')" />
             <div class="mt-5 divide-y divide-gray-200 border-y border-gray-200 dark:divide-dark-700 dark:border-dark-700">
@@ -171,6 +184,7 @@ const navigation = [
   { href: '#quick-start', label: 'video.apiDocs.nav.quick' },
   { href: '#upload-media', label: 'video.apiDocs.nav.upload' },
   { href: '#create-job', label: 'video.apiDocs.nav.create' },
+  { href: '#model-examples', label: 'video.apiDocs.models.title' },
   { href: '#job-operations', label: 'video.apiDocs.nav.jobs' },
   { href: '#status-errors', label: 'video.apiDocs.nav.status' },
 ]
@@ -357,4 +371,77 @@ const grokExample = `{
   "audio": true,
   "start_frame_url": "https://media.example/start-frame.png"
 }`
+
+const modelExamples = [
+  {
+    model: 'seedance-2.0',
+    description: 'video.apiDocs.models.seedance20',
+    code: modelRequestExample(`{
+  "model": "seedance-2.0",
+  "prompt": "A slow aerial shot over a coastal city at sunrise",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": false
+}`),
+  },
+  {
+    model: 'seedance-2.0-fast',
+    description: 'video.apiDocs.models.seedance20Fast',
+    code: modelRequestExample(`{
+  "model": "seedance-2.0-fast",
+  "prompt": "A fast tracking shot through a neon city street",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": false
+}`),
+  },
+  {
+    model: 'seedance-2.0-mini',
+    description: 'video.apiDocs.models.seedance20Mini',
+    code: modelRequestExample(`{
+  "model": "seedance-2.0-mini",
+  "prompt": "A paper boat drifting across a calm lake",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": false
+}`),
+  },
+  {
+    model: 'happy-horse-1.1',
+    description: 'video.apiDocs.models.happyHorse',
+    code: modelRequestExample(`{
+  "model": "happy-horse-1.1",
+  "prompt": "A horse runs through a sunlit meadow",
+  "resolution": "720p",
+  "duration": 3,
+  "aspect_ratio": "16:9",
+  "audio": false,
+  "prompt_enhance": "OFF",
+  "start_frame_url": "https://media.example/start-frame.png"
+}`),
+  },
+  {
+    model: 'grok-imagine-1.5',
+    description: 'video.apiDocs.models.grokImagine',
+    code: modelRequestExample(`{
+  "model": "grok-imagine-1.5",
+  "prompt": "A cinematic camera move through a neon city",
+  "resolution": "400p",
+  "duration": 3,
+  "aspect_ratio": "16:9",
+  "audio": false,
+  "start_frame_url": "https://media.example/start-frame.png"
+}`),
+  },
+]
+
+function modelRequestExample(body: string) {
+  return `curl -X POST "${baseUrl}/v1/videos/generations" \\
+  ${authHeaders} \\
+  -H "Prefer: respond-async" \\
+  -d '${body}'`
+}
 </script>

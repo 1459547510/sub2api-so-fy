@@ -847,6 +847,15 @@ export default {
       apiDocs: 'API 对接文档',
     },
     apiDocs: {
+      models: {
+        title: '模型请求示例',
+        description: '下面为每个模型提供可直接复制的 curl 请求。请按模型限制选择分辨率、时长、画面比例和参考媒体；media_url 使用上传接口返回的值。',
+        seedance20: '支持 480p/720p/1080p，时长 4-15 秒；1080p 最长 12 秒。本示例为文生视频。',
+        seedance20Fast: '支持 480p/720p，时长 4-15 秒。本示例为文生视频。',
+        seedance20Mini: '支持 480p/720p，时长 4-15 秒，画面比例支持 16:9、1:1、9:16。本示例为文生视频。',
+        happyHorse: '支持 720p/1080p，时长 3-15 秒。可使用首帧或参考图；当前网关不接受参考视频。',
+        grokImagine: '支持 400p/544p/720p/960p，时长 3-15 秒。必须提供一张首帧 URL，不接受其他 guidance。',
+      },
       eyebrow: '开发者接口',
       title: '视频 API 对接文档',
       description: '使用 Sub2API Key 接入异步视频生成、任务查询和本地成品下载。',
