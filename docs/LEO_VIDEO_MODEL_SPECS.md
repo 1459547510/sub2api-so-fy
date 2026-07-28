@@ -7,17 +7,92 @@ contract.
 
 ## Model matrix
 
-| Model | Resolutions | Duration | Aspect ratios | Prompt limit |
-| --- | --- | --- | --- | ---: |
-| `seedance-2.0` | `480p`, `720p`, `1080p` | `4-15s`; `1080p` is `4-12s`; default `8s` | `480p`/`1080p`: `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`, `9:21`; `720p` excludes `9:21` | 5000 |
-| `seedance-2.0-fast` | `480p`, `720p` | `4-15s`; default `8s` | `480p`: all seven Seedance ratios; `720p` excludes `9:21` | 5000 |
-| `seedance-2.0-mini` | `480p`, `720p` | `4-15s`; default `8s` | Both resolutions: `16:9`, `1:1`, `9:16` | 5000 |
-| `happy-horse-1.1` | `720p`, `1080p` | `3-15s`; default `5s` | Both resolutions: `16:9`, `4:3`, `1:1`, `3:4`, `9:16` | 2500 |
-| `grok-imagine-1.5` | `400p`, `544p`, `720p`, `960p` | `3-15s`; default `6s` | `400p`/`720p`: `16:9`, `9:16`; `544p`/`960p`: `1:1` | 5000 |
+The following table is the server-side validation contract. A request must
+use a supported resolution/aspect-ratio pair from the same row.
+
+| Model | Resolutions | Duration / default | Aspect ratios | Prompt limit | Reference inputs |
+| --- | --- | --- | --- | ---: | --- |
+| `seedance-2.0` | `480p`, `720p`, `1080p` | `4-15s`; default `8s`; `1080p` is `4-12s` | `480p`/`1080p`: `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`, `9:21`; `720p` excludes `9:21` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
+| `seedance-2.0-fast` | `480p`, `720p` | `4-15s`; default `8s` | `480p`: all seven Seedance ratios; `720p` excludes `9:21` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
+| `seedance-2.0-mini` | `480p`, `720p` | `4-15s`; default `8s` | Both resolutions: `16:9`, `1:1`, `9:16` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
+| `happy-horse-1.1` | `720p`, `1080p` | `3-15s`; default `5s` | Both resolutions: `16:9`, `4:3`, `1:1`, `3:4`, `9:16` | 2500 | 1 start frame or 9 images; no end frame/video/audio; `prompt_enhance` |
+| `grok-imagine-1.5` | `400p`, `544p`, `720p`, `960p` | `3-15s`; default `6s` | `400p`/`720p`: `16:9`, `9:16`; `544p`/`960p`: `1:1` | 5000 | exactly 1 start frame; no end frame/image/video/audio |
 
 The platform rejects unsupported model, resolution, duration, and aspect-ratio
 combinations before dispatch. `seedance-2.0` is the compatibility alias for
 `seedance` when an account mapping uses that name.
+
+## Common request fields
+
+| Field | Type | Required | Rules |
+| --- | --- | --- | --- |
+| `model` | string | yes | One of the five public model IDs above. `seedance` is accepted as an alias for `seedance-2.0`. |
+| `prompt` | string | yes | Scene, action, camera, and style description. Maximum is 5000 characters except `happy-horse-1.1`, which is 2500. |
+| `resolution` | string | no | Defaults to `720p` when omitted. The selected model must support the value. |
+| `duration` | integer | no | Whole seconds. Defaults to the model default in the matrix. |
+| `aspect_ratio` | string | no | Defaults to the first supported ratio for the selected resolution. |
+| `audio` | boolean | no | Whether generated output should include audio. Defaults to `false`; this is separate from a reference-audio input. |
+| `prompt_enhance` | string | no | `happy-horse-1.1` only: `AUTO`, `ON`, or `OFF`. `ON` cannot be combined with a start frame. |
+| `image_url` | string | no | One start-frame absolute HTTP(S) URL. Use `start_frame_url` and `end_frame_url` for an explicit frame pair. |
+| `start_frame_url` / `end_frame_url` | string | no | Absolute HTTP(S) frame URLs. Frame mode cannot be combined with reference images. |
+| `guidances` | object | no | Nested `image_reference`, `video_reference_base`, and `audio_reference` arrays. Use the media object formats below. |
+
+## Reference video request format
+
+Upload a local reference video first. The upload response's `media_url` is the
+value used in the generation request:
+
+```bash
+curl -X POST "$SUB2_BASE_URL/v1/videos/uploads" \
+  -H "Authorization: Bearer $SUB2_API_KEY" \
+  -F "video=@./reference.mp4"
+```
+
+```json
+{
+  "media_url": "https://media.example/uploaded/reference.mp4",
+  "media_type": "video",
+  "content_type": "video/mp4",
+  "size": 428516
+}
+```
+
+Use the returned URL under `guidances.video_reference_base[].video`:
+
+```json
+{
+  "model": "seedance-2.0",
+  "prompt": "Preserve the motion and timing of the reference video",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "guidances": {
+    "video_reference_base": [
+      {
+        "video": {
+          "url": "https://media.example/uploaded/reference.mp4",
+          "type": "UPLOADED"
+        }
+      }
+    ]
+  }
+}
+```
+
+The video object must contain either `url` or a UUID `id`, never both. For a
+URL, `type` must be `UPLOADED`; do not add a `duration` property. A generation
+may contain at most three reference videos, and only Seedance models accept
+this guidance. The file itself must be a readable MP4/MOV ISO Base Media
+container and no larger than 100 MiB. Data URLs, Base64, and multipart media
+inside the generation JSON are not accepted.
+
+## Reference audio format
+
+Use `guidances.audio_reference[].audio` with the same `url` and
+`type: "UPLOADED"` shape. Audio URL entries must omit `duration`; an audio
+reference must be paired with at least one image or reference video. Only
+Seedance models accept reference audio. The upload endpoint accepts MP3 with
+readable frames or RIFF/WAVE PCM 16/24-bit WAV, up to 15 MiB and 2-30 seconds.
 
 ### Model-specific guidance
 

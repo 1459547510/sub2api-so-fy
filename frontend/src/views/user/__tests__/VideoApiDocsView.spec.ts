@@ -30,13 +30,16 @@ describe('VideoApiDocsView', () => {
     ]) {
       expect(text).toContain(endpoint)
     }
+    expect(text).toContain('video.apiDocs.matrix.title')
+    expect(text).toContain('video.apiDocs.uploadMediaFormat')
+    expect(wrapper.findAll('#model-matrix tbody tr')).toHaveLength(5)
 
     const examples = wrapper.findAllComponents(ApiCodeBlock).map((component) => component.props('code'))
     expect(examples.some((code) => code.includes('Prefer: respond-async'))).toBe(true)
     expect(examples.some((code) => code.includes('"image_url"'))).toBe(true)
     expect(examples.some((code) => code.includes('"start_frame_url"') && code.includes('"end_frame_url"'))).toBe(true)
     expect(examples.some((code) => code.includes('"image_reference"') && code.includes('"order": 1'))).toBe(true)
-    expect(examples.some((code) => code.includes('"video_reference_base"') && code.includes('reference.mp4'))).toBe(true)
+    expect(examples.some((code) => code.includes('"video_reference_base"') && code.includes('reference.mp4') && code.includes('"type": "UPLOADED"'))).toBe(true)
     expect(examples.some((code) => code.includes('"audio_reference"') && code.includes('reference.mp3'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "happy-horse-1.1"') && code.includes('prompt_enhance'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "grok-imagine-1.5"') && code.includes('start_frame_url'))).toBe(true)

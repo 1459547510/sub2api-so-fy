@@ -58,6 +58,7 @@
             <SectionHeading :title="t('video.apiDocs.uploadMediaTitle')" :description="t('video.apiDocs.uploadMediaDescription')" />
             <EndpointTitle method="POST" path="/v1/videos/uploads" class="mt-5" />
             <p class="mt-3 text-sm leading-6 text-gray-600 dark:text-dark-300">{{ t('video.apiDocs.uploadMediaConstraints') }}</p>
+            <p class="mt-3 text-sm leading-6 text-gray-600 dark:text-dark-300">{{ t('video.apiDocs.uploadMediaFormat') }}</p>
             <div class="mt-4">
               <ApiCodeBlock :label="t('video.apiDocs.examples.upload')" :code="uploadExample" />
             </div>
@@ -100,6 +101,34 @@
               <ApiCodeBlock :label="t('video.apiDocs.examples.audioReference')" :code="audioReferenceExample" />
               <ApiCodeBlock :label="t('video.apiDocs.examples.happyHorse')" :code="happyHorseExample" />
               <ApiCodeBlock :label="t('video.apiDocs.examples.grok')" :code="grokExample" />
+            </div>
+          </section>
+
+          <section id="model-matrix" class="scroll-mt-6 border-t border-gray-200 pt-10 dark:border-dark-700">
+            <SectionHeading :title="t('video.apiDocs.matrix.title')" :description="t('video.apiDocs.matrix.description')" />
+            <div class="mt-5 overflow-x-auto rounded-lg border border-gray-200 dark:border-dark-700">
+              <table class="min-w-[1120px] w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-dark-800 dark:text-dark-300">
+                  <tr>
+                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.matrix.model') }}</th>
+                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.matrix.resolution') }}</th>
+                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.matrix.duration') }}</th>
+                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.matrix.aspectRatio') }}</th>
+                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.matrix.promptLimit') }}</th>
+                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.matrix.references') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white dark:divide-dark-700 dark:bg-dark-900">
+                  <tr v-for="row in modelMatrixRows" :key="row.model">
+                    <td class="whitespace-nowrap px-4 py-3 font-mono text-xs font-semibold text-gray-900 dark:text-white">{{ row.model }}</td>
+                    <td class="px-4 py-3 leading-6 text-gray-600 dark:text-dark-300">{{ t(row.resolution) }}</td>
+                    <td class="px-4 py-3 leading-6 text-gray-600 dark:text-dark-300">{{ t(row.duration) }}</td>
+                    <td class="px-4 py-3 leading-6 text-gray-600 dark:text-dark-300">{{ t(row.aspectRatio) }}</td>
+                    <td class="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-dark-300">{{ t(row.promptLimit) }}</td>
+                    <td class="px-4 py-3 leading-6 text-gray-600 dark:text-dark-300">{{ t(row.references) }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </section>
 
@@ -184,6 +213,7 @@ const navigation = [
   { href: '#quick-start', label: 'video.apiDocs.nav.quick' },
   { href: '#upload-media', label: 'video.apiDocs.nav.upload' },
   { href: '#create-job', label: 'video.apiDocs.nav.create' },
+  { href: '#model-matrix', label: 'video.apiDocs.nav.matrix' },
   { href: '#model-examples', label: 'video.apiDocs.models.title' },
   { href: '#job-operations', label: 'video.apiDocs.nav.jobs' },
   { href: '#status-errors', label: 'video.apiDocs.nav.status' },
@@ -201,6 +231,49 @@ const requestFields = [
   { name: 'start_frame_url', type: 'string', required: false, description: 'video.apiDocs.fields.startFrameUrl' },
   { name: 'end_frame_url', type: 'string', required: false, description: 'video.apiDocs.fields.endFrameUrl' },
   { name: 'guidances', type: 'object', required: false, description: 'video.apiDocs.fields.guidancesPublic' },
+]
+
+const modelMatrixRows = [
+  {
+    model: 'seedance-2.0',
+    resolution: 'video.apiDocs.matrix.seedance20.resolution',
+    duration: 'video.apiDocs.matrix.seedance20.duration',
+    aspectRatio: 'video.apiDocs.matrix.seedance20.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.seedance20.promptLimit',
+    references: 'video.apiDocs.matrix.seedance20.references',
+  },
+  {
+    model: 'seedance-2.0-fast',
+    resolution: 'video.apiDocs.matrix.seedance20Fast.resolution',
+    duration: 'video.apiDocs.matrix.seedance20Fast.duration',
+    aspectRatio: 'video.apiDocs.matrix.seedance20Fast.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.seedance20Fast.promptLimit',
+    references: 'video.apiDocs.matrix.seedance20Fast.references',
+  },
+  {
+    model: 'seedance-2.0-mini',
+    resolution: 'video.apiDocs.matrix.seedance20Mini.resolution',
+    duration: 'video.apiDocs.matrix.seedance20Mini.duration',
+    aspectRatio: 'video.apiDocs.matrix.seedance20Mini.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.seedance20Mini.promptLimit',
+    references: 'video.apiDocs.matrix.seedance20Mini.references',
+  },
+  {
+    model: 'happy-horse-1.1',
+    resolution: 'video.apiDocs.matrix.happyHorse.resolution',
+    duration: 'video.apiDocs.matrix.happyHorse.duration',
+    aspectRatio: 'video.apiDocs.matrix.happyHorse.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.happyHorse.promptLimit',
+    references: 'video.apiDocs.matrix.happyHorse.references',
+  },
+  {
+    model: 'grok-imagine-1.5',
+    resolution: 'video.apiDocs.matrix.grokImagine.resolution',
+    duration: 'video.apiDocs.matrix.grokImagine.duration',
+    aspectRatio: 'video.apiDocs.matrix.grokImagine.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.grokImagine.promptLimit',
+    references: 'video.apiDocs.matrix.grokImagine.references',
+  },
 ]
 
 const jobEndpoints = [
@@ -253,9 +326,9 @@ Location: /v1/videos/jobs/vidjob_example
 const uploadExample = `curl -X POST "${baseUrl}/v1/videos/uploads" \\\n  -H "Authorization: Bearer $SUB2_API_KEY" \\\n  -F "image=@./reference.png"`
 
 const uploadResponseExample = `{
-  "media_url": "https://media.example/uploaded/reference.mp4",
-  "media_type": "video",
-  "content_type": "video/mp4",
+  "media_url": "https://media.example/uploaded/reference.png",
+  "media_type": "image",
+  "content_type": "image/png",
   "size": 428516
 }`
 

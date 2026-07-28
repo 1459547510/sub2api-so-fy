@@ -4076,3 +4076,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the release commit, tag, package verification, and rollback point.
 - `.superpowers/`: remains untracked and excluded from the commit and release.
 - Rollback point: source rollback is `git revert 60fabd8b10b3912e807867a0180c059dfa9afe1f`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.2`.
+
+## 2026-07-28 - Task: Clarify per-model video parameters and reference-video format
+
+### What was done
+- Added a Web API documentation matrix covering each public model's resolution, duration/default, aspect-ratio combinations, prompt limit, and supported reference inputs.
+- Clarified the reference-video flow: upload with multipart `video`, read `media_url`, and place it at `guidances.video_reference_base[].video` with `type: "UPLOADED"`; documented the Seedance-only restriction and three-video limit.
+- Added common request-field rules and reference-video/audio examples to the standalone model specification document.
+- Corrected the Web API upload response example so an image upload is represented as `image/png` instead of `video/mp4`.
+
+### Testing
+- `frontend/node_modules/.bin/vitest.cmd run src/views/user/__tests__/VideoApiDocsView.spec.ts --reporter=verbose`: passed, 1 test.
+- `frontend/node_modules/.bin/vue-tsc.cmd --noEmit`: passed.
+- `git diff --check`: passed; only the existing LF/CRLF normalization warning for the Markdown file remains.
+
+### Notes
+- `frontend/src/views/user/VideoApiDocsView.vue`: adds the visible model matrix and upload-format explanation.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies the five-row matrix and uploaded video object format.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese matrix and reference-video wording.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English matrix and reference-video wording.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: adds detailed standalone request and media-format documentation.
+- `progress.md`: records this documentation change and verification evidence.
+- Rollback point: revert the latest hunks in the five files above; no production API, account, pricing, or model configuration was changed.
