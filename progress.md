@@ -4098,3 +4098,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_MODEL_SPECS.md`: adds detailed standalone request and media-format documentation.
 - `progress.md`: records this documentation change and verification evidence.
 - Rollback point: revert the latest hunks in the five files above; no production API, account, pricing, or model configuration was changed.
+
+## 2026-07-28 - Task: Publish fork release v0.1.166-fy.3
+
+### What was done
+- Pushed commit `1c460cfabaf688e61c51e8325d461525cdf3b35f` to `origin/codex/leo-video-channel` and annotated tag `v0.1.166-fy.3` to `origin`.
+- Published the updated per-model video parameter matrix and reference-media format documentation through the GitHub Release workflow.
+
+### Testing
+- Targeted Vitest for `VideoApiDocsView` and `VideoGenerationView`: 26 tests passed.
+- `pnpm.cmd typecheck`, `pnpm.cmd lint:check`, `pnpm.cmd run build`, and `git diff --check` passed before release.
+- GitHub Release workflow run `30327285187` completed successfully.
+- Public Release assets returned successfully; `sub2api_0.1.166-fy.3_linux_amd64.tar.gz` is `35,490,700` bytes.
+- SHA256 `cf745ef3cd2a3f3f6336b233f45bfb4d71f9842096167b1f64ed0a767949d17a` exactly matched `checksums.txt`.
+
+### Notes
+- `progress.md`: records the release commit, tag, workflow result, package verification, and rollback point.
+- `.superpowers/`: remains untracked and excluded from the commit and release.
+- Rollback point: source rollback is `git revert 1c460cfabaf688e61c51e8325d461525cdf3b35f`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.3`.
