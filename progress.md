@@ -4057,3 +4057,22 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the production announcement, readback evidence, and rollback operation.
 - Production state changed through the Admin API only; no source behavior, deployment, commit, or push was performed.
 - Rollback point: archive announcement ID `20` with `PUT /api/v1/admin/announcements/20` and `{"status":"archived"}`.
+
+## 2026-07-28 - Task: Publish fork release v0.1.166-fy.2
+
+### What was done
+- Pushed commit `60fabd8b10b3912e807867a0180c059dfa9afe1f` to `origin/codex/leo-video-channel` and annotated tag `v0.1.166-fy.2` to `origin`.
+- Published the updated per-model video API documentation and model request examples through the GitHub Release workflow.
+
+### Testing
+- Targeted Vitest for `VideoApiDocsView` and `VideoGenerationView`: 26 tests passed.
+- `pnpm.cmd typecheck` and `pnpm.cmd lint:check` passed.
+- `pnpm.cmd run build` passed; Vite transformed 975 modules and emitted the embedded frontend bundle. Existing Browserslist, dynamic-import, and chunk-size warnings remain non-blocking.
+- Public Release assets returned successfully; `sub2api_0.1.166-fy.2_linux_amd64.tar.gz` is `35,488,759` bytes.
+- SHA256 `f20775158233ca9ee8ca1a480f71e4907c1481b6bb7b63fdc752165d26d6c11c` exactly matched `checksums.txt`.
+- Archive listing contains executable `sub2api`; remote tag and branch both resolve to `60fabd8b10b3912e807867a0180c059dfa9afe1f`.
+
+### Notes
+- `progress.md`: records the release commit, tag, package verification, and rollback point.
+- `.superpowers/`: remains untracked and excluded from the commit and release.
+- Rollback point: source rollback is `git revert 60fabd8b10b3912e807867a0180c059dfa9afe1f`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.2`.
