@@ -4264,3 +4264,27 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records implementation scope, verification evidence, modified files, and rollback point.
 - `.superpowers/` remains untracked and excluded from this task.
 - Rollback point: working-tree base is `d622c6053`; after commit, use `git revert <ltx_pricing_commit>` to restore the previous single-tier compatibility behavior.
+
+## 2026-07-29 - Task: Deploy and production-test LTX 2.3 video models
+
+### What was done
+- Published commit `c9ec2cb43` as release `v0.1.168-fy.2` and deployed it to production.
+- Added exact Leo account `1682` mappings for `ltxv-2.3-fast` and `ltxv-2.3-pro`, then added both models to channel `5` without changing its existing five pricing entries.
+- Configured Fast prices at `$0.06/$0.21/$0.24` and Pro prices at `$0.09/$0.18/$0.36` per second for `1080p/1440p/2160p`.
+- Submitted live Fast and Pro generation jobs plus a Seedance Fast control job. All three were blocked by the only Leo upstream video generation service; no output video was produced and the test API key was not charged.
+
+### Testing
+- Production version readback returned `0.1.168-fy.2`; `/v1/models` exposed both `ltxv-2.3-fast` and `ltxv-2.3-pro`.
+- Account `1682` remained `active` and schedulable, and both exact model mappings read back correctly.
+- Channel `5` contained seven pricing entries and all six LTX prices read back exactly as configured.
+- Fast job `vidjob_D-ysl6LNHogwFON5NXVvsoZ8Oh11emo-` reached `running` and then failed with `Video service authentication failed`.
+- Pro job `vidjob_dK7nvJyFgVqigpEvwevHYSURG5sormj8` and Seedance Fast control job `vidjob_deOCnTwJK5TOP1RvdmmnUoJCDxwtAcB-` failed with `Video service request failed`.
+- Leo account health still returned `LeoStudio health check passed`, but group `25` had no second active Leo account for failover. Test API key `215` remained at `quota_used = 36.27` after the failures.
+- Failed-job account concurrency drained from `3` to `0` by `2026-07-29 17:16:10 +08:00` under the production 30-minute slot TTL.
+- Release package `sub2api_0.1.168-fy.2_linux_amd64.tar.gz` was `36,053,307` bytes with SHA256 `26172a3bd1dbc51a944af14a77af13b8b6c97336e4d7d41eb94566999c2b5b17`.
+
+### Notes
+- `progress.md`: records the production release, exact configuration, live generation outcomes, no-charge evidence, concurrency recovery, and rollback point.
+- `.superpowers/`: remains untracked and excluded from the commit and release.
+- Remaining blocker: repair or refresh the Leo upstream video credentials, or add another active Leo account, before repeating a successful-output test.
+- Rollback point: run `git revert c9ec2cb43`, publish and deploy the resulting rollback release (or redeploy `v0.1.168-fy.1`), then remove the two LTX mappings from account `1682` and the two LTX pricing entries from channel `5`.
