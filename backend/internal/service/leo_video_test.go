@@ -73,6 +73,20 @@ func TestForwardLeoVideoMapsModelAndAddsBearer(t *testing.T) {
 	require.JSONEq(t, responseBody, rec.Body.String())
 }
 
+func TestForwardLeoVideoPreservesLTXFastTwentySecondDuration(t *testing.T) {
+	upstream := &leoVideoHTTPUpstream{response: leoVideoResponse(http.StatusOK, `{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"RESOLUTION_1080","duration":20}}`)}
+	svc := &OpenAIGatewayService{httpUpstream: upstream}
+	account := newLeoVideoTestAccount()
+	account.Credentials["model_mapping"] = map[string]any{"ltx-fast": "ltxv-2.3-fast"}
+	_, c := newLeoVideoTestContext()
+
+	result, err := svc.ForwardLeoVideo(context.Background(), c, account, []byte(`{"model":"ltx-fast","prompt":"city","resolution":"1080p","duration":20}`))
+
+	require.NoError(t, err)
+	require.Equal(t, "ltxv-2.3-fast", gjson.GetBytes(upstream.requestBody, "model").String())
+	require.Equal(t, 20, result.VideoDurationSeconds)
+}
+
 func TestForwardLeoVideoPassesMediaAndAudioReferenceURLs(t *testing.T) {
 	body := []byte(`{"model":"seedance","prompt":"city","guidances":{"image_reference":[{"image":{"url":"https://cdn.example/ref.png"}}],"video_reference_base":[{"video":{"url":"https://cdn.example/ref.mp4","type":"UPLOADED"}}],"audio_reference":[{"audio":{"url":"https://cdn.example/ref.mp3","type":"UPLOADED"}}]}}`)
 	responseBody := `{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"RESOLUTION_720","duration":8}}`

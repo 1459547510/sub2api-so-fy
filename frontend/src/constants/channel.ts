@@ -14,7 +14,15 @@ export type BillingMode =
   | typeof BILLING_MODE_IMAGE
   | typeof BILLING_MODE_VIDEO
 
-export const LEO_VIDEO_MODELS = ['seedance-2.0', 'seedance-2.0-fast', 'seedance-2.0-mini'] as const
+export const LEO_VIDEO_MODELS = [
+  'seedance-2.0',
+  'seedance-2.0-fast',
+  'seedance-2.0-mini',
+  'happy-horse-1.1',
+  'grok-imagine-1.5',
+  'ltxv-2.3-pro',
+  'ltxv-2.3-fast',
+] as const
 export const VIDEO_PRICING_RESOLUTIONS = ['480p', '720p', '1080p'] as const
 
 /** Billing-model-source values (must match service.BillingModelSource* constants in Go). */

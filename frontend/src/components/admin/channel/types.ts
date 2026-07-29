@@ -79,9 +79,10 @@ export function formIntervalsToAPI(intervals: IntervalFormEntry[]): PricingInter
 }
 
 export function videoPricingResolutionsForModel(model?: string): readonly string[] {
-  return model?.trim().toLowerCase() === 'seedance-2.0-mini'
-    ? ['720p']
-    : VIDEO_PRICING_RESOLUTIONS
+  const normalizedModel = model?.trim().toLowerCase()
+  if (normalizedModel === 'seedance-2.0-mini') return ['720p']
+  if (normalizedModel === 'ltxv-2.3-pro' || normalizedModel === 'ltxv-2.3-fast') return ['1080p']
+  return VIDEO_PRICING_RESOLUTIONS
 }
 
 export function normalizeVideoIntervals(intervals: IntervalFormEntry[] = [], model?: string): IntervalFormEntry[] {

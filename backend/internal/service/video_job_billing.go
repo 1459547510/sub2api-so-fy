@@ -42,11 +42,11 @@ type VideoJobBillingSnapshot struct {
 	PricingSource      string  `json:"pricing_source,omitempty"`
 }
 
-func (s VideoJobBillingSnapshot) Cost(resolution string, durationSeconds, videoCount int) *CostBreakdown {
+func (s VideoJobBillingSnapshot) Cost(durationModel, resolution string, durationSeconds, videoCount int) *CostBreakdown {
 	if videoCount <= 0 {
 		videoCount = 1
 	}
-	durationSeconds = NormalizeVideoBillingDurationSecondsOrDefault(durationSeconds)
+	durationSeconds = NormalizeLeoVideoBillingDurationSecondsOrDefault(durationModel, durationSeconds)
 	var unitPrice float64
 	switch NormalizeVideoBillingResolutionOrDefault(resolution) {
 	case VideoBillingResolution720P:
@@ -119,11 +119,14 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 			pricingSource = resolved.Source
 		}
 	}
-	if price720P == nil || (len(LeoVideoPricingResolutions(billingModel)) != 1 && (price480P == nil || price1080P == nil)) {
+	if !videoPricingIsCompleteForModel(billingModel, price480P, price720P, price1080P) {
 		return errors.New("video pricing is incomplete")
 	}
 	if price480P == nil {
 		price480P = float64Pointer(0)
+	}
+	if price720P == nil {
+		price720P = float64Pointer(0)
 	}
 	if price1080P == nil {
 		price1080P = float64Pointer(0)
@@ -144,7 +147,7 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 		return err
 	}
 	job.BillingSnapshot = raw
-	cost := snapshot.Cost(job.Resolution, job.DurationSeconds, 1)
+	cost := snapshot.Cost(job.UpstreamModel, job.Resolution, job.DurationSeconds, 1)
 	job.HoldAmount = nil
 	if snapshot.BillingType == BillingTypeSubscription || cost.ActualCost <= 0 {
 		return nil
@@ -158,6 +161,28 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 		JobID: job.JobID, HoldAmount: cost.ActualCost, RequestPayloadHash: job.RequestHash,
 	})
 	return err
+}
+
+func videoPricingIsCompleteForModel(model string, price480P, price720P, price1080P *float64) bool {
+	for _, resolution := range LeoVideoPricingResolutions(model) {
+		switch resolution {
+		case VideoBillingResolution480P:
+			if price480P == nil {
+				return false
+			}
+		case VideoBillingResolution720P:
+			if price720P == nil {
+				return false
+			}
+		case VideoBillingResolution1080P:
+			if price1080P == nil {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func (s *VideoJobBillingService) SettleCompleted(ctx context.Context, job *VideoJob, result json.RawMessage) error {
@@ -183,7 +208,7 @@ func (s *VideoJobBillingService) SettleCompleted(ctx context.Context, job *Video
 	if videoCount <= 0 {
 		return ErrVideoOutputURLMissing
 	}
-	cost := snapshot.Cost(resolution, duration, videoCount)
+	cost := snapshot.Cost(job.UpstreamModel, resolution, duration, videoCount)
 	apiKey, user, account, subscription, err := s.loadUsageContext(ctx, job, snapshot)
 	if err != nil {
 		return err

@@ -310,8 +310,9 @@ func (r *ModelPricingResolver) GetRequestTierPriceByContext(resolved *ResolvedPr
 }
 
 // VideoPriceConfigFromResolvedPricing extracts a channel video price configuration.
-// Mini uses only its supported 720p tier; legacy models still require all three
-// resolution tiers. Explicit zero prices remain valid through non-nil pointers.
+// Single-tier models use their model-specific compatibility tier; legacy models
+// still require all three resolution tiers. Explicit zero prices remain valid
+// through non-nil pointers.
 func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPriceConfig, bool) {
 	if resolved == nil || resolved.Mode != BillingModeVideo {
 		return nil, false
@@ -349,18 +350,15 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 			return nil, false
 		}
 	}
-	if !seen[VideoBillingResolution720P] {
-		return nil, false
+	config := &VideoPriceConfig{}
+	if seen[VideoBillingResolution480P] {
+		config.Price480P = &price480P
 	}
-	price480PPointer := &price480P
-	price1080PPointer := &price1080P
-	if len(requiredResolutions) == 1 {
-		price480PPointer = nil
-		price1080PPointer = nil
+	if seen[VideoBillingResolution720P] {
+		config.Price720P = &price720P
 	}
-	return &VideoPriceConfig{
-		Price480P:  price480PPointer,
-		Price720P:  &price720P,
-		Price1080P: price1080PPointer,
-	}, true
+	if seen[VideoBillingResolution1080P] {
+		config.Price1080P = &price1080P
+	}
+	return config, true
 }

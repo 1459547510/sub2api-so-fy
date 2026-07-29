@@ -134,6 +134,43 @@ describe('VideoGenerationView', () => {
     expect(wrapper.get('[data-testid="video-image-file"]').attributes('disabled')).toBeDefined()
   })
 
+  it('exposes exact LTX 2.3 parameters and allows prompt enhancement with a start frame', async () => {
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-ltx', status: 'pending', status_url: '/v1/videos/jobs/vidjob-ltx',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="video-model"]').setValue('ltxv-2.3-pro')
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['1080p', '1440p', '2160p'])
+    expect(wrapper.get('[data-testid="video-duration"]').findAll('option').map((option) => Number(option.attributes('value')))).toEqual([6, 8, 10])
+    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9'])
+    expect(wrapper.get('[data-testid="video-prompt-enhance"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="video-model"]').setValue('ltxv-2.3-fast')
+    expect(wrapper.get('[data-testid="video-duration"]').findAll('option').map((option) => Number(option.attributes('value')))).toEqual([6, 8, 10, 12, 14, 16, 18, 20])
+    await wrapper.get('[data-testid="video-resolution"]').setValue('2160p')
+    await wrapper.get('[data-testid="video-duration"]').setValue('20')
+    await wrapper.get('[data-testid="video-prompt-enhance"]').setValue('ON')
+    await wrapper.get('[data-testid="mode-url"]').trigger('click')
+    await wrapper.get('[data-testid="video-start-frame-url"]').setValue('https://example.com/start.png')
+    await wrapper.get('[data-testid="video-prompt"]').setValue('A cinematic coastal flyover')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', {
+      model: 'ltxv-2.3-fast',
+      prompt: 'A cinematic coastal flyover',
+      resolution: '2160p',
+      duration: 20,
+      aspect_ratio: '16:9',
+      audio: false,
+      prompt_enhance: 'ON',
+      start_frame_url: 'https://example.com/start.png',
+    })
+  })
+
   it('limits standard 1080p to 12 seconds and keeps other resolutions at 15 seconds', async () => {
     const wrapper = mountView()
     await flushPromises()

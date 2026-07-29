@@ -810,8 +810,8 @@ func TestComputeTokenBreakdown_GptImage2ImageEditIssue4386(t *testing.T) {
 
 	cost := svc.computeTokenBreakdown(pricing, tokens, 1.0, "", false)
 
-	wantTextInput := float64(19) * 5e-6    // 0.000095
-	wantImageInput := float64(352) * 8e-6  // 0.002816
+	wantTextInput := float64(19) * 5e-6     // 0.000095
+	wantImageInput := float64(352) * 8e-6   // 0.002816
 	wantImageOutput := float64(439) * 30e-6 // 0.013170
 	require.InDelta(t, wantTextInput, cost.InputCost, 1e-15, "InputCost 仅含文本输入")
 	require.InDelta(t, wantImageInput, cost.ImageInputCost, 1e-15, "图片输入按 $8/1M 独立计费")
@@ -957,7 +957,7 @@ func TestCalculateVideoCostBillsPerSecond(t *testing.T) {
 
 	oneSecond := svc.CalculateVideoCost("grok-imagine-video", "720p", 1, 1, nil, 1.0)
 	fifteenSeconds := svc.CalculateVideoCost("grok-imagine-video", "720p", 1, 15, nil, 1.0)
-	// duration <=0 时按上游默认 8 秒计费，超出上限按 15 秒收敛。
+	// duration <=0 时按默认 8 秒计费，通用视频路径超出上限按 15 秒收敛。
 	defaultDuration := svc.CalculateVideoCost("grok-imagine-video", "720p", 1, 0, nil, 1.0)
 	clampedDuration := svc.CalculateVideoCost("grok-imagine-video", "720p", 1, 999, nil, 1.0)
 
@@ -965,6 +965,15 @@ func TestCalculateVideoCostBillsPerSecond(t *testing.T) {
 	require.InDelta(t, 0.07*15, fifteenSeconds.TotalCost, 1e-10)
 	require.InDelta(t, 0.07*8, defaultDuration.TotalCost, 1e-10)
 	require.InDelta(t, 0.07*15, clampedDuration.TotalCost, 1e-10)
+}
+
+func TestCalculateLTXFastVideoCostAllowsTwentySeconds(t *testing.T) {
+	svc := newTestBillingService()
+	videoPrice := 0.2
+
+	cost := svc.CalculateVideoCost("ltxv-2.3-fast", "2160p", 1, 20, &VideoPriceConfig{Price1080P: &videoPrice}, 1.0)
+
+	require.InDelta(t, 4.0, cost.TotalCost, 1e-10)
 }
 
 func TestCalculateGrokImagineImageCostUsesDefaultRateCard(t *testing.T) {

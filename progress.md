@@ -4116,3 +4116,57 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the release commit, tag, workflow result, package verification, and rollback point.
 - `.superpowers/`: remains untracked and excluded from the commit and release.
 - Rollback point: source rollback is `git revert 1c460cfabaf688e61c51e8325d461525cdf3b35f`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.3`.
+
+## 2026-07-28 - Task: Integrate LeoStudio LTX 2.3 video models
+
+### What was done
+- Added `ltxv-2.3-pro` and `ltxv-2.3-fast` to the Leo model capability registry, account defaults, channel-model lists, user workbench, public API documentation, and bilingual labels.
+- Enforced the current model contracts: 1080p/1440p/2160p, fixed 16:9, Pro at 6/8/10 seconds, Fast at even durations from 6 through 20 seconds, start/end frames, generated audio, and prompt enhancement. Unsupported image, video, and audio references, `seed`, and `mode` are rejected before dispatch.
+- Added the LTX single-tier billing compatibility rule: 1080p is the only configured USD-per-second tier, and requests/results at 1440p and 2160p normalize to it for reserve and settlement. Removed the stale internal assumption that every single-tier model must provide 720p.
+- Updated the customer-facing video workbench and API docs without exposing provider account IDs, provider task IDs, UUIDs, or credentials.
+
+### Testing
+- `go test ./internal/service -run 'TestVideoJobBillingPrepareLTX|TestVideoJobSettlementLTX|TestVideoPriceConfigFromResolvedPricing|TestLeoVideoPricingResolutions|TestNormalizeVideoBillingResolutionLeo' -count=1`: passed.
+- `go test ./internal/service -count=1`: passed.
+- `go test ./internal/handler -count=1`: passed.
+- `pnpm.cmd exec vitest run src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/api/__tests__/videoGeneration.spec.ts src/components/account/__tests__/CreateAccountModal.spec.ts src/components/admin/channel/__tests__/types.spec.ts`: 5 files and 62 tests passed.
+- `pnpm.cmd exec vue-tsc --noEmit`: passed.
+- `pnpm.cmd run build`: passed; Vite transformed 975 modules and refreshed the embedded frontend assets. Existing dynamic-import and chunk-size warnings remain non-blocking.
+- `git diff --check`: passed; Git reported only LF-to-CRLF line-ending warnings for Markdown documents.
+
+### Modified files
+- Backend: `backend/internal/service/billing_service_test.go`, `leo_account.go`, `leo_account_test.go`, `leo_video.go`, `leo_video_model_specs.go`, `leo_video_model_specs_test.go`, `model_pricing_resolver.go`, `model_pricing_resolver_test.go`, `video_billing_resolution.go`, `video_billing_resolution_test.go`, `video_job_billing.go`, and `video_job_billing_test.go`.
+- Frontend: `frontend/src/api/videoGeneration.ts`, `components/account/CreateAccountModal.vue`, `components/account/__tests__/CreateAccountModal.spec.ts`, `components/admin/channel/types.ts`, `components/admin/channel/__tests__/types.spec.ts`, `composables/useModelWhitelist.ts`, `constants/channel.ts`, `i18n/locales/en/dashboard.ts`, `i18n/locales/zh/dashboard.ts`, `views/user/VideoGenerationView.vue`, `views/user/VideoApiDocsView.vue`, `views/user/__tests__/VideoGenerationView.spec.ts`, and `views/user/__tests__/VideoApiDocsView.spec.ts`.
+- Documentation: `docs/LEO_VIDEO_CHANNEL.md` and `docs/LEO_VIDEO_MODEL_SPECS.md`.
+
+### Notes
+- `.superpowers/` remains untracked and excluded from this task.
+- Rollback point: working-tree base is `be80e81db6a63682db4157d9e74fcfb5948d9575`. After committing this task, roll back with `git revert <ltx_integration_commit>`; before committing, reverse only this task's reviewed diff rather than resetting the shared worktree.
+
+## 2026-07-29 - Task: Restore model-specific video billing duration limits
+
+### What was done
+- Restored the shared video billing limit to 15 seconds so Grok and legacy video paths cannot inherit the LTX Fast 20-second capability.
+- Added model-aware Leo duration normalization for LTX Fast and applied it consistently to direct Leo forwarding, async video-job reserve/settlement, OpenAI video cost calculation, and usage-log metadata.
+- Added regression coverage for the 15-second shared limit, LTX Fast 20-second billing, Grok duration handling, direct Leo output metadata, async reserve/settlement, and usage recording.
+
+### Testing
+- `go test ./internal/service -run 'Test(NormalizeVideoBillingResolutionLeo|LeoVideoPricingResolutions|Calculate.*VideoCost|VideoJobBillingPrepareLTX|VideoJobSettlementLTX|ForwardLeoVideoPreservesLTXFastTwentySecondDuration|ParseGrokMediaVideoRequestClampsDurationToFifteenSeconds|LTXFastVideoUsageKeepsTwentySecondDuration)$' -count=1`: passed.
+- `go test ./internal/service -run 'TestVideoJobBillingPrepareLTXRequiresOnly1080PCompatibilityPrice|TestLTXFastVideoUsageKeepsTwentySecondDuration|TestVideoJobSettlementLTXUses1080PCompatibilityPrice' -count=1`: passed after correcting the expected 20-second reserve amount.
+- `go test ./internal/service -count=1`: passed (96.276s).
+- `go test ./internal/handler -count=1`: passed (28.974s).
+- `git diff --check`: passed; only existing Markdown LF/CRLF warnings remain.
+
+### Notes
+- `backend/internal/service/video_billing_resolution.go`: restores the shared 15-second cap and adds Leo model-aware duration normalization.
+- `backend/internal/service/video_billing_resolution_test.go`: verifies shared 15-second and LTX Fast 20-second normalization behavior.
+- `backend/internal/service/billing_service.go`: lets video cost calculation use the upstream capability model for duration limits.
+- `backend/internal/service/billing_service_test.go`: updates the legacy 15-second assertion and adds LTX Fast 20-second cost coverage.
+- `backend/internal/service/leo_video.go`: preserves valid LTX Fast 20-second direct response metadata.
+- `backend/internal/service/leo_video_test.go`: covers direct LTX Fast 20-second forwarding.
+- `backend/internal/service/openai_gateway_usage.go`: uses the upstream Leo model for video cost and usage-duration normalization.
+- `backend/internal/service/openai_gateway_record_usage_test.go`: covers 20-second LTX Fast usage records and charges.
+- `backend/internal/service/openai_gateway_grok_test.go`: verifies Grok duration remains capped at 15 seconds.
+- `backend/internal/service/video_job_billing.go`: applies the upstream model limit during async reserve and settlement.
+- `backend/internal/service/video_job_billing_test.go`: covers 20-second LTX Fast reserve and settlement.
+- Rollback point: these files also contain the preceding uncommitted LTX integration changes; do not run `git restore` on them. To roll back this round safely, reverse only the hunks under the task heading above (or save the current `git diff` first and apply the inverse selectively).

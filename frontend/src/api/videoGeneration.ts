@@ -22,7 +22,7 @@ export interface VideoGuidances {
 export interface VideoGenerationRequest {
   model: string
   prompt: string
-  resolution?: '400p' | '480p' | '544p' | '720p' | '960p' | '1080p' | string
+  resolution?: '400p' | '480p' | '544p' | '720p' | '960p' | '1080p' | '1440p' | '2160p' | string
   duration?: number
   aspect_ratio?: string
   audio?: boolean

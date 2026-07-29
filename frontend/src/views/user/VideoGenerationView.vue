@@ -371,7 +371,7 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let videoOutputRequest = 0
 let jobsRequest = 0
 
-type VideoResolution = '400p' | '480p' | '544p' | '720p' | '960p' | '1080p'
+type VideoResolution = '400p' | '480p' | '544p' | '720p' | '960p' | '1080p' | '1440p' | '2160p'
 type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '21:9' | '9:21'
 
 interface VideoModelCapability {
@@ -390,10 +390,13 @@ interface VideoModelCapability {
   maxAudioRefs: number
   requiresStartFrame?: boolean
   supportsPromptEnhance?: boolean
+  rejectsPromptEnhanceOnStartFrame?: boolean
 }
 
 const allDurationOptions = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 const shortVideoDurationOptions = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+const ltxProDurationOptions = [6, 8, 10]
+const ltxFastDurationOptions = [6, 8, 10, 12, 14, 16, 18, 20]
 const allAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '9:21']
 const hdAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
 const videoReferenceMaxBytes = 100 * 1024 * 1024
@@ -491,6 +494,44 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxAudioRefs: 0,
     requiresStartFrame: true,
   },
+  'ltxv-2.3-pro': {
+    resolutions: ['1080p', '1440p', '2160p'],
+    defaultResolution: '1080p',
+    durations: ltxProDurationOptions,
+    defaultDuration: 6,
+    aspectsByResolution: {
+      '1080p': ['16:9'],
+      '1440p': ['16:9'],
+      '2160p': ['16:9'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 5000,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    supportsPromptEnhance: true,
+  },
+  'ltxv-2.3-fast': {
+    resolutions: ['1080p', '1440p', '2160p'],
+    defaultResolution: '1080p',
+    durations: ltxFastDurationOptions,
+    defaultDuration: 6,
+    aspectsByResolution: {
+      '1080p': ['16:9'],
+      '1440p': ['16:9'],
+      '2160p': ['16:9'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 5000,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    supportsPromptEnhance: true,
+  },
 }
 const modelOptions = Object.keys(videoModelCapabilities)
 const imageModes = [
@@ -536,7 +577,7 @@ const hasUnsupportedModelGuidances = computed(() => {
     referenceVideoFiles.value.length > capability.maxVideoRefs ||
     Number(Boolean(referenceAudioFile.value)) > capability.maxAudioRefs ||
     (Boolean(promptEnhance.value) && !capability.supportsPromptEnhance) ||
-    (promptEnhance.value === 'ON' && startCount > 0) ||
+    (capability.rejectsPromptEnhanceOnStartFrame && promptEnhance.value === 'ON' && startCount > 0) ||
     Boolean(capability.requiresStartFrame && !startCount)
 })
 const currentVideoKey = computed(() => {

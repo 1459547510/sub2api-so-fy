@@ -15,37 +15,43 @@ const leoVideoMaxPromptLength = 5000
 var leoVideoAssetIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 type leoVideoModelSpec struct {
-	resolutions             []string
-	aspects                 map[string][]string
-	maxDurationByResolution map[string]int
-	minDuration             int
-	maxDuration             int
-	defaultDuration         int
-	maxPromptLength         int
-	maxStartFrames          int
-	maxEndFrames            int
-	maxImageRefs            int
-	maxVideoRefs            int
-	maxAudioRefs            int
-	requiresStartFrame      bool
-	supportsPromptEnhance   bool
+	resolutions                      []string
+	defaultResolution                string
+	aspects                          map[string][]string
+	allowedDurations                 []int
+	maxDurationByResolution          map[string]int
+	minDuration                      int
+	maxDuration                      int
+	defaultDuration                  int
+	maxPromptLength                  int
+	maxStartFrames                   int
+	maxEndFrames                     int
+	maxImageRefs                     int
+	maxVideoRefs                     int
+	maxAudioRefs                     int
+	requiresStartFrame               bool
+	supportsPromptEnhance            bool
+	rejectsPromptEnhanceOnStartFrame bool
+	rejectsSeedAndMode               bool
 }
 
 var defaultLeoVideoModelSpec = leoVideoModelSpec{
-	minDuration:     4,
-	maxDuration:     15,
-	defaultDuration: 8,
-	maxPromptLength: leoVideoMaxPromptLength,
-	maxStartFrames:  1,
-	maxEndFrames:    1,
-	maxImageRefs:    4,
-	maxVideoRefs:    3,
-	maxAudioRefs:    1,
+	defaultResolution: "720p",
+	minDuration:       4,
+	maxDuration:       15,
+	defaultDuration:   8,
+	maxPromptLength:   leoVideoMaxPromptLength,
+	maxStartFrames:    1,
+	maxEndFrames:      1,
+	maxImageRefs:      4,
+	maxVideoRefs:      3,
+	maxAudioRefs:      1,
 }
 
 var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 	"seedance-2.0": {
-		resolutions: []string{"480p", "720p", "1080p"},
+		resolutions:       []string{"480p", "720p", "1080p"},
+		defaultResolution: "720p",
 		maxDurationByResolution: map[string]int{
 			"1080p": 12,
 		},
@@ -65,7 +71,8 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		maxAudioRefs:    1,
 	},
 	"seedance-2.0-fast": {
-		resolutions: []string{"480p", "720p"},
+		resolutions:       []string{"480p", "720p"},
+		defaultResolution: "720p",
 		aspects: map[string][]string{
 			"480p": {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"},
 			"720p": {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9"},
@@ -81,7 +88,8 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		maxAudioRefs:    1,
 	},
 	"seedance-2.0-mini": {
-		resolutions: []string{"480p", "720p"},
+		resolutions:       []string{"480p", "720p"},
+		defaultResolution: "720p",
 		aspects: map[string][]string{
 			"480p": {"16:9", "1:1", "9:16"},
 			"720p": {"16:9", "1:1", "9:16"},
@@ -97,21 +105,24 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		maxAudioRefs:    1,
 	},
 	"happy-horse-1.1": {
-		resolutions: []string{"720p", "1080p"},
+		resolutions:       []string{"720p", "1080p"},
+		defaultResolution: "1080p",
 		aspects: map[string][]string{
 			"720p":  {"16:9", "4:3", "1:1", "3:4", "9:16"},
 			"1080p": {"16:9", "4:3", "1:1", "3:4", "9:16"},
 		},
-		minDuration:           3,
-		maxDuration:           15,
-		defaultDuration:       5,
-		maxPromptLength:       2500,
-		maxStartFrames:        1,
-		maxImageRefs:          9,
-		supportsPromptEnhance: true,
+		minDuration:                      3,
+		maxDuration:                      15,
+		defaultDuration:                  5,
+		maxPromptLength:                  2500,
+		maxStartFrames:                   1,
+		maxImageRefs:                     9,
+		supportsPromptEnhance:            true,
+		rejectsPromptEnhanceOnStartFrame: true,
 	},
 	"grok-imagine-1.5": {
-		resolutions: []string{"400p", "544p", "720p", "960p"},
+		resolutions:       []string{"400p", "544p", "720p", "960p"},
+		defaultResolution: "720p",
 		aspects: map[string][]string{
 			"400p": {"16:9", "9:16"},
 			"544p": {"1:1"},
@@ -124,6 +135,48 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		maxPromptLength:    5000,
 		maxStartFrames:     1,
 		requiresStartFrame: true,
+	},
+	"ltxv-2.3-pro": {
+		resolutions:       []string{"1080p", "1440p", "2160p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"1080p": {"16:9"},
+			"1440p": {"16:9"},
+			"2160p": {"16:9"},
+		},
+		allowedDurations:      []int{6, 8, 10},
+		minDuration:           6,
+		maxDuration:           10,
+		defaultDuration:       6,
+		maxPromptLength:       5000,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          0,
+		maxVideoRefs:          0,
+		maxAudioRefs:          0,
+		supportsPromptEnhance: true,
+		rejectsSeedAndMode:    true,
+	},
+	"ltxv-2.3-fast": {
+		resolutions:       []string{"1080p", "1440p", "2160p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"1080p": {"16:9"},
+			"1440p": {"16:9"},
+			"2160p": {"16:9"},
+		},
+		allowedDurations:      []int{6, 8, 10, 12, 14, 16, 18, 20},
+		minDuration:           6,
+		maxDuration:           20,
+		defaultDuration:       6,
+		maxPromptLength:       5000,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          0,
+		maxVideoRefs:          0,
+		maxAudioRefs:          0,
+		supportsPromptEnhance: true,
+		rejectsSeedAndMode:    true,
 	},
 }
 
@@ -165,6 +218,10 @@ func normalizeLeoVideoResolution(resolution string) (string, bool) {
 		return "960p", true
 	case "1080", "1080p", "full_hd", "full-hd", "fhd", "resolution_1080":
 		return "1080p", true
+	case "1440", "1440p", "resolution_1440":
+		return "1440p", true
+	case "2160", "2160p", "4k", "uhd", "resolution_2160":
+		return "2160p", true
 	default:
 		return "", false
 	}
@@ -201,17 +258,6 @@ func validateLeoVideoRequest(body []byte, effectiveModel string) (LeoVideoReques
 	if info.Prompt == "" {
 		return LeoVideoRequestInfo{}, newLeoVideoValidationError("prompt is required")
 	}
-	duration := gjson.GetBytes(body, "duration")
-	durationProvided := duration.Exists()
-	if duration.Exists() {
-		if duration.Type != gjson.Number || duration.Float() != float64(duration.Int()) || duration.Int() < 1 || int(duration.Int()) > defaultLeoVideoModelSpec.maxDuration {
-			return LeoVideoRequestInfo{}, newLeoVideoValidationError("duration must be a whole number from 4 through 15 seconds")
-		}
-		info.DurationSeconds = int(duration.Int())
-	} else {
-		info.DurationSeconds = defaultLeoVideoModelSpec.defaultDuration
-	}
-
 	modelForSpec := info.Model
 	if strings.TrimSpace(effectiveModel) != "" {
 		modelForSpec = effectiveModel
@@ -223,18 +269,31 @@ func validateLeoVideoRequest(body []byte, effectiveModel string) (LeoVideoReques
 	if strings.TrimSpace(effectiveModel) != "" && !knownModel {
 		return LeoVideoRequestInfo{}, newLeoVideoValidationError("video model %q is not supported", effectiveModel)
 	}
+	duration := gjson.GetBytes(body, "duration")
+	durationProvided := duration.Exists()
+	if durationProvided {
+		if duration.Type != gjson.Number || duration.Float() != float64(duration.Int()) || duration.Int() < 1 {
+			return LeoVideoRequestInfo{}, newLeoVideoValidationError("%s", durationValidationMessage(spec))
+		}
+		info.DurationSeconds = int(duration.Int())
+	} else {
+		info.DurationSeconds = spec.defaultDuration
+	}
 	if knownModel {
 		if spec.maxPromptLength > 0 && utf8.RuneCountInString(info.Prompt) > spec.maxPromptLength {
 			return LeoVideoRequestInfo{}, newLeoVideoValidationError("prompt supports at most %d characters for the selected video model", spec.maxPromptLength)
 		}
 		if !durationProvided {
 			info.DurationSeconds = spec.defaultDuration
-		} else if info.DurationSeconds < spec.minDuration || info.DurationSeconds > spec.maxDuration {
-			return LeoVideoRequestInfo{}, newLeoVideoValidationError("duration must be a whole number from %d through %d seconds for the selected video model", spec.minDuration, spec.maxDuration)
+		} else if info.DurationSeconds < spec.minDuration || info.DurationSeconds > spec.maxDuration || !containsLeoVideoInt(spec.allowedDurations, info.DurationSeconds) {
+			return LeoVideoRequestInfo{}, newLeoVideoValidationError("%s for the selected video model", durationValidationMessage(spec))
 		}
 		resolution := info.Resolution
 		if strings.TrimSpace(resolution) == "" {
-			resolution = "720p"
+			resolution = spec.defaultResolution
+			if resolution == "" {
+				resolution = "720p"
+			}
 		}
 		normalizedResolution, ok := normalizeLeoVideoResolution(resolution)
 		if !ok || !containsLeoVideoValue(spec.resolutions, normalizedResolution) {
@@ -252,16 +311,19 @@ func validateLeoVideoRequest(body []byte, effectiveModel string) (LeoVideoReques
 		}
 		if promptEnhance := strings.TrimSpace(gjson.GetBytes(body, "prompt_enhance").String()); promptEnhance != "" {
 			if !spec.supportsPromptEnhance {
-				return LeoVideoRequestInfo{}, newLeoVideoValidationError("prompt_enhance is only supported by happy-horse-1.1")
+				return LeoVideoRequestInfo{}, newLeoVideoValidationError("prompt_enhance is not supported by the selected video model")
 			}
 			switch strings.ToUpper(promptEnhance) {
 			case "AUTO", "ON", "OFF":
 			default:
-				return LeoVideoRequestInfo{}, newLeoVideoValidationError("prompt_enhance must be AUTO, ON, or OFF for happy-horse-1.1")
+				return LeoVideoRequestInfo{}, newLeoVideoValidationError("prompt_enhance must be AUTO, ON, or OFF for the selected video model")
 			}
-			if strings.EqualFold(promptEnhance, "ON") && leoVideoStartFrameCount(body) > 0 {
+			if spec.rejectsPromptEnhanceOnStartFrame && strings.EqualFold(promptEnhance, "ON") && leoVideoStartFrameCount(body) > 0 {
 				return LeoVideoRequestInfo{}, newLeoVideoValidationError("prompt_enhance ON is not supported with start_frame by happy-horse-1.1")
 			}
+		}
+		if spec.rejectsSeedAndMode && (gjson.GetBytes(body, "seed").Exists() || gjson.GetBytes(body, "mode").Exists()) {
+			return LeoVideoRequestInfo{}, newLeoVideoValidationError("seed and mode are not supported by the selected video model")
 		}
 		if spec.requiresStartFrame && leoVideoStartFrameCount(body) == 0 {
 			return LeoVideoRequestInfo{}, newLeoVideoValidationError("start frame is required by grok-imagine-1.5")
@@ -366,6 +428,17 @@ func leoVideoDefaultAspect(aspects []string) string {
 		return aspects[0]
 	}
 	return "16:9"
+}
+
+func durationValidationMessage(spec leoVideoModelSpec) string {
+	if len(spec.allowedDurations) > 0 {
+		values := make([]string, 0, len(spec.allowedDurations))
+		for _, duration := range spec.allowedDurations {
+			values = append(values, fmt.Sprintf("%d", duration))
+		}
+		return fmt.Sprintf("duration must be one of %s seconds", strings.Join(values, ", "))
+	}
+	return fmt.Sprintf("duration must be a whole number from %d through %d seconds", spec.minDuration, spec.maxDuration)
 }
 
 func validateLeoVideoMediaGuidances(body []byte) error {
@@ -488,6 +561,18 @@ func leoVideoArrayLength(body []byte, path string) (int, error) {
 }
 
 func containsLeoVideoValue(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
+func containsLeoVideoInt(values []int, target int) bool {
+	if len(values) == 0 {
+		return true
+	}
 	for _, value := range values {
 		if value == target {
 			return true

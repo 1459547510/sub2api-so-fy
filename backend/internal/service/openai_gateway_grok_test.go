@@ -775,6 +775,12 @@ func TestParseGrokMediaVideoRequestResolution(t *testing.T) {
 	require.Equal(t, "720p", info.Resolution)
 }
 
+func TestParseGrokMediaVideoRequestClampsDurationToFifteenSeconds(t *testing.T) {
+	info := ParseGrokMediaRequest("application/json", []byte(`{"model":"grok-imagine-video","prompt":"waves","duration":20}`))
+
+	require.Equal(t, 15, info.DurationSeconds)
+}
+
 func TestParseGrokMediaRequestAcceptsOfficialImageURLFields(t *testing.T) {
 	body := []byte(`{
 		"model":"grok-imagine-video-1.5",

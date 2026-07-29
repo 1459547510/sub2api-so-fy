@@ -292,7 +292,7 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
     expect(createOpenAICodexPATMock.mock.calls[0]?.[0]?.extra?.openai_long_context_billing_enabled).toBe(false)
   })
 
-  it('creates a Leo API key account with required URL and Seedance mappings', async () => {
+  it('creates a Leo API key account with required URL and all public video mappings', async () => {
     const wrapper = mountModal()
 
     await wrapper.get('[data-testid="platform-leo"]').trigger('click')
@@ -320,6 +320,11 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
         model_mapping: {
           'seedance-2.0': 'seedance-2.0',
           'seedance-2.0-fast': 'seedance-2.0-fast',
+          'seedance-2.0-mini': 'seedance-2.0-mini',
+          'happy-horse-1.1': 'happy-horse-1.1',
+          'grok-imagine-1.5': 'grok-imagine-1.5',
+          'ltxv-2.3-pro': 'ltxv-2.3-pro',
+          'ltxv-2.3-fast': 'ltxv-2.3-fast',
         },
       },
     })

@@ -129,7 +129,7 @@ describe('video pricing', () => {
       createPricingFormEntry(['seedance-2.0'], 'video'),
       createPricingFormEntry(['seedance-2.0-fast'], 'video'),
       createPricingFormEntry(['seedance-2.0-mini'], 'video'),
-    ])).toBeUndefined()
+    ])).toBe('happy-horse-1.1')
   })
 
   it('creates a Mini pricing entry with only its supported 720p tier', () => {
@@ -137,6 +137,15 @@ describe('video pricing', () => {
     expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['720p'])
     entry.intervals[0].per_request_price = 0.06
     expect(validateVideoPricing(entry, t)).toBeNull()
+  })
+
+  it('creates LTX pricing entries with only the compatible 1080p tier', () => {
+    for (const model of ['ltxv-2.3-pro', 'ltxv-2.3-fast']) {
+      const entry = createPricingFormEntry([model], 'video')
+      expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['1080p'])
+      entry.intervals[0].per_request_price = 0.2
+      expect(validateVideoPricing(entry, t)).toBeNull()
+    }
   })
 
   it('splits synchronized Leo models into independent video entries', () => {

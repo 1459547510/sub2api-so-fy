@@ -16,6 +16,17 @@ func TestValidateLeoVideoRequestAppliesSeedanceDefaults(t *testing.T) {
 	require.Equal(t, "16:9", info.AspectRatio)
 }
 
+func TestValidateLeoVideoRequestAppliesLTXDefaults(t *testing.T) {
+	for _, model := range []string{"ltxv-2.3-pro", "ltxv-2.3-fast"} {
+		info, err := ValidateLeoVideoRequest([]byte(`{"model":"` + model + `","prompt":"waves"}`))
+
+		require.NoError(t, err)
+		require.Equal(t, "1080p", info.Resolution)
+		require.Equal(t, 6, info.DurationSeconds)
+		require.Equal(t, "16:9", info.AspectRatio)
+	}
+}
+
 func TestValidateLeoVideoRequestRejectsUnsupportedModelParameters(t *testing.T) {
 	tests := []struct {
 		name string
@@ -111,6 +122,43 @@ func TestValidateLeoVideoRequestSupportsLatestModels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := ValidateLeoVideoRequest([]byte(tt.body))
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestValidateLeoVideoRequestSupportsLTXModels(t *testing.T) {
+	tests := []string{
+		`{"model":"ltxv-2.3-pro","prompt":"waves","resolution":"2160p","duration":10,"aspect_ratio":"16:9","audio":true,"prompt_enhance":"ON","start_frame_url":"https://example.com/start.png","end_frame_url":"https://example.com/end.png"}`,
+		`{"model":"ltxv-2.3-fast","prompt":"waves","resolution":"1440p","duration":20,"aspect_ratio":"16:9","prompt_enhance":"AUTO"}`,
+	}
+
+	for _, body := range tests {
+		info, err := ValidateLeoVideoRequest([]byte(body))
+		require.NoError(t, err)
+		require.Contains(t, []string{"1440p", "2160p"}, info.Resolution)
+	}
+}
+
+func TestValidateLeoVideoRequestRejectsUnsupportedLTXParameters(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{name: "pro duration", body: `{"model":"ltxv-2.3-pro","prompt":"waves","duration":12}`, want: "duration must be one of 6, 8, 10"},
+		{name: "fast odd duration", body: `{"model":"ltxv-2.3-fast","prompt":"waves","duration":7}`, want: "duration must be one of 6, 8, 10, 12, 14, 16, 18, 20"},
+		{name: "aspect ratio", body: `{"model":"ltxv-2.3-pro","prompt":"waves","aspect_ratio":"9:16"}`, want: "aspect_ratio is not supported"},
+		{name: "image reference", body: `{"model":"ltxv-2.3-pro","prompt":"waves","guidances":{"image_reference":[{"image":{"url":"https://example.com/reference.png"}}]}}`, want: "guidances.image_reference supports at most 0"},
+		{name: "video reference", body: `{"model":"ltxv-2.3-fast","prompt":"waves","guidances":{"video_reference_base":[{"video":{"url":"https://example.com/reference.mp4"}}]}}`, want: "guidances.video_reference_base supports at most 0"},
+		{name: "audio reference", body: `{"model":"ltxv-2.3-fast","prompt":"waves","guidances":{"audio_reference":[{"audio":{"url":"https://example.com/reference.mp3"}}]}}`, want: "guidances.audio_reference supports at most 0"},
+		{name: "seed", body: `{"model":"ltxv-2.3-pro","prompt":"waves","seed":1}`, want: "seed and mode are not supported"},
+		{name: "mode", body: `{"model":"ltxv-2.3-fast","prompt":"waves","mode":"fast"}`, want: "seed and mode are not supported"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ValidateLeoVideoRequest([]byte(tt.body))
+			require.ErrorContains(t, err, tt.want)
 		})
 	}
 }
@@ -242,4 +290,10 @@ func TestValidateLeoVideoRequestUsesMappedModelSpec(t *testing.T) {
 	body = []byte(`{"model":"public-seedance","prompt":"waves","resolution":"1080p","duration":13}`)
 	_, err = ValidateLeoVideoRequestForModel(body, "seedance-2.0")
 	require.ErrorContains(t, err, "duration must be a whole number from 4 through 12")
+
+	body = []byte(`{"model":"public-ltx","prompt":"waves"}`)
+	info, err := ValidateLeoVideoRequestForModel(body, "ltxv-2.3-fast")
+	require.NoError(t, err)
+	require.Equal(t, "1080p", info.Resolution)
+	require.Equal(t, 6, info.DurationSeconds)
 }

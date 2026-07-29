@@ -189,6 +189,31 @@ func TestVideoJobBillingPreparePreservesExplicitZeroChannelPrice(t *testing.T) {
 	require.Zero(t, snapshot.Price1080P)
 }
 
+func TestVideoJobBillingPrepareLTXRequiresOnly1080PCompatibilityPrice(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{}
+	service := &VideoJobBillingService{BillingRepo: balance}
+	groupID := int64(3)
+	job := &VideoJob{
+		JobID: "vidjob_ltx_prepare", UserID: 1, APIKeyID: 2, GroupID: groupID,
+		RequestedModel: "ltxv-2.3-fast", UpstreamModel: "ltxv-2.3-fast",
+		Resolution: "2160p", DurationSeconds: 20,
+	}
+	apiKey := &APIKey{ID: 2, GroupID: &groupID, Group: &Group{
+		ID: groupID, RateMultiplier: 1, VideoPrice1080P: f64p(0.2),
+	}}
+
+	require.NoError(t, service.Prepare(context.Background(), job, apiKey, &User{ID: 1}, nil))
+	require.NotNil(t, job.HoldAmount)
+	require.InDelta(t, 4, *job.HoldAmount, 1e-12)
+	require.Len(t, balance.reserves, 1)
+
+	var snapshot VideoJobBillingSnapshot
+	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
+	require.Zero(t, snapshot.Price480P)
+	require.Zero(t, snapshot.Price720P)
+	require.InDelta(t, 0.2, snapshot.Price1080P, 1e-12)
+}
+
 func TestVideoJobSettlementIsIdempotent(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	recorder := &fakeVideoUsageRecorder{}
@@ -225,6 +250,35 @@ func TestVideoJobSettlementIsIdempotent(t *testing.T) {
 	require.NotNil(t, job.SettledAt)
 	require.NotNil(t, job.ActualCost)
 	require.InDelta(t, 1.8, *job.ActualCost, 1e-12)
+}
+
+func TestVideoJobSettlementLTXUses1080PCompatibilityPrice(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{}
+	recorder := &fakeVideoUsageRecorder{}
+	snapshot, err := json.Marshal(VideoJobBillingSnapshot{
+		BillingType: BillingTypeBalance, Price1080P: 0.2, RateMultiplier: 1,
+		BillingModel: "ltxv-2.3-fast",
+	})
+	require.NoError(t, err)
+	job := &VideoJob{
+		JobID: "vidjob_ltx_settle", UserID: 1, APIKeyID: 2, GroupID: 3, AccountID: 9,
+		RequestedModel: "ltxv-2.3-fast", UpstreamModel: "ltxv-2.3-fast", Resolution: "1440p",
+		DurationSeconds: 6, BillingSnapshot: snapshot, HoldAmount: f64p(1.2), RequestHash: "request-hash",
+	}
+	service := &VideoJobBillingService{
+		BillingRepo: balance, UsageRecorder: recorder,
+		APIKeyService: fakeVideoAPIKeyQuotaUpdater{},
+		APIKeys:       fakeVideoBillingAPIKeyLoader{apiKey: &APIKey{ID: 2}},
+		Users:         fakeVideoBillingUserLoader{user: &User{ID: 1}},
+		Accounts:      fakeVideoBillingAccountLoader{account: &Account{ID: 9, Type: AccountTypeAPIKey}},
+		Subscriptions: fakeVideoBillingSubscriptionLoader{},
+	}
+
+	result := json.RawMessage(`{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"2160p","duration":20}}`)
+	require.NoError(t, service.SettleCompleted(context.Background(), job, result))
+	require.Len(t, recorder.inputs, 1)
+	require.InDelta(t, 4, recorder.inputs[0].CostOverride.ActualCost, 1e-12)
+	require.Len(t, balance.releases, 1)
 }
 
 func TestVideoJobSettlementRecordsFrozenChannelUsageFields(t *testing.T) {

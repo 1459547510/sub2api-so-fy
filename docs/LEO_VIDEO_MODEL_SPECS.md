@@ -17,6 +17,8 @@ use a supported resolution/aspect-ratio pair from the same row.
 | `seedance-2.0-mini` | `480p`, `720p` | `4-15s`; default `8s` | Both resolutions: `16:9`, `1:1`, `9:16` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
 | `happy-horse-1.1` | `720p`, `1080p` | `3-15s`; default `5s` | Both resolutions: `16:9`, `4:3`, `1:1`, `3:4`, `9:16` | 2500 | 1 start frame or 9 images; no end frame/video/audio; `prompt_enhance` |
 | `grok-imagine-1.5` | `400p`, `544p`, `720p`, `960p` | `3-15s`; default `6s` | `400p`/`720p`: `16:9`, `9:16`; `544p`/`960p`: `1:1` | 5000 | exactly 1 start frame; no end frame/image/video/audio |
+| `ltxv-2.3-pro` | `1080p`, `1440p`, `2160p` | `6s`, `8s`, `10s`; default `6s` | `16:9` only | 5000 | 1 start frame, 1 end frame; no image/video/audio references; generated audio and `prompt_enhance` |
+| `ltxv-2.3-fast` | `1080p`, `1440p`, `2160p` | even values from `6s` to `20s`; default `6s` | `16:9` only | 5000 | 1 start frame, 1 end frame; no image/video/audio references; generated audio and `prompt_enhance` |
 
 The platform rejects unsupported model, resolution, duration, and aspect-ratio
 combinations before dispatch. `seedance-2.0` is the compatibility alias for
@@ -26,13 +28,13 @@ combinations before dispatch. `seedance-2.0` is the compatibility alias for
 
 | Field | Type | Required | Rules |
 | --- | --- | --- | --- |
-| `model` | string | yes | One of the five public model IDs above. `seedance` is accepted as an alias for `seedance-2.0`. |
+| `model` | string | yes | One of the seven public model IDs above. `seedance` is accepted as an alias for `seedance-2.0`. |
 | `prompt` | string | yes | Scene, action, camera, and style description. Maximum is 5000 characters except `happy-horse-1.1`, which is 2500. |
-| `resolution` | string | no | Defaults to `720p` when omitted. The selected model must support the value. |
+| `resolution` | string | no | Defaults to the selected model's default (`1080p` for Happy Horse and LTX, otherwise `720p`). The selected model must support the value. |
 | `duration` | integer | no | Whole seconds. Defaults to the model default in the matrix. |
 | `aspect_ratio` | string | no | Defaults to the first supported ratio for the selected resolution. |
 | `audio` | boolean | no | Whether generated output should include audio. Defaults to `false`; this is separate from a reference-audio input. |
-| `prompt_enhance` | string | no | `happy-horse-1.1` only: `AUTO`, `ON`, or `OFF`. `ON` cannot be combined with a start frame. |
+| `prompt_enhance` | string | no | `happy-horse-1.1` and both LTX models: `AUTO`, `ON`, or `OFF`. Only Happy Horse forbids `ON` with a start frame. |
 | `image_url` | string | no | One start-frame absolute HTTP(S) URL. Use `start_frame_url` and `end_frame_url` for an explicit frame pair. |
 | `start_frame_url` / `end_frame_url` | string | no | Absolute HTTP(S) frame URLs. Frame mode cannot be combined with reference images. |
 | `guidances` | object | no | Nested `image_reference`, `video_reference_base`, and `audio_reference` arrays. Use the media object formats below. |
@@ -79,8 +81,8 @@ Use the returned URL under `guidances.video_reference_base[].video`:
 }
 ```
 
-The video object must contain either `url` or a UUID `id`, never both. For a
-URL, `type` must be `UPLOADED`; do not add a `duration` property. A generation
+The video object uses the upload response's `media_url` as `url`, with
+`type: "UPLOADED"`; do not add a `duration` property. A generation
 may contain at most three reference videos, and only Seedance models accept
 this guidance. The file itself must be a readable MP4/MOV ISO Base Media
 container and no larger than 100 MiB. Data URLs, Base64, and multipart media
@@ -110,6 +112,10 @@ readable frames or RIFF/WAVE PCM 16/24-bit WAV, up to 15 MiB and 2-30 seconds.
 - `grok-imagine-1.5` requires exactly one start frame and does not accept an
   end frame, reference image, reference video, or reference audio. It does not
   accept `prompt_enhance` or other unsupported guidance options.
+- Both LTX 2.3 models accept one start frame and one end frame together, but no
+  image, video, or audio references. They support generated audio and
+  `prompt_enhance`; `ON` may be combined with a start frame. Do not send
+  `seed` or `mode`.
 
 ## Media upload contract
 
@@ -123,7 +129,7 @@ request.
 - The file must be a readable PNG, JPEG, or WebP image.
 - The size limit is 10 MiB per file.
 - A generation may contain at most four reference images for Seedance or nine
-  for Happy Horse. Grok does not accept reference-image guidance.
+  for Happy Horse. Grok and LTX do not accept reference-image guidance.
 
 ### Reference videos
 

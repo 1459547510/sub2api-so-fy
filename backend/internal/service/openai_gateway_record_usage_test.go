@@ -2139,6 +2139,45 @@ func TestLeoVideoUsageUsesActualOutputMetadata(t *testing.T) {
 	require.InDelta(t, 0.5, usageRepo.lastLog.RateMultiplier, 1e-12)
 }
 
+func TestLTXFastVideoUsageKeepsTwentySecondDuration(t *testing.T) {
+	groupID := int64(1291)
+	videoPrice1080P := 0.2
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{}, &openAIRecordUsageSubRepoStub{}, nil)
+
+	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:            "ltx-fast-video-request",
+			Model:                "ltx-fast",
+			BillingModel:         "ltx-fast",
+			UpstreamModel:        "ltxv-2.3-fast",
+			VideoCount:           1,
+			VideoResolution:      "2160p",
+			VideoDurationSeconds: 20,
+			Duration:             time.Second,
+		},
+		APIKey: &APIKey{
+			ID:      101291,
+			GroupID: i64p(groupID),
+			Group: &Group{
+				ID:                   groupID,
+				Platform:             PlatformLeo,
+				RateMultiplier:       1,
+				VideoRateIndependent: true,
+				VideoRateMultiplier:  1,
+				VideoPrice1080P:      &videoPrice1080P,
+			},
+		},
+		User:    &User{ID: 201291},
+		Account: &Account{ID: 301291, Platform: PlatformLeo},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, 20, *usageRepo.lastLog.VideoDurationSeconds)
+	require.InDelta(t, 4, usageRepo.lastLog.TotalCost, 1e-12)
+}
+
 func TestOpenAIGatewayServiceRecordUsage_GrokVideoUsesDefaultRateCard(t *testing.T) {
 	groupID := int64(1261)
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}

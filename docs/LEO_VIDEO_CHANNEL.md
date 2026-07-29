@@ -50,6 +50,10 @@ Sub2API 的连接测试会请求去掉 `/v1` 后的 `/health`；视频生成会�
 seedance-2.0      -> seedance-2.0
 seedance-2.0-fast -> seedance-2.0-fast
 seedance-2.0-mini -> seedance-2.0-mini
+happy-horse-1.1   -> happy-horse-1.1
+grok-imagine-1.5  -> grok-imagine-1.5
+ltxv-2.3-pro      -> ltxv-2.3-pro
+ltxv-2.3-fast     -> ltxv-2.3-fast
 ```
 
 9. 执行账号连接测试，确认 `/health` 返回成功。
@@ -136,6 +140,8 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 | `seedance-2.0-mini` | `480p`、`720p` | 两档均支持 `16:9`、`1:1`、`9:16`。 |
 | `happy-horse-1.1` | `720p`、`1080p` | 3–15 秒，最多 9 张参考图；不支持尾帧、参考视频和参考音频。 |
 | `grok-imagine-1.5` | `400p`、`544p`、`720p`、`960p` | 3–15 秒，必须提供一张首帧；不支持其他参考 guidance。 |
+| `ltxv-2.3-pro` | `1080p`、`1440p`、`2160p` | 固定 `16:9`；仅 6、8、10 秒；支持首尾帧、生成音频和提示词增强。 |
+| `ltxv-2.3-fast` | `1080p`、`1440p`、`2160p` | 固定 `16:9`；支持 6–20 秒偶数值；支持首尾帧、生成音频和提示词增强。 |
 
 工作台会为每个模型设置一个可用的默认分辨率和时长；页面提交前会再次校验模型、分辨率、时长、画面比例和 guidance 组合，非法组合不会上传媒体或创建任务。直接调用公共 API 的客户端也会得到同样的服务端校验。
 
@@ -197,6 +203,8 @@ seedance-2.0-fast -> seedance-2.0-fast
 seedance-2.0-mini -> seedance-2.0-mini
 happy-horse-1.1   -> happy-horse-1.1
 grok-imagine-1.5  -> grok-imagine-1.5
+ltxv-2.3-pro      -> ltxv-2.3-pro
+ltxv-2.3-fast     -> ltxv-2.3-fast
 ```
 
 If a public model has channel pricing but is absent from the account mapping,
@@ -214,6 +222,14 @@ reference images, and prompt enhancement. Grok supports `400p`/`544p`/`720p`/`96
 are rejected before dispatch. `seedance-2.0-mini` now supports both `480p` and
 `720p`, with `16:9`, `1:1`, and `9:16` at each resolution.
 
+`ltxv-2.3-pro` and `ltxv-2.3-fast` are also exposed. Both use `1080p` as the
+default, accept `1440p` and `2160p`, and are fixed to `16:9`. Pro accepts
+6/8/10 seconds; Fast accepts even durations from 6 through 20 seconds. Both
+support a start/end frame pair, generated audio, and prompt enhancement, but
+reject image, video, and audio references. Existing Leo accounts must add both
+exact model mappings before these models can be scheduled; newly created
+accounts include them by default.
+
 Channel model pricing entries continue to use the existing 480p/720p/1080p
 tiers for the Seedance models. Happy Horse and Grok are exposed in the
 workbench/API and use the compatibility mapping below until billing tiers for
@@ -228,6 +244,9 @@ For the current rightmost retail-price table, the compatible channel tiers are:
   The billing normalizer maps both 400p and 544p to the 480p tier, and maps
   960p to the 1080p tier, so the table's 400p/544p and 720p/960p price pairs
   remain aligned with the legacy three-tier snapshot.
+- LTX 2.3 Pro/Fast: configure one `1080p` compatibility price. Requests at
+  `1080p`, `1440p`, and `2160p` all settle through that tier because the
+  current pricing schema does not define separate 1440p or 2160p prices.
 
 ### Production pricing snapshot
 
@@ -239,7 +258,7 @@ As of 2026-07-24, production channel `Seedance 2 视频专用渠道` (channel ID
 | `seedance-2.0-fast` | `$0.10` | `$0.20` | `$0.25`* |
 | `seedance-2.0-mini` | - | `$0.17` | - |
 
-`*` The Fast 1080p price remains configured only because the current channel validator requires all three tiers for non-Mini entries. The Fast model capability matrix does not expose 1080p, so this tier is not advertised to users and cannot be selected in the video workbench. Exact channel pricing takes precedence over the unchanged group-level fallback prices.
+`*` The Fast 1080p price remains configured because Seedance Fast uses the legacy three-tier pricing configuration. The Fast model capability matrix does not expose 1080p, so this tier is not advertised to users and cannot be selected in the video workbench. LTX models are the separate single-tier exception and use only their 1080p compatibility price. Exact channel pricing takes precedence over the unchanged group-level fallback prices.
 
 ### Customer media upload contract
 
