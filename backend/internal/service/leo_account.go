@@ -7,14 +7,38 @@ import (
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
+const (
+	LeoLTX23ProModelID          = "ltx-2.3-pro"
+	LeoLTX23FastModelID         = "ltx-2.3-fast"
+	leoLTX23ProUpstreamModelID  = "ltxv-2.3-pro"
+	leoLTX23FastUpstreamModelID = "ltxv-2.3-fast"
+)
+
 var LeoDefaultVideoModelIDs = []string{
 	"seedance-2.0",
 	"seedance-2.0-fast",
 	"seedance-2.0-mini",
 	"happy-horse-1.1",
 	"grok-imagine-1.5",
-	"ltxv-2.3-pro",
-	"ltxv-2.3-fast",
+	LeoLTX23ProModelID,
+	LeoLTX23FastModelID,
+}
+
+func normalizeLeoVideoModelID(model string) string {
+	model = strings.ToLower(strings.TrimSpace(model))
+	switch model {
+	case leoLTX23ProUpstreamModelID:
+		return LeoLTX23ProModelID
+	case leoLTX23FastUpstreamModelID:
+		return LeoLTX23FastModelID
+	default:
+		return model
+	}
+}
+
+func isLeoLTX23Model(model string) bool {
+	model = normalizeLeoVideoModelID(model)
+	return model == LeoLTX23ProModelID || model == LeoLTX23FastModelID
 }
 
 func (a *Account) IsLeo() bool {

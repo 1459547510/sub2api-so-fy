@@ -140,7 +140,7 @@ describe('video pricing', () => {
   })
 
   it('creates LTX pricing entries with native 1080p, 1440p, and 2160p tiers', () => {
-    for (const model of ['ltxv-2.3-pro', 'ltxv-2.3-fast']) {
+    for (const model of ['ltx-2.3-pro', 'ltx-2.3-fast']) {
       const entry = createPricingFormEntry([model], 'video')
       expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['1080p', '1440p', '2160p'])
       entry.intervals.forEach((interval, index) => {

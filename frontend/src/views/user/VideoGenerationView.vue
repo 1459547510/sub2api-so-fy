@@ -494,7 +494,7 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxAudioRefs: 0,
     requiresStartFrame: true,
   },
-  'ltxv-2.3-pro': {
+  'ltx-2.3-pro': {
     resolutions: ['1080p', '1440p', '2160p'],
     defaultResolution: '1080p',
     durations: ltxProDurationOptions,
@@ -513,7 +513,7 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxAudioRefs: 0,
     supportsPromptEnhance: true,
   },
-  'ltxv-2.3-fast': {
+  'ltx-2.3-fast': {
     resolutions: ['1080p', '1440p', '2160p'],
     defaultResolution: '1080p',
     durations: ltxFastDurationOptions,

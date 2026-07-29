@@ -142,13 +142,13 @@ describe('VideoGenerationView', () => {
     const wrapper = mountView()
     await flushPromises()
 
-    await wrapper.get('[data-testid="video-model"]').setValue('ltxv-2.3-pro')
+    await wrapper.get('[data-testid="video-model"]').setValue('ltx-2.3-pro')
     expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['1080p', '1440p', '2160p'])
     expect(wrapper.get('[data-testid="video-duration"]').findAll('option').map((option) => Number(option.attributes('value')))).toEqual([6, 8, 10])
     expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9'])
     expect(wrapper.get('[data-testid="video-prompt-enhance"]').exists()).toBe(true)
 
-    await wrapper.get('[data-testid="video-model"]').setValue('ltxv-2.3-fast')
+    await wrapper.get('[data-testid="video-model"]').setValue('ltx-2.3-fast')
     expect(wrapper.get('[data-testid="video-duration"]').findAll('option').map((option) => Number(option.attributes('value')))).toEqual([6, 8, 10, 12, 14, 16, 18, 20])
     await wrapper.get('[data-testid="video-resolution"]').setValue('2160p')
     await wrapper.get('[data-testid="video-duration"]').setValue('20')
@@ -160,7 +160,7 @@ describe('VideoGenerationView', () => {
     await flushPromises()
 
     expect(createVideoJob).toHaveBeenCalledWith('sub2-leo-key', {
-      model: 'ltxv-2.3-fast',
+      model: 'ltx-2.3-fast',
       prompt: 'A cinematic coastal flyover',
       resolution: '2160p',
       duration: 20,

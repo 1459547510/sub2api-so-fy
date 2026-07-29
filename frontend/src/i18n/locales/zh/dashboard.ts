@@ -1046,7 +1046,7 @@ export default {
         description: '说明',
         yes: '是',
         no: '否',
-        model: '模型标识：seedance-2.0、seedance-2.0-fast、seedance-2.0-mini、happy-horse-1.1、grok-imagine-1.5、ltxv-2.3-pro 或 ltxv-2.3-fast。',
+        model: '模型标识：seedance-2.0、seedance-2.0-fast、seedance-2.0-mini、happy-horse-1.1、grok-imagine-1.5、ltx-2.3-pro 或 ltx-2.3-fast。',
         prompt: '场景、动作、镜头和风格描述；Seedance、Grok 和 LTX 最多 5000 个字符，Happy Horse 最多 2500 个字符。',
         resolution: '工作台按模型过滤分辨率。LTX 2.3 Pro/Fast 支持 1080p、1440p、2160p；其他模型的可选值见模型参数矩阵。',
         duration: '必须选择模型支持的整数秒数。LTX 2.3 Pro 仅支持 6、8、10 秒；LTX 2.3 Fast 支持 6 至 20 秒的偶数值；其他模型范围见模型参数矩阵。',

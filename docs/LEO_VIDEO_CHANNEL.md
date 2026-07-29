@@ -52,8 +52,8 @@ seedance-2.0-fast -> seedance-2.0-fast
 seedance-2.0-mini -> seedance-2.0-mini
 happy-horse-1.1   -> happy-horse-1.1
 grok-imagine-1.5  -> grok-imagine-1.5
-ltxv-2.3-pro      -> ltxv-2.3-pro
-ltxv-2.3-fast     -> ltxv-2.3-fast
+ltx-2.3-pro       -> ltxv-2.3-pro
+ltx-2.3-fast      -> ltxv-2.3-fast
 ```
 
 9. 执行账号连接测试，确认 `/health` 返回成功。
@@ -140,8 +140,8 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 | `seedance-2.0-mini` | `480p`、`720p` | 两档均支持 `16:9`、`1:1`、`9:16`。 |
 | `happy-horse-1.1` | `720p`、`1080p` | 3–15 秒，最多 9 张参考图；不支持尾帧、参考视频和参考音频。 |
 | `grok-imagine-1.5` | `400p`、`544p`、`720p`、`960p` | 3–15 秒，必须提供一张首帧；不支持其他参考 guidance。 |
-| `ltxv-2.3-pro` | `1080p`、`1440p`、`2160p` | 固定 `16:9`；仅 6、8、10 秒；支持首尾帧、生成音频和提示词增强。 |
-| `ltxv-2.3-fast` | `1080p`、`1440p`、`2160p` | 固定 `16:9`；支持 6–20 秒偶数值；支持首尾帧、生成音频和提示词增强。 |
+| `ltx-2.3-pro` | `1080p`、`1440p`、`2160p` | 固定 `16:9`；仅 6、8、10 秒；支持首尾帧、生成音频和提示词增强。 |
+| `ltx-2.3-fast` | `1080p`、`1440p`、`2160p` | 固定 `16:9`；支持 6–20 秒偶数值；支持首尾帧、生成音频和提示词增强。 |
 
 工作台会为每个模型设置一个可用的默认分辨率和时长；页面提交前会再次校验模型、分辨率、时长、画面比例和 guidance 组合，非法组合不会上传媒体或创建任务。直接调用公共 API 的客户端也会得到同样的服务端校验。
 
@@ -203,8 +203,8 @@ seedance-2.0-fast -> seedance-2.0-fast
 seedance-2.0-mini -> seedance-2.0-mini
 happy-horse-1.1   -> happy-horse-1.1
 grok-imagine-1.5  -> grok-imagine-1.5
-ltxv-2.3-pro      -> ltxv-2.3-pro
-ltxv-2.3-fast     -> ltxv-2.3-fast
+ltx-2.3-pro       -> ltxv-2.3-pro
+ltx-2.3-fast      -> ltxv-2.3-fast
 ```
 
 If a public model has channel pricing but is absent from the account mapping,
@@ -222,7 +222,7 @@ reference images, and prompt enhancement. Grok supports `400p`/`544p`/`720p`/`96
 are rejected before dispatch. `seedance-2.0-mini` now supports both `480p` and
 `720p`, with `16:9`, `1:1`, and `9:16` at each resolution.
 
-`ltxv-2.3-pro` and `ltxv-2.3-fast` are also exposed. Both use `1080p` as the
+`ltx-2.3-pro` and `ltx-2.3-fast` are also exposed. Both use `1080p` as the
 default, accept `1440p` and `2160p`, and are fixed to `16:9`. Pro accepts
 6/8/10 seconds; Fast accepts even durations from 6 through 20 seconds. Both
 support a start/end frame pair, generated audio, and prompt enhancement, but
@@ -264,8 +264,8 @@ As of 2026-07-29, the LTX channel prices are:
 
 | Model | 1080p | 1440p | 2160p |
 | --- | ---: | ---: | ---: |
-| `ltxv-2.3-fast` | `$0.06` | `$0.21` | `$0.24` |
-| `ltxv-2.3-pro` | `$0.09` | `$0.18` | `$0.36` |
+| `ltx-2.3-fast` | `$0.06` | `$0.21` | `$0.24` |
+| `ltx-2.3-pro` | `$0.09` | `$0.18` | `$0.36` |
 
 Each LTX tier is frozen independently in the async job billing snapshot, so a
 later channel edit does not change an already accepted job's settlement price.

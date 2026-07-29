@@ -4288,3 +4288,49 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `.superpowers/`: remains untracked and excluded from the commit and release.
 - Remaining blocker: repair or refresh the Leo upstream video credentials, or add another active Leo account, before repeating a successful-output test.
 - Rollback point: run `git revert c9ec2cb43`, publish and deploy the resulting rollback release (or redeploy `v0.1.168-fy.1`), then remove the two LTX mappings from account `1682` and the two LTX pricing entries from channel `5`.
+
+## 2026-07-29 - Task: Rename public LTX 2.3 model IDs
+
+### What was done
+- Renamed the public LTX model IDs from `ltxv-2.3-fast` and `ltxv-2.3-pro` to `ltx-2.3-fast` and `ltx-2.3-pro` across the API model list, video workbench, account defaults, channel pricing, and operating documentation.
+- Preserved LeoStudio compatibility by keeping account mapping targets as `ltxv-2.3-fast` and `ltxv-2.3-pro`; public requests use the new names while the upstream service still receives its required model IDs.
+- Kept internal normalization for existing task and billing records that contain the former upstream IDs. No database schema changed.
+
+### Testing
+- Targeted backend Leo account, model capability, pricing, usage, reserve, and settlement tests passed.
+- `go test ./... -count=1`: passed for all backend packages.
+- Targeted frontend account, channel pricing, API documentation, and video workbench suites passed: 4 files and 57 tests.
+- `pnpm.cmd test:run`, `pnpm.cmd typecheck`, and `pnpm.cmd lint:check`: passed.
+- `pnpm.cmd build`: passed; Vite transformed 994 modules and emitted the embedded frontend bundle. Existing dynamic-import and chunk-size warnings remain non-blocking.
+- `git diff --check`: passed with only the existing Markdown LF-to-CRLF warnings.
+
+### Notes
+- `backend/internal/service/leo_account.go`: defines the public LTX IDs, upstream aliases, and compatibility normalization.
+- `backend/internal/service/leo_account_test.go`: verifies the new public defaults and old upstream alias compatibility.
+- `backend/internal/service/leo_video_model_specs.go`: keys LTX capabilities by the new public IDs and normalizes aliases before lookup.
+- `backend/internal/service/leo_video_model_specs_test.go`: verifies public model validation and upstream alias lookup.
+- `backend/internal/service/video_billing_resolution.go`: recognizes both public and upstream LTX IDs for native resolution billing.
+- `backend/internal/service/video_billing_resolution_test.go`: covers pricing tiers and normalization for both naming forms.
+- `backend/internal/service/billing_service_test.go`: updates LTX billing coverage to the public model ID.
+- `backend/internal/service/channel_service_test.go`: updates LTX channel pricing validation coverage to the public model ID.
+- `backend/internal/service/leo_video_test.go`: updates LTX forwarding coverage to the public model ID.
+- `backend/internal/service/model_pricing_resolver_test.go`: updates native-tier resolution coverage to the public model ID.
+- `backend/internal/service/openai_gateway_record_usage_test.go`: updates LTX usage and charge coverage to the public model ID.
+- `backend/internal/service/video_job_billing_test.go`: updates LTX reserve and settlement coverage to the public model ID.
+- `frontend/src/components/account/CreateAccountModal.vue`: maps new public LTX IDs to the unchanged LeoStudio upstream IDs by default.
+- `frontend/src/components/account/__tests__/CreateAccountModal.spec.ts`: verifies both new default mappings.
+- `frontend/src/components/admin/channel/types.ts`: recognizes new public LTX IDs as native three-tier video models.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: verifies new public LTX channel pricing entries.
+- `frontend/src/composables/useModelWhitelist.ts`: exposes the new LTX IDs in model selection.
+- `frontend/src/constants/channel.ts`: lists the new public LTX IDs in channel pricing order.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updates English LTX model labels and examples.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updates Chinese LTX model labels and examples.
+- `frontend/src/views/user/VideoApiDocsView.vue`: updates public API documentation and examples to the new IDs.
+- `frontend/src/views/user/VideoGenerationView.vue`: updates workbench model values and capability checks to the new IDs.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies the new IDs in the API documentation.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verifies the new IDs in the workbench.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the public-to-upstream mapping and new pricing model names.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: documents the new public request model IDs.
+- `progress.md`: records the implementation, verification evidence, changed files, and rollback point.
+- `.superpowers/` remains untracked and excluded from this task.
+- Rollback point: working-tree base is `ab6b0e7d1`; after commit, use `git revert <ltx_public_id_rename_commit>` to restore the former public IDs. Existing production account, channel, and announcement configuration must be restored separately if already migrated.

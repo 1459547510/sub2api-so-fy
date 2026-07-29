@@ -136,7 +136,7 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		maxStartFrames:     1,
 		requiresStartFrame: true,
 	},
-	"ltxv-2.3-pro": {
+	LeoLTX23ProModelID: {
 		resolutions:       []string{"1080p", "1440p", "2160p"},
 		defaultResolution: "1080p",
 		aspects: map[string][]string{
@@ -157,7 +157,7 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		supportsPromptEnhance: true,
 		rejectsSeedAndMode:    true,
 	},
-	"ltxv-2.3-fast": {
+	LeoLTX23FastModelID: {
 		resolutions:       []string{"1080p", "1440p", "2160p"},
 		defaultResolution: "1080p",
 		aspects: map[string][]string{
@@ -196,7 +196,7 @@ func newLeoVideoValidationError(format string, args ...any) error {
 }
 
 func lookupLeoVideoModelSpec(model string) (leoVideoModelSpec, bool) {
-	model = strings.ToLower(strings.TrimSpace(model))
+	model = normalizeLeoVideoModelID(model)
 	if model == "seedance" {
 		model = "seedance-2.0"
 	}

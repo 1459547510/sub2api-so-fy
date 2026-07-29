@@ -275,7 +275,7 @@ const modelMatrixRows = [
     references: 'video.apiDocs.matrix.grokImagine.references',
   },
   {
-    model: 'ltxv-2.3-pro',
+    model: 'ltx-2.3-pro',
     resolution: 'video.apiDocs.matrix.ltx23Pro.resolution',
     duration: 'video.apiDocs.matrix.ltx23Pro.duration',
     aspectRatio: 'video.apiDocs.matrix.ltx23Pro.aspectRatio',
@@ -283,7 +283,7 @@ const modelMatrixRows = [
     references: 'video.apiDocs.matrix.ltx23Pro.references',
   },
   {
-    model: 'ltxv-2.3-fast',
+    model: 'ltx-2.3-fast',
     resolution: 'video.apiDocs.matrix.ltx23Fast.resolution',
     duration: 'video.apiDocs.matrix.ltx23Fast.duration',
     aspectRatio: 'video.apiDocs.matrix.ltx23Fast.aspectRatio',
@@ -526,10 +526,10 @@ const modelExamples = [
 }`),
   },
   {
-    model: 'ltxv-2.3-pro',
+    model: 'ltx-2.3-pro',
     description: 'video.apiDocs.models.ltx23Pro',
     code: modelRequestExample(`{
-  "model": "ltxv-2.3-pro",
+  "model": "ltx-2.3-pro",
   "prompt": "A cinematic mountain landscape with synchronized ambience",
   "resolution": "2160p",
   "duration": 10,
@@ -541,10 +541,10 @@ const modelExamples = [
 }`),
   },
   {
-    model: 'ltxv-2.3-fast',
+    model: 'ltx-2.3-fast',
     description: 'video.apiDocs.models.ltx23Fast',
     code: modelRequestExample(`{
-  "model": "ltxv-2.3-fast",
+  "model": "ltx-2.3-fast",
   "prompt": "A continuous tracking shot through a futuristic city",
   "resolution": "1440p",
   "duration": 20,

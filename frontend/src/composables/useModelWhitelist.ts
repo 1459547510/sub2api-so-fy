@@ -166,8 +166,8 @@ const leoModels = [
   'seedance-2.0-mini',
   'happy-horse-1.1',
   'grok-imagine-1.5',
-  'ltxv-2.3-pro',
-  'ltxv-2.3-fast'
+  'ltx-2.3-pro',
+  'ltx-2.3-fast'
 ]
 
 // Cohere
@@ -334,8 +334,8 @@ const leoPresetMappings = [
   { label: 'Seedance 2.0 Mini', from: 'seedance-2.0-mini', to: 'seedance-2.0-mini', color: 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-300' },
   { label: 'Happy Horse 1.1', from: 'happy-horse-1.1', to: 'happy-horse-1.1', color: 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300' },
   { label: 'Grok Imagine 1.5', from: 'grok-imagine-1.5', to: 'grok-imagine-1.5', color: 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800/50 dark:text-slate-300' },
-  { label: 'LTX 2.3 Pro', from: 'ltxv-2.3-pro', to: 'ltxv-2.3-pro', color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-300' },
-  { label: 'LTX 2.3 Fast', from: 'ltxv-2.3-fast', to: 'ltxv-2.3-fast', color: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300' }
+  { label: 'LTX 2.3 Pro', from: 'ltx-2.3-pro', to: 'ltxv-2.3-pro', color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-300' },
+  { label: 'LTX 2.3 Fast', from: 'ltx-2.3-fast', to: 'ltxv-2.3-fast', color: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300' }
 ]
 
 // Antigravity 预设映射（支持通配符）

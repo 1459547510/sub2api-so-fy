@@ -24,7 +24,7 @@ func LeoVideoPricingResolutions(model string) []string {
 	if model == "seedance-2.0-mini" {
 		return []string{VideoBillingResolution720P}
 	}
-	if model == "ltxv-2.3-pro" || model == "ltxv-2.3-fast" {
+	if isLeoLTX23Model(model) {
 		return []string{
 			VideoBillingResolution1080P,
 			VideoBillingResolution1440P,
@@ -100,8 +100,7 @@ func NormalizeVideoBillingResolutionOrDefault(resolution string) string {
 }
 
 func NormalizeLeoVideoBillingResolutionOrDefault(model, resolution string) string {
-	model = strings.ToLower(strings.TrimSpace(model))
-	if model != "ltxv-2.3-pro" && model != "ltxv-2.3-fast" {
+	if !isLeoLTX23Model(model) {
 		return NormalizeVideoBillingResolutionOrDefault(resolution)
 	}
 

@@ -191,12 +191,12 @@ func TestVideoJobBillingPreparePreservesExplicitZeroChannelPrice(t *testing.T) {
 
 func TestVideoJobBillingPrepareLTXUsesNativeResolutionPrice(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
-	gateway, pricing := newLTXVideoJobChannelPricingServices(t, "ltxv-2.3-fast", 0.06, 0.21, 0.24)
+	gateway, pricing := newLTXVideoJobChannelPricingServices(t, "ltx-2.3-fast", 0.06, 0.21, 0.24)
 	service := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
 	groupID := int64(100)
 	job := &VideoJob{
 		JobID: "vidjob_ltx_prepare", UserID: 1, APIKeyID: 2, GroupID: groupID,
-		RequestedModel: "ltxv-2.3-fast", UpstreamModel: "ltxv-2.3-fast",
+		RequestedModel: "ltx-2.3-fast", UpstreamModel: "ltxv-2.3-fast",
 		Resolution: "2160p", DurationSeconds: 20,
 	}
 	apiKey := newVideoJobBillingAPIKey(groupID)
@@ -259,12 +259,12 @@ func TestVideoJobSettlementLTXUsesNativeResolutionPrice(t *testing.T) {
 	snapshot, err := json.Marshal(VideoJobBillingSnapshot{
 		Version: 3, BillingType: BillingTypeBalance,
 		Price1080P: 0.06, Price1440P: 0.21, Price2160P: 0.24, RateMultiplier: 1,
-		BillingModel: "ltxv-2.3-fast",
+		BillingModel: "ltx-2.3-fast",
 	})
 	require.NoError(t, err)
 	job := &VideoJob{
 		JobID: "vidjob_ltx_settle", UserID: 1, APIKeyID: 2, GroupID: 3, AccountID: 9,
-		RequestedModel: "ltxv-2.3-fast", UpstreamModel: "ltxv-2.3-fast", Resolution: "1440p",
+		RequestedModel: "ltx-2.3-fast", UpstreamModel: "ltxv-2.3-fast", Resolution: "1440p",
 		DurationSeconds: 6, BillingSnapshot: snapshot, HoldAmount: f64p(1.2), RequestHash: "request-hash",
 	}
 	service := &VideoJobBillingService{

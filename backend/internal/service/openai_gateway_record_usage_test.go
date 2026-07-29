@@ -2155,8 +2155,8 @@ func TestLTXFastVideoUsageKeepsTwentySecondDuration(t *testing.T) {
 	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
 		Result: &OpenAIForwardResult{
 			RequestID:            "ltx-fast-video-request",
-			Model:                "ltx-fast",
-			BillingModel:         "ltx-fast",
+			Model:                "ltx-2.3-fast",
+			BillingModel:         "ltx-2.3-fast",
 			UpstreamModel:        "ltxv-2.3-fast",
 			VideoCount:           1,
 			VideoResolution:      "2160p",

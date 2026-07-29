@@ -4243,8 +4243,8 @@ watch(
         { from: 'seedance-2.0-mini', to: 'seedance-2.0-mini' },
         { from: 'happy-horse-1.1', to: 'happy-horse-1.1' },
         { from: 'grok-imagine-1.5', to: 'grok-imagine-1.5' },
-        { from: 'ltxv-2.3-pro', to: 'ltxv-2.3-pro' },
-        { from: 'ltxv-2.3-fast', to: 'ltxv-2.3-fast' },
+        { from: 'ltx-2.3-pro', to: 'ltxv-2.3-pro' },
+        { from: 'ltx-2.3-fast', to: 'ltxv-2.3-fast' },
       ]
     }
     if (newPlatform !== 'gemini' && newPlatform !== 'anthropic' && accountCategory.value === 'service_account') {

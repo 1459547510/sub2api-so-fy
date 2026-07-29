@@ -20,8 +20,8 @@ export const LEO_VIDEO_MODELS = [
   'seedance-2.0-mini',
   'happy-horse-1.1',
   'grok-imagine-1.5',
-  'ltxv-2.3-pro',
-  'ltxv-2.3-fast',
+  'ltx-2.3-pro',
+  'ltx-2.3-fast',
 ] as const
 export const VIDEO_PRICING_RESOLUTIONS = ['480p', '720p', '1080p'] as const
 

@@ -513,7 +513,7 @@ func TestVideoPriceConfigFromResolvedPricing(t *testing.T) {
 	t.Run("LTX config preserves all three native resolution tiers", func(t *testing.T) {
 		resolved := &ResolvedPricing{
 			Mode:           BillingModeVideo,
-			channelPricing: &ChannelModelPricing{Models: []string{"ltxv-2.3-fast"}},
+			channelPricing: &ChannelModelPricing{Models: []string{"ltx-2.3-fast"}},
 			RequestTiers: []PricingInterval{
 				{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.06)},
 				{TierLabel: "1440p", PerRequestPrice: testPtrFloat64(0.21)},

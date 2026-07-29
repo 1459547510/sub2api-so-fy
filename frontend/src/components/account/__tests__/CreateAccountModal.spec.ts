@@ -323,8 +323,8 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
           'seedance-2.0-mini': 'seedance-2.0-mini',
           'happy-horse-1.1': 'happy-horse-1.1',
           'grok-imagine-1.5': 'grok-imagine-1.5',
-          'ltxv-2.3-pro': 'ltxv-2.3-pro',
-          'ltxv-2.3-fast': 'ltxv-2.3-fast',
+          'ltx-2.3-pro': 'ltxv-2.3-pro',
+          'ltx-2.3-fast': 'ltxv-2.3-fast',
         },
       },
     })

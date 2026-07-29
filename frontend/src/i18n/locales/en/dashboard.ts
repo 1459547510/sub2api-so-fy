@@ -1041,7 +1041,7 @@ export default {
         description: 'Description',
         yes: 'Yes',
         no: 'No',
-        model: 'Model ID: seedance-2.0, seedance-2.0-fast, seedance-2.0-mini, happy-horse-1.1, grok-imagine-1.5, ltxv-2.3-pro, or ltxv-2.3-fast.',
+        model: 'Model ID: seedance-2.0, seedance-2.0-fast, seedance-2.0-mini, happy-horse-1.1, grok-imagine-1.5, ltx-2.3-pro, or ltx-2.3-fast.',
         prompt: 'Describe the scene, action, camera, and visual style. Seedance, Grok, and LTX allow up to 5,000 characters; Happy Horse allows up to 2,500.',
         resolution: 'The workbench filters resolutions by model. LTX 2.3 Pro/Fast support 1080p, 1440p, and 2160p; see the model matrix for all other model-specific values.',
         duration: 'Choose a supported whole number of seconds. LTX 2.3 Pro accepts 6, 8, or 10; LTX 2.3 Fast accepts even values from 6 through 20. See the model matrix for all other model-specific ranges.',
