@@ -510,18 +510,24 @@ func TestVideoPriceConfigFromResolvedPricing(t *testing.T) {
 		require.Nil(t, config.Price1080P)
 	})
 
-	t.Run("LTX config only requires the 1080p compatibility tier", func(t *testing.T) {
+	t.Run("LTX config preserves all three native resolution tiers", func(t *testing.T) {
 		resolved := &ResolvedPricing{
 			Mode:           BillingModeVideo,
 			channelPricing: &ChannelModelPricing{Models: []string{"ltxv-2.3-fast"}},
-			RequestTiers:   []PricingInterval{{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.2)}},
+			RequestTiers: []PricingInterval{
+				{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.06)},
+				{TierLabel: "1440p", PerRequestPrice: testPtrFloat64(0.21)},
+				{TierLabel: "2160p", PerRequestPrice: testPtrFloat64(0.24)},
+			},
 		}
 
 		config, ok := VideoPriceConfigFromResolvedPricing(resolved)
 		require.True(t, ok)
 		require.Nil(t, config.Price480P)
 		require.Nil(t, config.Price720P)
-		require.InDelta(t, 0.2, *config.Price1080P, 1e-12)
+		require.InDelta(t, 0.06, *config.Price1080P, 1e-12)
+		require.InDelta(t, 0.21, *config.Price1440P, 1e-12)
+		require.InDelta(t, 0.24, *config.Price2160P, 1e-12)
 	})
 
 	tests := []struct {

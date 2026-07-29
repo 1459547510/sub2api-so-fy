@@ -135,7 +135,7 @@ func TestVideoJobBillingPrepareUsesChannelVideoPricingByBillingModelSource(t *te
 
 			var snapshot VideoJobBillingSnapshot
 			require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
-			require.Equal(t, 2, snapshot.Version)
+			require.Equal(t, 3, snapshot.Version)
 			require.Equal(t, int64(77), snapshot.ChannelID)
 			require.Equal(t, tt.wantBillingModel, snapshot.BillingModel)
 			require.Equal(t, tt.billingModelSource, snapshot.BillingModelSource)
@@ -189,29 +189,30 @@ func TestVideoJobBillingPreparePreservesExplicitZeroChannelPrice(t *testing.T) {
 	require.Zero(t, snapshot.Price1080P)
 }
 
-func TestVideoJobBillingPrepareLTXRequiresOnly1080PCompatibilityPrice(t *testing.T) {
+func TestVideoJobBillingPrepareLTXUsesNativeResolutionPrice(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
-	service := &VideoJobBillingService{BillingRepo: balance}
-	groupID := int64(3)
+	gateway, pricing := newLTXVideoJobChannelPricingServices(t, "ltxv-2.3-fast", 0.06, 0.21, 0.24)
+	service := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
+	groupID := int64(100)
 	job := &VideoJob{
 		JobID: "vidjob_ltx_prepare", UserID: 1, APIKeyID: 2, GroupID: groupID,
 		RequestedModel: "ltxv-2.3-fast", UpstreamModel: "ltxv-2.3-fast",
 		Resolution: "2160p", DurationSeconds: 20,
 	}
-	apiKey := &APIKey{ID: 2, GroupID: &groupID, Group: &Group{
-		ID: groupID, RateMultiplier: 1, VideoPrice1080P: f64p(0.2),
-	}}
+	apiKey := newVideoJobBillingAPIKey(groupID)
 
 	require.NoError(t, service.Prepare(context.Background(), job, apiKey, &User{ID: 1}, nil))
 	require.NotNil(t, job.HoldAmount)
-	require.InDelta(t, 4, *job.HoldAmount, 1e-12)
+	require.InDelta(t, 4.8, *job.HoldAmount, 1e-12)
 	require.Len(t, balance.reserves, 1)
 
 	var snapshot VideoJobBillingSnapshot
 	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
 	require.Zero(t, snapshot.Price480P)
 	require.Zero(t, snapshot.Price720P)
-	require.InDelta(t, 0.2, snapshot.Price1080P, 1e-12)
+	require.InDelta(t, 0.06, snapshot.Price1080P, 1e-12)
+	require.InDelta(t, 0.21, snapshot.Price1440P, 1e-12)
+	require.InDelta(t, 0.24, snapshot.Price2160P, 1e-12)
 }
 
 func TestVideoJobSettlementIsIdempotent(t *testing.T) {
@@ -252,11 +253,12 @@ func TestVideoJobSettlementIsIdempotent(t *testing.T) {
 	require.InDelta(t, 1.8, *job.ActualCost, 1e-12)
 }
 
-func TestVideoJobSettlementLTXUses1080PCompatibilityPrice(t *testing.T) {
+func TestVideoJobSettlementLTXUsesNativeResolutionPrice(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	recorder := &fakeVideoUsageRecorder{}
 	snapshot, err := json.Marshal(VideoJobBillingSnapshot{
-		BillingType: BillingTypeBalance, Price1080P: 0.2, RateMultiplier: 1,
+		Version: 3, BillingType: BillingTypeBalance,
+		Price1080P: 0.06, Price1440P: 0.21, Price2160P: 0.24, RateMultiplier: 1,
 		BillingModel: "ltxv-2.3-fast",
 	})
 	require.NoError(t, err)
@@ -277,8 +279,18 @@ func TestVideoJobSettlementLTXUses1080PCompatibilityPrice(t *testing.T) {
 	result := json.RawMessage(`{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"2160p","duration":20}}`)
 	require.NoError(t, service.SettleCompleted(context.Background(), job, result))
 	require.Len(t, recorder.inputs, 1)
-	require.InDelta(t, 4, recorder.inputs[0].CostOverride.ActualCost, 1e-12)
+	require.InDelta(t, 4.8, recorder.inputs[0].CostOverride.ActualCost, 1e-12)
 	require.Len(t, balance.releases, 1)
+}
+
+func TestVideoJobBillingSnapshotV2LTXUses1080PCompatibilityPrice(t *testing.T) {
+	snapshot := VideoJobBillingSnapshot{
+		Version: 2, Price1080P: 0.2, RateMultiplier: 1,
+	}
+
+	cost := snapshot.Cost("ltxv-2.3-fast", "2160p", 20, 1)
+
+	require.InDelta(t, 4, cost.ActualCost, 1e-12)
 }
 
 func TestVideoJobSettlementRecordsFrozenChannelUsageFields(t *testing.T) {
@@ -365,6 +377,33 @@ func newVideoJobChannelPricingServices(
 					{TierLabel: "480p", PerRequestPrice: f64p(price480P)},
 					{TierLabel: "720p", PerRequestPrice: f64p(price720P)},
 					{TierLabel: "1080p", PerRequestPrice: f64p(price1080P)},
+				},
+			}},
+		}},
+		groupPlatforms: map[int64]string{groupID: PlatformLeo},
+	}
+	channelService := NewChannelService(repo, nil, nil, nil)
+	resolver := NewModelPricingResolver(channelService, &BillingService{fallbackPrices: map[string]*ModelPricing{}})
+	return &OpenAIGatewayService{channelService: channelService}, resolver
+}
+
+func newLTXVideoJobChannelPricingServices(
+	t *testing.T,
+	model string,
+	price1080P, price1440P, price2160P float64,
+) (*OpenAIGatewayService, *ModelPricingResolver) {
+	t.Helper()
+	const groupID int64 = 100
+	repo := &fakeVideoBillingChannelRepository{
+		channels: []Channel{{
+			ID: 77, Name: "leo-video", Status: StatusActive, GroupIDs: []int64{groupID},
+			BillingModelSource: BillingModelSourceRequested,
+			ModelPricing: []ChannelModelPricing{{
+				Platform: PlatformLeo, Models: []string{model}, BillingMode: BillingModeVideo,
+				Intervals: []PricingInterval{
+					{TierLabel: "1080p", PerRequestPrice: f64p(price1080P)},
+					{TierLabel: "1440p", PerRequestPrice: f64p(price1440P)},
+					{TierLabel: "2160p", PerRequestPrice: f64p(price2160P)},
 				},
 			}},
 		}},

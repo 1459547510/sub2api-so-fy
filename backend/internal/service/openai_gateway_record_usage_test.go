@@ -2149,7 +2149,6 @@ func TestLeoVideoUsageUsesActualOutputMetadata(t *testing.T) {
 
 func TestLTXFastVideoUsageKeepsTwentySecondDuration(t *testing.T) {
 	groupID := int64(1291)
-	videoPrice1080P := 0.2
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
 	svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{}, &openAIRecordUsageSubRepoStub{}, nil)
 
@@ -2164,6 +2163,7 @@ func TestLTXFastVideoUsageKeepsTwentySecondDuration(t *testing.T) {
 			VideoDurationSeconds: 20,
 			Duration:             time.Second,
 		},
+		CostOverride: &CostBreakdown{TotalCost: 4.8, ActualCost: 4.8, BillingMode: string(BillingModeVideo)},
 		APIKey: &APIKey{
 			ID:      101291,
 			GroupID: i64p(groupID),
@@ -2173,7 +2173,6 @@ func TestLTXFastVideoUsageKeepsTwentySecondDuration(t *testing.T) {
 				RateMultiplier:       1,
 				VideoRateIndependent: true,
 				VideoRateMultiplier:  1,
-				VideoPrice1080P:      &videoPrice1080P,
 			},
 		},
 		User:    &User{ID: 201291},
@@ -2183,7 +2182,8 @@ func TestLTXFastVideoUsageKeepsTwentySecondDuration(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, usageRepo.lastLog)
 	require.Equal(t, 20, *usageRepo.lastLog.VideoDurationSeconds)
-	require.InDelta(t, 4, usageRepo.lastLog.TotalCost, 1e-12)
+	require.Equal(t, VideoBillingResolution2160P, *usageRepo.lastLog.VideoResolution)
+	require.InDelta(t, 4.8, usageRepo.lastLog.TotalCost, 1e-12)
 }
 
 func TestOpenAIGatewayServiceRecordUsage_GrokVideoUsesDefaultRateCard(t *testing.T) {

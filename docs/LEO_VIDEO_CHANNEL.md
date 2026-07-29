@@ -244,9 +244,9 @@ For the current rightmost retail-price table, the compatible channel tiers are:
   The billing normalizer maps both 400p and 544p to the 480p tier, and maps
   960p to the 1080p tier, so the table's 400p/544p and 720p/960p price pairs
   remain aligned with the legacy three-tier snapshot.
-- LTX 2.3 Pro/Fast: configure one `1080p` compatibility price. Requests at
-  `1080p`, `1440p`, and `2160p` all settle through that tier because the
-  current pricing schema does not define separate 1440p or 2160p prices.
+- LTX 2.3 Pro/Fast: configure independent `1080p`, `1440p`, and `2160p`
+  channel prices. Reserve and settlement use the exact request/result tier;
+  LTX pricing does not fall back to the group's legacy 480p/720p/1080p table.
 
 ### Production pricing snapshot
 
@@ -258,7 +258,17 @@ As of 2026-07-24, production channel `Seedance 2 视频专用渠道` (channel ID
 | `seedance-2.0-fast` | `$0.10` | `$0.20` | `$0.25`* |
 | `seedance-2.0-mini` | - | `$0.17` | - |
 
-`*` The Fast 1080p price remains configured because Seedance Fast uses the legacy three-tier pricing configuration. The Fast model capability matrix does not expose 1080p, so this tier is not advertised to users and cannot be selected in the video workbench. LTX models are the separate single-tier exception and use only their 1080p compatibility price. Exact channel pricing takes precedence over the unchanged group-level fallback prices.
+`*` The Fast 1080p price remains configured because Seedance Fast uses the legacy three-tier pricing configuration. The Fast model capability matrix does not expose 1080p, so this tier is not advertised to users and cannot be selected in the video workbench. Exact channel pricing takes precedence over the unchanged group-level fallback prices; LTX uses its native three-tier channel pricing listed below.
+
+As of 2026-07-29, the LTX channel prices are:
+
+| Model | 1080p | 1440p | 2160p |
+| --- | ---: | ---: | ---: |
+| `ltxv-2.3-fast` | `$0.06` | `$0.21` | `$0.24` |
+| `ltxv-2.3-pro` | `$0.09` | `$0.18` | `$0.36` |
+
+Each LTX tier is frozen independently in the async job billing snapshot, so a
+later channel edit does not change an already accepted job's settlement price.
 
 ### Customer media upload contract
 

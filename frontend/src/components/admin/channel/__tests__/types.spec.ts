@@ -139,11 +139,13 @@ describe('video pricing', () => {
     expect(validateVideoPricing(entry, t)).toBeNull()
   })
 
-  it('creates LTX pricing entries with only the compatible 1080p tier', () => {
+  it('creates LTX pricing entries with native 1080p, 1440p, and 2160p tiers', () => {
     for (const model of ['ltxv-2.3-pro', 'ltxv-2.3-fast']) {
       const entry = createPricingFormEntry([model], 'video')
-      expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['1080p'])
-      entry.intervals[0].per_request_price = 0.2
+      expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['1080p', '1440p', '2160p'])
+      entry.intervals.forEach((interval, index) => {
+        interval.per_request_price = [0.06, 0.21, 0.24][index]
+      })
       expect(validateVideoPricing(entry, t)).toBeNull()
     }
   })

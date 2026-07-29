@@ -34,6 +34,8 @@ type VideoJobBillingSnapshot struct {
 	Price480P          float64 `json:"price_480p"`
 	Price720P          float64 `json:"price_720p"`
 	Price1080P         float64 `json:"price_1080p"`
+	Price1440P         float64 `json:"price_1440p,omitempty"`
+	Price2160P         float64 `json:"price_2160p,omitempty"`
 	RateMultiplier     float64 `json:"rate_multiplier"`
 	ChannelID          int64   `json:"channel_id,omitempty"`
 	BillingModel       string  `json:"billing_model,omitempty"`
@@ -47,12 +49,20 @@ func (s VideoJobBillingSnapshot) Cost(durationModel, resolution string, duration
 		videoCount = 1
 	}
 	durationSeconds = NormalizeLeoVideoBillingDurationSecondsOrDefault(durationModel, durationSeconds)
+	billingResolution := NormalizeVideoBillingResolutionOrDefault(resolution)
+	if s.Version >= 3 {
+		billingResolution = NormalizeLeoVideoBillingResolutionOrDefault(durationModel, resolution)
+	}
 	var unitPrice float64
-	switch NormalizeVideoBillingResolutionOrDefault(resolution) {
+	switch billingResolution {
 	case VideoBillingResolution720P:
 		unitPrice = s.Price720P
 	case VideoBillingResolution1080P:
 		unitPrice = s.Price1080P
+	case VideoBillingResolution1440P:
+		unitPrice = s.Price1440P
+	case VideoBillingResolution2160P:
+		unitPrice = s.Price2160P
 	default:
 		unitPrice = s.Price480P
 	}
@@ -111,15 +121,17 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 	}
 	billingModel := resolveVideoJobBillingModel(mapping.BillingModelSource, job.RequestedModel, channelMappedModel, job.UpstreamModel)
 	price480P, price720P, price1080P := group.VideoPrice480P, group.VideoPrice720P, group.VideoPrice1080P
+	var price1440P, price2160P *float64
 	pricingSource := "group"
 	if s != nil && s.Pricing != nil {
 		resolved := s.Pricing.Resolve(ctx, PricingInput{Model: billingModel, GroupID: &group.ID})
 		if channelPrices, ok := VideoPriceConfigFromResolvedPricing(resolved); ok {
 			price480P, price720P, price1080P = channelPrices.Price480P, channelPrices.Price720P, channelPrices.Price1080P
+			price1440P, price2160P = channelPrices.Price1440P, channelPrices.Price2160P
 			pricingSource = resolved.Source
 		}
 	}
-	if !videoPricingIsCompleteForModel(billingModel, price480P, price720P, price1080P) {
+	if !videoPricingIsCompleteForModel(billingModel, price480P, price720P, price1080P, price1440P, price2160P) {
 		return errors.New("video pricing is incomplete")
 	}
 	if price480P == nil {
@@ -131,9 +143,16 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 	if price1080P == nil {
 		price1080P = float64Pointer(0)
 	}
+	if price1440P == nil {
+		price1440P = float64Pointer(0)
+	}
+	if price2160P == nil {
+		price2160P = float64Pointer(0)
+	}
 	snapshot := VideoJobBillingSnapshot{
-		Version: 2, BillingType: BillingTypeBalance,
+		Version: 3, BillingType: BillingTypeBalance,
 		Price480P: *price480P, Price720P: *price720P, Price1080P: *price1080P,
+		Price1440P: *price1440P, Price2160P: *price2160P,
 		RateMultiplier: resolveVideoRateMultiplier(apiKey, baseMultiplier), ChannelID: mapping.ChannelID,
 		BillingModel: billingModel, BillingModelSource: mapping.BillingModelSource,
 		ChannelMappedModel: channelMappedModel, PricingSource: pricingSource,
@@ -163,7 +182,7 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 	return err
 }
 
-func videoPricingIsCompleteForModel(model string, price480P, price720P, price1080P *float64) bool {
+func videoPricingIsCompleteForModel(model string, price480P, price720P, price1080P, price1440P, price2160P *float64) bool {
 	for _, resolution := range LeoVideoPricingResolutions(model) {
 		switch resolution {
 		case VideoBillingResolution480P:
@@ -176,6 +195,14 @@ func videoPricingIsCompleteForModel(model string, price480P, price720P, price108
 			}
 		case VideoBillingResolution1080P:
 			if price1080P == nil {
+				return false
+			}
+		case VideoBillingResolution1440P:
+			if price1440P == nil {
+				return false
+			}
+		case VideoBillingResolution2160P:
+			if price2160P == nil {
 				return false
 			}
 		default:

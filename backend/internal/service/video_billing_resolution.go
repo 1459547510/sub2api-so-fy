@@ -6,6 +6,8 @@ const (
 	VideoBillingResolution480P  = "480p"
 	VideoBillingResolution720P  = "720p"
 	VideoBillingResolution1080P = "1080p"
+	VideoBillingResolution1440P = "1440p"
+	VideoBillingResolution2160P = "2160p"
 )
 
 var leoVideoPricingResolutions = []string{
@@ -23,7 +25,11 @@ func LeoVideoPricingResolutions(model string) []string {
 		return []string{VideoBillingResolution720P}
 	}
 	if model == "ltxv-2.3-pro" || model == "ltxv-2.3-fast" {
-		return []string{VideoBillingResolution1080P}
+		return []string{
+			VideoBillingResolution1080P,
+			VideoBillingResolution1440P,
+			VideoBillingResolution2160P,
+		}
 	}
 	return append([]string(nil), leoVideoPricingResolutions...)
 }
@@ -90,5 +96,23 @@ func NormalizeVideoBillingResolutionOrDefault(resolution string) string {
 		return VideoBillingResolution1080P
 	default:
 		return VideoBillingResolution480P
+	}
+}
+
+func NormalizeLeoVideoBillingResolutionOrDefault(model, resolution string) string {
+	model = strings.ToLower(strings.TrimSpace(model))
+	if model != "ltxv-2.3-pro" && model != "ltxv-2.3-fast" {
+		return NormalizeVideoBillingResolutionOrDefault(resolution)
+	}
+
+	switch strings.ToLower(strings.TrimSpace(resolution)) {
+	case "1080", "1080p", "full_hd", "full-hd", "fhd", "resolution_1080":
+		return VideoBillingResolution1080P
+	case "1440", "1440p", "resolution_1440":
+		return VideoBillingResolution1440P
+	case "2160", "2160p", "4k", "uhd", "resolution_2160":
+		return VideoBillingResolution2160P
+	default:
+		return VideoBillingResolution1080P
 	}
 }

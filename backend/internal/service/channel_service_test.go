@@ -2439,6 +2439,18 @@ func TestValidatePricingBillingMode(t *testing.T) {
 			}},
 		},
 		{
+			name: "video LTX native resolution tiers - valid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"ltxv-2.3-fast"},
+				Intervals: []PricingInterval{
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.06)},
+					{TierLabel: "1440p", PerRequestPrice: testPtrFloat64(0.21)},
+					{TierLabel: "2160p", PerRequestPrice: testPtrFloat64(0.24)},
+				},
+			}},
+		},
+		{
 			name: "video multiple models - invalid",
 			pricing: []ChannelModelPricing{{
 				BillingMode: BillingModeVideo,

@@ -4229,3 +4229,38 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the final public asset and checksum verification.
 - `.superpowers/`: remains untracked and excluded from the commit and release.
 - Rollback point: source rollback is `git revert aede017fb`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.168-fy.1`.
+
+## 2026-07-29 - Task: Add native multi-resolution pricing for LTX 2.3 video models
+
+### What was done
+- Added independent `1080p`, `1440p`, and `2160p` USD-per-second channel pricing for `ltxv-2.3-fast` and `ltxv-2.3-pro` while preserving the legacy resolution mapping for all other video models.
+- Extended synchronous usage billing and async video-job reserve/settlement snapshots to retain and charge the exact LTX resolution tier. New async snapshots use version 3; existing snapshots remain readable and no database schema changed.
+- Updated the admin channel form and operating documentation for the six requested prices: Fast `0.06/0.21/0.24` and Pro `0.09/0.18/0.36` for `1080p/1440p/2160p`.
+
+### Testing
+- Targeted backend LTX resolution, pricing resolver, channel validation, forwarding, usage, reserve, and settlement tests passed.
+- `go test ./internal/service -count=1` passed in 99.262 seconds; `go test ./internal/handler -count=1` passed in 35.143 seconds.
+- `go test ./... -count=1` passed for all backend packages.
+- Targeted channel pricing Vitest passed all 14 tests; `pnpm.cmd typecheck`, `pnpm.cmd lint:check`, and `pnpm.cmd run build` passed.
+- `git diff --check` passed with only the existing Markdown LF-to-CRLF warning.
+
+### Notes
+- `backend/internal/service/billing_service.go`: adds native 1440p and 2160p video unit prices and model-aware resolution selection.
+- `backend/internal/service/billing_service_test.go`: verifies LTX Fast 2160p cost at the requested rate.
+- `backend/internal/service/channel_service_test.go`: verifies a valid LTX three-tier channel pricing entry.
+- `backend/internal/service/leo_video.go`: records the native LTX output resolution returned by Leo.
+- `backend/internal/service/leo_video_test.go`: verifies 2160p LTX forwarding metadata and the 20-second Fast duration.
+- `backend/internal/service/model_pricing_resolver.go`: extracts native LTX 1440p and 2160p channel prices.
+- `backend/internal/service/model_pricing_resolver_test.go`: verifies all three native LTX prices are preserved.
+- `backend/internal/service/openai_gateway_record_usage_test.go`: verifies 2160p LTX usage metadata and cost.
+- `backend/internal/service/openai_gateway_usage.go`: applies model-aware LTX resolution normalization during synchronous usage billing.
+- `backend/internal/service/video_billing_resolution.go`: defines native LTX pricing tiers while retaining legacy resolution compatibility for other models.
+- `backend/internal/service/video_billing_resolution_test.go`: verifies LTX tier enumeration and resolution normalization.
+- `backend/internal/service/video_job_billing.go`: stores and settles 1440p and 2160p prices in version 3 async billing snapshots.
+- `backend/internal/service/video_job_billing_test.go`: verifies native LTX reserve and settlement amounts plus snapshot compatibility.
+- `frontend/src/components/admin/channel/types.ts`: exposes the three native LTX tiers in the admin pricing form.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: verifies creation and validation of LTX three-tier pricing entries.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents native LTX tiers, exact production prices, and snapshot behavior.
+- `progress.md`: records implementation scope, verification evidence, modified files, and rollback point.
+- `.superpowers/` remains untracked and excluded from this task.
+- Rollback point: working-tree base is `d622c6053`; after commit, use `git revert <ltx_pricing_commit>` to restore the previous single-tier compatibility behavior.

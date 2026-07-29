@@ -205,7 +205,7 @@ func (s *OpenAIGatewayService) ForwardLeoVideo(
 		ResponseHeaders:      resp.Header.Clone(),
 		Duration:             time.Since(startTime),
 		VideoCount:           1,
-		VideoResolution:      NormalizeVideoBillingResolutionOrDefault(resolution),
+		VideoResolution:      NormalizeLeoVideoBillingResolutionOrDefault(upstreamModel, resolution),
 		VideoDurationSeconds: NormalizeLeoVideoBillingDurationSecondsOrDefault(upstreamModel, durationSeconds),
 	}, nil
 }

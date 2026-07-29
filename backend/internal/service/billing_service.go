@@ -1406,6 +1406,8 @@ type VideoPriceConfig struct {
 	Price480P  *float64 // 480p 每秒价格（nil 表示使用默认值）
 	Price720P  *float64 // 720p 每秒价格（nil 表示使用默认值）
 	Price1080P *float64 // 1080p 每秒价格（nil 表示使用默认值）
+	Price1440P *float64 // 1440p 每秒价格（nil 表示使用默认值）
+	Price2160P *float64 // 2160p 每秒价格（nil 表示使用默认值）
 }
 
 const (
@@ -1498,7 +1500,7 @@ func (s *BillingService) calculateVideoCost(model, durationModel string, resolut
 	if videoCount <= 0 {
 		return &CostBreakdown{}
 	}
-	resolution = NormalizeVideoBillingResolutionOrDefault(resolution)
+	resolution = NormalizeLeoVideoBillingResolutionOrDefault(durationModel, resolution)
 	durationSeconds = NormalizeLeoVideoBillingDurationSecondsOrDefault(durationModel, durationSeconds)
 
 	perSecondPrice := s.getVideoUnitPrice(model, resolution, groupConfig)
@@ -1554,6 +1556,14 @@ func (s *BillingService) getVideoUnitPrice(model string, resolution string, grou
 		case VideoBillingResolution1080P:
 			if groupConfig.Price1080P != nil {
 				return *groupConfig.Price1080P
+			}
+		case VideoBillingResolution1440P:
+			if groupConfig.Price1440P != nil {
+				return *groupConfig.Price1440P
+			}
+		case VideoBillingResolution2160P:
+			if groupConfig.Price2160P != nil {
+				return *groupConfig.Price2160P
 			}
 		}
 	}

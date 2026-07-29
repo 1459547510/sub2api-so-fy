@@ -1014,11 +1014,11 @@ func TestCalculateVideoCostBillsPerSecond(t *testing.T) {
 
 func TestCalculateLTXFastVideoCostAllowsTwentySeconds(t *testing.T) {
 	svc := newTestBillingService()
-	videoPrice := 0.2
+	videoPrice := 0.24
 
-	cost := svc.CalculateVideoCost("ltxv-2.3-fast", "2160p", 1, 20, &VideoPriceConfig{Price1080P: &videoPrice}, 1.0)
+	cost := svc.CalculateVideoCost("ltxv-2.3-fast", "2160p", 1, 20, &VideoPriceConfig{Price2160P: &videoPrice}, 1.0)
 
-	require.InDelta(t, 4.0, cost.TotalCost, 1e-10)
+	require.InDelta(t, 4.8, cost.TotalCost, 1e-10)
 }
 
 func TestCalculateGrokImagineImageCostUsesDefaultRateCard(t *testing.T) {

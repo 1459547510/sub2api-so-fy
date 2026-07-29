@@ -74,16 +74,17 @@ func TestForwardLeoVideoMapsModelAndAddsBearer(t *testing.T) {
 }
 
 func TestForwardLeoVideoPreservesLTXFastTwentySecondDuration(t *testing.T) {
-	upstream := &leoVideoHTTPUpstream{response: leoVideoResponse(http.StatusOK, `{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"RESOLUTION_1080","duration":20}}`)}
+	upstream := &leoVideoHTTPUpstream{response: leoVideoResponse(http.StatusOK, `{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"RESOLUTION_2160","duration":20}}`)}
 	svc := &OpenAIGatewayService{httpUpstream: upstream}
 	account := newLeoVideoTestAccount()
 	account.Credentials["model_mapping"] = map[string]any{"ltx-fast": "ltxv-2.3-fast"}
 	_, c := newLeoVideoTestContext()
 
-	result, err := svc.ForwardLeoVideo(context.Background(), c, account, []byte(`{"model":"ltx-fast","prompt":"city","resolution":"1080p","duration":20}`))
+	result, err := svc.ForwardLeoVideo(context.Background(), c, account, []byte(`{"model":"ltx-fast","prompt":"city","resolution":"2160p","duration":20}`))
 
 	require.NoError(t, err)
 	require.Equal(t, "ltxv-2.3-fast", gjson.GetBytes(upstream.requestBody, "model").String())
+	require.Equal(t, VideoBillingResolution2160P, result.VideoResolution)
 	require.Equal(t, 20, result.VideoDurationSeconds)
 }
 

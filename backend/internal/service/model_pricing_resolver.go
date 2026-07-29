@@ -310,15 +310,14 @@ func (r *ModelPricingResolver) GetRequestTierPriceByContext(resolved *ResolvedPr
 }
 
 // VideoPriceConfigFromResolvedPricing extracts a channel video price configuration.
-// Single-tier models use their model-specific compatibility tier; legacy models
-// still require all three resolution tiers. Explicit zero prices remain valid
-// through non-nil pointers.
+// Each model must provide its model-specific resolution tiers. Explicit zero
+// prices remain valid through non-nil pointers.
 func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPriceConfig, bool) {
 	if resolved == nil || resolved.Mode != BillingModeVideo {
 		return nil, false
 	}
 
-	var price480P, price720P, price1080P float64
+	var price480P, price720P, price1080P, price1440P, price2160P float64
 	model := ""
 	if resolved.channelPricing != nil && len(resolved.channelPricing.Models) == 1 {
 		model = resolved.channelPricing.Models[0]
@@ -340,6 +339,10 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 			price720P = *tier.PerRequestPrice
 		case VideoBillingResolution1080P:
 			price1080P = *tier.PerRequestPrice
+		case VideoBillingResolution1440P:
+			price1440P = *tier.PerRequestPrice
+		case VideoBillingResolution2160P:
+			price2160P = *tier.PerRequestPrice
 		default:
 			return nil, false
 		}
@@ -359,6 +362,12 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 	}
 	if seen[VideoBillingResolution1080P] {
 		config.Price1080P = &price1080P
+	}
+	if seen[VideoBillingResolution1440P] {
+		config.Price1440P = &price1440P
+	}
+	if seen[VideoBillingResolution2160P] {
+		config.Price2160P = &price2160P
 	}
 	return config, true
 }
