@@ -48,7 +48,7 @@ func (r *cyberPolicyBanUserRepo) GetByID(_ context.Context, id int64) (*User, er
 	return &clone, nil
 }
 
-func (r *cyberPolicyBanUserRepo) Update(_ context.Context, user *User) error {
+func (r *cyberPolicyBanUserRepo) Update(_ context.Context, user *User, _ UserUpdateFields) error {
 	clone := *user
 	r.users[user.ID] = &clone
 	r.updateCount++

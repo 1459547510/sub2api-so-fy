@@ -4189,3 +4189,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the release commit, tag, verification evidence, package checksum, and rollback point.
 - `.superpowers/`: remains untracked and excluded from the commit and release.
 - Rollback point: source rollback is `git revert f1fefc776db07ee5c7f0211e52b4dc8ab596f850`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.4`.
+
+## 2026-07-29 - Task: Merge upstream v0.1.168 and publish fork release v0.1.168-fy.1
+
+### What was done
+- Merged upstream formal release `v0.1.168` into the fork without merging unpublished upstream `main` changes beyond that tag.
+- Preserved the fork's Leo video generation, async video billing, video menu switch, Token Incentive Plan, and related migrations while adding upstream Passkey authentication, Model Plaza, Kimi K3 support, setup bypass, scoped update fixes, and security/audit fixes.
+- Resolved 22 conflicts across dependency injection, settings contracts, backend/frontend feature flags, and admin settings; also migrated the cyber-policy ban test path to the upstream explicit `UserUpdateFields` repository update contract and restored Leo platform color mappings.
+
+### Testing
+- `go test ./... -count=1`: passed for all backend packages.
+- `pnpm.cmd test:run`: passed for the complete frontend Vitest suite.
+- `pnpm.cmd typecheck`: passed.
+- `pnpm.cmd lint:check`: passed.
+- `pnpm.cmd run build`: passed; Vite transformed 994 modules and refreshed the embedded frontend assets. Existing dynamic-import, chunk-size, and Browserslist warnings remain non-blocking.
+- Go formatting, merge-marker checks, and `git diff --cached --check`: passed.
+
+### Notes
+- `backend/cmd/server/wire_gen.go`: retains Token Incentive and adds Model Plaza/Passkey handler wiring.
+- `backend/internal/handler/`, `backend/internal/service/`, and `frontend/src/views/admin/SettingsView.vue`: combine upstream settings and Model Plaza fields with fork video and Token Incentive fields.
+- `backend/internal/service/ops_cyber_policy_ban.go`, `backend/internal/service/ops_cyber_policy_ban_test.go`: migrate the user update call and test stub to `UserUpdateFields`.
+- `frontend/src/i18n/locales/en/admin/settings.ts`, `frontend/src/i18n/locales/zh/admin/settings.ts`: retain both video and Model Plaza settings translations.
+- `frontend/src/utils/platformColors.ts`: adds missing Leo strong-border and accent mappings required by the merged platform type.
+- Other files changed by this task are the upstream `v0.1.168` release files included in the merge commit, plus the existing fork files retained by the merge.
+- `.superpowers/`: remains untracked and excluded from the commit and release.
+- Rollback point: revert the merge commit after it is created; release rollback is to remove `v0.1.168-fy.1` and push `git push origin :refs/tags/v0.1.168-fy.1`.

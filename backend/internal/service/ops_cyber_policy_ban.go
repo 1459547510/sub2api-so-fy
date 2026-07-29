@@ -62,7 +62,7 @@ func (s *OpsService) applyCyberPolicyRevocationBan(ctx context.Context, entry *O
 		}
 
 		user.Status = StatusDisabled
-		if err := s.userRepo.Update(ctx, user); err != nil {
+		if err := s.userRepo.Update(ctx, user, UserUpdateFields{Status: true}); err != nil {
 			slog.Warn("cyber_policy_revocation_ban_update_failed", "account_id", accountID, "user_id", user.ID, "error", err)
 			continue
 		}
