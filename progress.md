@@ -4334,3 +4334,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the implementation, verification evidence, changed files, and rollback point.
 - `.superpowers/` remains untracked and excluded from this task.
 - Rollback point: working-tree base is `ab6b0e7d1`; after commit, use `git revert <ltx_public_id_rename_commit>` to restore the former public IDs. Existing production account, channel, and announcement configuration must be restored separately if already migrated.
+
+## 2026-07-29 - Task: Release and deploy public LTX model ID rename
+
+### What was done
+- Pushed commit `fda87c078` and annotated tag `v0.1.168-fy.3`, then deployed the checksum-verified release to `api.fflink.top` through the built-in updater and restarted the service.
+- Renamed the two public mappings on Leo account `1682` to `ltx-2.3-fast -> ltxv-2.3-fast` and `ltx-2.3-pro -> ltxv-2.3-pro`, preserving the other five mappings and the upstream model IDs.
+- Renamed only the two LTX model identifiers in channel `5`; all seven pricing entries and the six LTX prices remained unchanged.
+- Updated active popup announcement `21` with the new public model IDs using an explicit UTF-8 request body.
+
+### Testing
+- Release asset `sub2api_0.1.168-fy.3_linux_amd64.tar.gz` is `36,053,752` bytes and contains the `sub2api` executable.
+- SHA256 `f94a7a9dc126bf6e1aa7e933ff1896bdcab6d452893cfa8b00ae9832b811729d` exactly matched the published `checksums.txt`.
+- Production `/health` returned `status=ok`, and the admin version endpoint returned `0.1.168-fy.3` after restart.
+- `/v1/models` returned `ltx-2.3-fast` and `ltx-2.3-pro` and did not return either former `ltxv-*` public ID.
+- Account `1682` readback remained `active` and schedulable with both new-public-to-old-upstream mappings and no old public mapping keys.
+- Channel `5` readback retained seven entries. Fast prices remained `0.06/0.21/0.24` and Pro prices remained `0.09/0.18/0.36` for `1080p/1440p/2160p`.
+- Announcement `21` readback remained `active` with `notify_mode=popup`, contained both new public IDs, contained no former `ltxv-*` ID, and preserved valid Chinese text.
+
+### Notes
+- `progress.md`: records the release, production configuration changes, verification evidence, and rollback procedure.
+- `.superpowers/` remains untracked and excluded from the release and follow-up commit.
+- Production rollback: while `0.1.168-fy.3` is running, rename account `1682` mapping keys and channel `5` pricing model IDs back to `ltxv-2.3-fast/pro`, restore those names in announcement `21`, then call `POST /api/v1/admin/system/rollback` with `{"version":"0.1.168-fy.2"}` and restart the service. Source rollback is `git revert fda87c078` followed by a new release.
