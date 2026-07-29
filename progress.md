@@ -4214,3 +4214,18 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Other files changed by this task are the upstream `v0.1.168` release files included in the merge commit, plus the existing fork files retained by the merge.
 - `.superpowers/`: remains untracked and excluded from the commit and release.
 - Rollback point: revert the merge commit after it is created; release rollback is to remove `v0.1.168-fy.1` and push `git push origin :refs/tags/v0.1.168-fy.1`.
+
+## 2026-07-29 - Task: Verify fork release v0.1.168-fy.1
+
+### What was done
+- Confirmed the public GitHub Release for `v0.1.168-fy.1` contains the Linux amd64 package and checksum manifest generated from the merge tag.
+
+### Testing
+- Release asset returned HTTP `200`.
+- `sub2api_0.1.168-fy.1_linux_amd64.tar.gz` is `36,053,635` bytes and contains the executable `sub2api` entry.
+- SHA256 `724a533607c63b986ad507bbaab0149f7b20892450ee9d20a78f73b22ea55d3e` exactly matched `checksums.txt`.
+
+### Notes
+- `progress.md`: records the final public asset and checksum verification.
+- `.superpowers/`: remains untracked and excluded from the commit and release.
+- Rollback point: source rollback is `git revert aede017fb`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.168-fy.1`.
