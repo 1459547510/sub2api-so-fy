@@ -4170,3 +4170,22 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/service/video_job_billing.go`: applies the upstream model limit during async reserve and settlement.
 - `backend/internal/service/video_job_billing_test.go`: covers 20-second LTX Fast reserve and settlement.
 - Rollback point: these files also contain the preceding uncommitted LTX integration changes; do not run `git restore` on them. To roll back this round safely, reverse only the hunks under the task heading above (or save the current `git diff` first and apply the inverse selectively).
+
+## 2026-07-29 - Task: Publish fork release v0.1.166-fy.4
+
+### What was done
+- Pushed commit `f1fefc776db07ee5c7f0211e52b4dc8ab596f850` to `origin/codex/leo-video-channel` and annotated tag `v0.1.166-fy.4` to `origin`.
+- Published the LeoStudio LTX 2.3 model integration and model-specific video billing duration fix while retaining upstream release `v0.1.166` as the version baseline.
+
+### Testing
+- `go test ./internal/service -count=1`: passed.
+- `go test ./internal/handler -count=1`: passed.
+- Targeted frontend Vitest suite: 5 files and 62 tests passed.
+- `pnpm.cmd typecheck`, `pnpm.cmd lint:check`, `pnpm.cmd run build`, Go formatting verification, and `git diff --check` passed before release.
+- Public Release assets returned successfully; `sub2api_0.1.166-fy.4_linux_amd64.tar.gz` is `35,500,561` bytes and contains the executable `sub2api` entry.
+- SHA256 `c18ed07592571a55e590955d6f5474b11f1bf8d8137586d5f20dbe84281d6a0d` exactly matched `checksums.txt`.
+
+### Notes
+- `progress.md`: records the release commit, tag, verification evidence, package checksum, and rollback point.
+- `.superpowers/`: remains untracked and excluded from the commit and release.
+- Rollback point: source rollback is `git revert f1fefc776db07ee5c7f0211e52b4dc8ab596f850`; release rollback is to remove the GitHub Release and push `git push origin :refs/tags/v0.1.166-fy.4`.
