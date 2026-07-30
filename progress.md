@@ -4388,3 +4388,66 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `.gitignore`: whitelists only the new account error alert document under the otherwise ignored `docs/` directory.
 - Rollback addendum: include `.gitignore` in the `git restore -- ...` command above so the document whitelist is reverted with the feature.
 - Final `git diff --check` completed after the progress entry and passed; only line-ending conversion warnings were reported.
+
+## 2026-07-30 - Task: Release account error email alerts
+
+### What was done
+- Published the account error email alert feature commit `9e503395f1` on `codex/leo-video-channel` and created annotated tag `v0.1.168-fy.4` without including the unrelated local OpenAI, account usage, or `.superpowers/` changes.
+- Confirmed the GitHub Release was generated as the latest release and points to commit `9e503395f1`.
+- Downloaded and verified the Linux amd64 release package and confirmed the archive contains the `sub2api` executable.
+
+### Testing
+- On a clean detached worktree containing only the staged feature patch, `go test ./internal/service -count=1` passed in `104.455s`.
+- On the same clean candidate, `pnpm.cmd test:run`, `pnpm.cmd typecheck`, `pnpm.cmd lint:check`, and `pnpm.cmd run build` all passed; the production build completed in `42.46s`.
+- `git diff --cached --check` passed before the feature commit.
+- Release package `sub2api_0.1.168-fy.4_linux_amd64.tar.gz` is `36,057,551` bytes with SHA256 `5e80991f2634b0dc6a147b38e2da49d164d5dc3bc25f5a9a59e553902bc3abf9`, exactly matching `checksums.txt`.
+- `tar -tzf` listed the expected `sub2api` executable.
+
+### Notes
+- `progress.md`: records the isolated release scope, clean-candidate verification, GitHub Release result, package checksum, and rollback point.
+- The published tag remains on feature commit `9e503395f1`; this release-record commit is intentionally branch-only.
+- Unrelated local OpenAI, account usage, and `.superpowers/` changes remain uncommitted and were excluded from the feature commit, tag, and release package.
+- Rollback point: run `git revert 9e503395f1`, publish the resulting rollback release, or redeploy `v0.1.168-fy.3` if an immediate binary rollback is required.
+
+## 2026-07-30 - Task: Rebuild OpenAI Codex reverse-proxy identity fingerprinting
+
+### What was done
+- Added a stable OpenAI OAuth device fingerprint domain that preserves official inbound installation identities, honors an operator-managed `openai_device_id`, and otherwise derives a deterministic account device without using tokens or proxy addresses.
+- Added controlled device generations through `openai_device_profile_id`; token refreshes and normal proxy rotation keep the same device, while an intentional profile-generation change rotates managed identifiers together.
+- Extended session, conversation, and prompt-cache isolation from downstream API Key only to upstream account plus downstream API Key, preventing identifiers from crossing scheduled accounts.
+- Applied the same device/session behavior to Responses HTTP, passthrough, Messages and Chat bridges, WebSocket v2 and ingress, alpha/search, Live, account tests, compact probes, and usage probes. OpenAI API-key upstream behavior remains unchanged.
+- Kept the existing OpenAI HTTP/2 transport and did not apply the Anthropic Node.js TLS profile to Codex, because that would contradict the declared `codex_cli_rs` application identity.
+
+### Testing
+- `go test ./internal/service -run 'Test(OpenAICodex|ApplyOpenAICodex|IsolateOpenAIAccountSessionID|EnsureCodexIdentityHeaders|EnforceCodexIdentityHeaders)' -count=1`: passed.
+- HTTP/WS/compatibility/compact/alpha regression group: passed (`27.460s`).
+- Live/account/probe/session regression group: passed (`2.441s`).
+- Session/prompt-cache/Codex identity/Chat Completions regression group: passed (`8.312s`).
+- `go test ./internal/service -count=1`: passed (`98.747s`).
+- `git diff --check`: passed before and after documentation/progress updates.
+
+### Notes
+- `.gitignore`: allows the Codex fingerprint document under the repository's ignored-by-default `docs/` directory.
+- `backend/internal/service/openai_codex_identity.go`: defines device resolution precedence, deterministic account/window mapping, and body/header synchronization.
+- `backend/internal/service/openai_codex_identity_test.go`: verifies official identity preservation, managed identity stability, token/proxy independence, account rotation, and body/header alignment.
+- `backend/internal/service/openai_gateway_service.go`: adds account-aware session and prompt-cache isolation while retaining the existing hash format.
+- `backend/internal/service/openai_gateway_service_session_isolation_test.go`: verifies account and downstream-tenant isolation.
+- `backend/internal/service/openai_gateway_forward.go`: applies the unified fingerprint at the final Responses HTTP outbound boundary.
+- `backend/internal/service/openai_gateway_passthrough.go`: applies the same body, session, installation, and window mapping to passthrough requests.
+- `backend/internal/service/openai_gateway_chat_completions.go`: uses the selected upstream account when deriving bridged session IDs.
+- `backend/internal/service/openai_gateway_messages.go`: uses the selected upstream account when deriving Messages bridge session IDs.
+- `backend/internal/service/openai_alpha_search.go`: adds account-aware sessions and stable synthetic device/window identity to alpha/search.
+- `backend/internal/service/openai_live.go`: gives Live calls stable account devices and per-call session/window lifetimes.
+- `backend/internal/service/openai_ws_forwarder_payload.go`: aligns OAuth WebSocket handshake sessions and device headers with HTTP forwarding.
+- `backend/internal/service/openai_ws_forwarder_v2.go`: maps WebSocket v2 prompt-cache and client metadata into the account device domain.
+- `backend/internal/service/openai_ws_forwarder_ingress.go`: applies the same mapping to each WebSocket ingress turn.
+- `backend/internal/service/account_test_service.go`: makes account and compact probes use the account's stable synthetic fingerprint.
+- `backend/internal/service/account_usage_service.go`: makes Codex usage probes use the account's stable synthetic fingerprint.
+- `backend/internal/service/openai_agent_identity_compat_test.go`: updates Agent Identity expectations for upstream-account isolation and mapped prompt-cache keys.
+- `backend/internal/service/openai_compat_model_test.go`: updates OAuth Messages continuation expectations for account-aware sessions.
+- `backend/internal/service/openai_ws_forwarder_ingress_session_test.go`: verifies account-aware ingress session headers.
+- `backend/internal/service/openai_ws_forwarder_success_test.go`: verifies account-aware OAuth WebSocket session headers.
+- `docs/OPENAI_CODEX_FINGERPRINT.md`: documents identity precedence, lifetimes, covered paths, transport boundaries, operation, and verification.
+- `progress.md`: records implementation, verification evidence, changed files, and rollback instructions.
+- No database schema, authentication credential format, proxy binding, or OpenAI TLS transport was changed.
+- Rollback point: `9e503395f1eed0fa0fb43fce6bd42563eb652b82`. Before commit, restore the listed source/test files plus `.gitignore` and `progress.md` with `git restore -- <paths>` and remove `docs/OPENAI_CODEX_FINGERPRINT.md`; after a dedicated commit, use `git revert <codex_fingerprint_commit>`.
