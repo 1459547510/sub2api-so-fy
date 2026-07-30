@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -220,8 +223,9 @@ type opsScheduledReport struct {
 }
 
 type opsScheduledReportContent struct {
-	html     string
-	overview *OpsDashboardOverview
+	html                     string
+	overview                 *OpsDashboardOverview
+	pendingAccountErrorState map[string]string
 }
 
 func (s *OpsScheduledReportService) listScheduledReports(ctx context.Context, now time.Time) []*opsScheduledReport {
@@ -254,6 +258,7 @@ func (s *OpsScheduledReportService) listScheduledReports(ctx context.Context, no
 		{enabled: emailCfg.Report.DailySummaryEnabled, name: "日报", kind: "daily_summary", timeRange: 24 * time.Hour, schedule: emailCfg.Report.DailySummarySchedule},
 		{enabled: emailCfg.Report.WeeklySummaryEnabled, name: "周报", kind: "weekly_summary", timeRange: 7 * 24 * time.Hour, schedule: emailCfg.Report.WeeklySummarySchedule},
 		{enabled: emailCfg.Report.ErrorDigestEnabled, name: "错误摘要", kind: "error_digest", timeRange: 24 * time.Hour, schedule: emailCfg.Report.ErrorDigestSchedule},
+		{enabled: emailCfg.Report.AccountErrorEnabled, name: "账号错误提醒", kind: "account_error", schedule: emailCfg.Report.AccountErrorSchedule},
 		{enabled: emailCfg.Report.AccountHealthEnabled, name: "账号健康", kind: "account_health", timeRange: 24 * time.Hour, schedule: emailCfg.Report.AccountHealthSchedule},
 	}
 
@@ -342,6 +347,7 @@ func (s *OpsScheduledReportService) runReport(ctx context.Context, report *opsSc
 	}
 
 	attempts := 0
+	delivered := 0
 	for _, to := range recipients {
 		addr := strings.TrimSpace(to)
 		if addr == "" {
@@ -367,6 +373,7 @@ func (s *OpsScheduledReportService) runReport(ctx context.Context, report *opsSc
 				Variables:        templateVariables,
 				RawHTMLVariables: rawHTMLVariables,
 			}); err == nil {
+				delivered++
 				continue
 			} else if !shouldFallbackNotificationEmail(err) {
 				continue
@@ -384,6 +391,12 @@ func (s *OpsScheduledReportService) runReport(ctx context.Context, report *opsSc
 		if err := s.emailService.SendEmail(ctx, addr, subject, content.html); err != nil {
 			// Ignore per-recipient failures; continue best-effort.
 			continue
+		}
+		delivered++
+	}
+	if content.pendingAccountErrorState != nil && delivered > 0 {
+		if err := s.saveAccountErrorReminderState(ctx, content.pendingAccountErrorState); err != nil {
+			return attempts, err
 		}
 	}
 	return attempts, nil
@@ -469,6 +482,11 @@ func opsScheduledReportLocalizedName(report *opsScheduledReport, locale string) 
 			return "账号健康"
 		}
 		return "Account health"
+	case "account_error":
+		if chinese {
+			return "账号错误提醒"
+		}
+		return "Account error alert"
 	default:
 		return strings.TrimSpace(report.Name)
 	}
@@ -559,14 +577,15 @@ func (s *OpsScheduledReportService) generateReportContent(ctx context.Context, r
 	if s == nil || s.opsService == nil || report == nil {
 		return opsScheduledReportContent{}, fmt.Errorf("service not initialized")
 	}
-	if report.TimeRange <= 0 {
+	reportType := strings.TrimSpace(report.ReportType)
+	if reportType != "account_error" && report.TimeRange <= 0 {
 		return opsScheduledReportContent{}, fmt.Errorf("invalid time range")
 	}
 
 	end := now.UTC()
 	start := end.Add(-report.TimeRange)
 
-	switch strings.TrimSpace(report.ReportType) {
+	switch reportType {
 	case "daily_summary", "weekly_summary":
 		overview, err := s.opsService.GetDashboardOverview(ctx, &OpsDashboardFilter{
 			StartTime: start,
@@ -620,9 +639,132 @@ func (s *OpsScheduledReportService) generateReportContent(ctx context.Context, r
 		}
 		_ = report.AccountHealthErrorRateThreshold // reserved for future per-account error rate report
 		return opsScheduledReportContent{html: buildOpsAccountHealthEmailHTML(report.Name, start, end, avail)}, nil
+	case "account_error":
+		avail, err := s.opsService.GetAccountAvailability(ctx, "", nil)
+		if err != nil {
+			return opsScheduledReportContent{}, err
+		}
+		previous, initialized, err := s.loadAccountErrorReminderState(ctx)
+		if err != nil {
+			return opsScheduledReportContent{}, err
+		}
+		current, newlyErrored := collectNewAccountErrors(avail, previous)
+		if !initialized || len(newlyErrored) == 0 {
+			if err := s.saveAccountErrorReminderState(ctx, current); err != nil {
+				return opsScheduledReportContent{}, err
+			}
+			return opsScheduledReportContent{}, nil
+		}
+		return opsScheduledReportContent{
+			html:                     buildOpsAccountErrorReminderEmailHTML(report.Name, now, newlyErrored),
+			pendingAccountErrorState: current,
+		}, nil
 	default:
 		return opsScheduledReportContent{}, fmt.Errorf("unknown report type: %s", report.ReportType)
 	}
+}
+
+type opsAccountErrorReminderState struct {
+	Accounts map[string]string `json:"accounts"`
+}
+
+func (s *OpsScheduledReportService) loadAccountErrorReminderState(ctx context.Context) (map[string]string, bool, error) {
+	if s == nil || s.opsService == nil || s.opsService.settingRepo == nil {
+		return nil, false, errors.New("setting repository not initialized")
+	}
+	raw, err := s.opsService.settingRepo.GetValue(ctx, SettingKeyOpsAccountErrorReminderState)
+	if err != nil {
+		if errors.Is(err, ErrSettingNotFound) {
+			return map[string]string{}, false, nil
+		}
+		return nil, false, err
+	}
+
+	state := opsAccountErrorReminderState{}
+	if err := json.Unmarshal([]byte(raw), &state); err != nil {
+		return nil, false, fmt.Errorf("decode account error reminder state: %w", err)
+	}
+	if state.Accounts == nil {
+		state.Accounts = map[string]string{}
+	}
+	return state.Accounts, true, nil
+}
+
+func (s *OpsScheduledReportService) saveAccountErrorReminderState(ctx context.Context, accounts map[string]string) error {
+	if s == nil || s.opsService == nil || s.opsService.settingRepo == nil {
+		return errors.New("setting repository not initialized")
+	}
+	if accounts == nil {
+		accounts = map[string]string{}
+	}
+	raw, err := json.Marshal(opsAccountErrorReminderState{Accounts: accounts})
+	if err != nil {
+		return err
+	}
+	return s.opsService.settingRepo.Set(ctx, SettingKeyOpsAccountErrorReminderState, string(raw))
+}
+
+func collectNewAccountErrors(avail *OpsAccountAvailability, previous map[string]string) (map[string]string, []*AccountAvailability) {
+	current := map[string]string{}
+	newlyErrored := make([]*AccountAvailability, 0)
+	if avail == nil {
+		return current, newlyErrored
+	}
+	for _, account := range avail.Accounts {
+		if account == nil || account.AccountID <= 0 || !account.HasError {
+			continue
+		}
+		id := strconv.FormatInt(account.AccountID, 10)
+		fingerprint := strings.TrimSpace(account.ErrorMessage)
+		current[id] = fingerprint
+		if old, exists := previous[id]; !exists || old != fingerprint {
+			newlyErrored = append(newlyErrored, account)
+		}
+	}
+	sort.Slice(newlyErrored, func(i, j int) bool {
+		return newlyErrored[i].AccountID < newlyErrored[j].AccountID
+	})
+	return current, newlyErrored
+}
+
+func buildOpsAccountErrorReminderEmailHTML(title string, detectedAt time.Time, accounts []*AccountAvailability) string {
+	rows := ""
+	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		groupName := strings.TrimSpace(account.GroupName)
+		if groupName == "" {
+			groupName = "-"
+		}
+		errorMessage := strings.TrimSpace(account.ErrorMessage)
+		if errorMessage == "" {
+			errorMessage = "Unknown error"
+		}
+		rows += fmt.Sprintf(
+			"<tr><td>%d</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
+			account.AccountID,
+			htmlEscape(account.AccountName),
+			htmlEscape(account.Platform),
+			htmlEscape(groupName),
+			htmlEscape(errorMessage),
+		)
+	}
+
+	return fmt.Sprintf(`
+<h2>%s</h2>
+<p><b>Detected At</b>: %s (UTC)</p>
+<p><b>New Errors</b>: %d</p>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;">
+  <thead><tr><th>ID</th><th>Account</th><th>Platform</th><th>Group</th><th>Error</th></tr></thead>
+  <tbody>%s</tbody>
+</table>
+`,
+		htmlEscape(strings.TrimSpace(title)),
+		htmlEscape(detectedAt.UTC().Format(time.RFC3339)),
+		len(accounts),
+		rows,
+	)
 }
 
 func buildOpsSummaryEmailHTML(title string, start, end time.Time, overview *OpsDashboardOverview) string {

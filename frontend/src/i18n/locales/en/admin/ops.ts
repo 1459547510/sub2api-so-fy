@@ -640,6 +640,7 @@ export default {
         weeklySummary: 'Weekly summary',
         errorDigest: 'Error digest',
         errorDigestMinCount: 'Min errors for digest',
+        accountError: 'New account error alert',
         accountHealth: 'Account health',
         accountHealthThreshold: 'Error rate threshold (%)',
         cronPlaceholder: 'Cron expression',

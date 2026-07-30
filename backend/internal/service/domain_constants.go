@@ -360,6 +360,8 @@ const (
 
 	// SettingKeyOpsEmailNotificationConfig stores JSON config for ops email notifications.
 	SettingKeyOpsEmailNotificationConfig = "ops_email_notification_config"
+	// SettingKeyOpsAccountErrorReminderState stores the last observed account error snapshot.
+	SettingKeyOpsAccountErrorReminderState = "ops_account_error_reminder_state"
 
 	// SettingKeyOpsAlertRuntimeSettings stores JSON config for ops alert evaluator runtime settings.
 	SettingKeyOpsAlertRuntimeSettings = "ops_alert_runtime_settings"

@@ -26,6 +26,8 @@ type OpsEmailReportConfig struct {
 	ErrorDigestEnabled              bool     `json:"error_digest_enabled"`
 	ErrorDigestSchedule             string   `json:"error_digest_schedule"`
 	ErrorDigestMinCount             int      `json:"error_digest_min_count"`
+	AccountErrorEnabled             bool     `json:"account_error_enabled"`
+	AccountErrorSchedule            string   `json:"account_error_schedule"`
 	AccountHealthEnabled            bool     `json:"account_health_enabled"`
 	AccountHealthSchedule           string   `json:"account_health_schedule"`
 	AccountHealthErrorRateThreshold float64  `json:"account_health_error_rate_threshold"`

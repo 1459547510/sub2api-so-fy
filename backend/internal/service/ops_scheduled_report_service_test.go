@@ -141,3 +141,128 @@ func TestFormatOpsReportIntegerGroupsDigits(t *testing.T) {
 	require.Equal(t, "-1,234", formatOpsReportInteger(-1234))
 	require.Equal(t, "42", formatOpsReportInteger(42))
 }
+
+func TestOpsAccountErrorReminderOnlySendsNewErrors(t *testing.T) {
+	ctx := context.Background()
+	repo := newNotificationEmailMemorySettingRepo()
+	smtpServer := startNotificationEmailTestSMTPServer(t)
+	require.NoError(t, repo.SetMultiple(ctx, smtpServer.settings()))
+
+	accounts := map[int64]*AccountAvailability{
+		1: {
+			AccountID:    1,
+			AccountName:  "existing-error",
+			Platform:     "openai",
+			HasError:     true,
+			ErrorMessage: "token expired",
+		},
+	}
+	opsService := &OpsService{
+		settingRepo: repo,
+		getAccountAvailability: func(context.Context, string, *int64) (*OpsAccountAvailability, error) {
+			return &OpsAccountAvailability{Accounts: accounts}, nil
+		},
+	}
+	emailService := NewEmailService(repo, nil)
+	NewNotificationEmailService(repo, emailService)
+	svc := &OpsScheduledReportService{opsService: opsService, emailService: emailService}
+	report := &opsScheduledReport{
+		Name:       "账号错误提醒",
+		ReportType: "account_error",
+		Schedule:   "*/5 * * * *",
+		Recipients: []string{"ops@example.com"},
+	}
+	now := time.Date(2026, time.July, 30, 2, 0, 0, 0, time.UTC)
+
+	_, err := svc.runReport(ctx, report, now)
+	require.NoError(t, err)
+	require.Equal(t, int64(0), smtpServer.messageCount(), "first scan only establishes the baseline")
+
+	accounts[2] = &AccountAvailability{
+		AccountID:    2,
+		AccountName:  "new-error",
+		Platform:     "anthropic",
+		GroupName:    "primary",
+		HasError:     true,
+		ErrorMessage: "unauthorized",
+	}
+	_, err = svc.runReport(ctx, report, now.Add(5*time.Minute))
+	require.NoError(t, err)
+	require.Equal(t, int64(1), smtpServer.messageCount())
+	require.Contains(t, smtpServer.lastMessage(), "new-error")
+	require.NotContains(t, smtpServer.lastMessage(), "existing-error")
+
+	_, err = svc.runReport(ctx, report, now.Add(10*time.Minute))
+	require.NoError(t, err)
+	require.Equal(t, int64(1), smtpServer.messageCount(), "unchanged errors must not be repeated")
+
+	accounts[2].ErrorMessage = "credentials revoked"
+	_, err = svc.runReport(ctx, report, now.Add(15*time.Minute))
+	require.NoError(t, err)
+	require.Equal(t, int64(2), smtpServer.messageCount(), "a changed error reason is a new error event")
+
+	delete(accounts, 2)
+	_, err = svc.runReport(ctx, report, now.Add(20*time.Minute))
+	require.NoError(t, err)
+	require.Equal(t, int64(2), smtpServer.messageCount())
+
+	accounts[2] = &AccountAvailability{
+		AccountID:    2,
+		AccountName:  "new-error",
+		Platform:     "anthropic",
+		HasError:     true,
+		ErrorMessage: "credentials revoked",
+	}
+	_, err = svc.runReport(ctx, report, now.Add(25*time.Minute))
+	require.NoError(t, err)
+	require.Equal(t, int64(3), smtpServer.messageCount(), "an error after recovery must be sent again")
+}
+
+func TestBuildOpsAccountErrorReminderEmailHTMLEscapesAccountData(t *testing.T) {
+	html := buildOpsAccountErrorReminderEmailHTML(
+		"Account errors",
+		time.Date(2026, time.July, 30, 2, 0, 0, 0, time.UTC),
+		[]*AccountAvailability{{
+			AccountID:    9,
+			AccountName:  `<script>alert("name")</script>`,
+			Platform:     "openai",
+			GroupName:    "primary",
+			ErrorMessage: `<img src=x onerror=alert(1)>`,
+		}},
+	)
+
+	require.NotContains(t, html, "<script>")
+	require.NotContains(t, html, "<img")
+	require.Contains(t, html, "&lt;script&gt;")
+	require.Contains(t, html, "&lt;img src=x onerror=alert(1)&gt;")
+}
+
+func TestDefaultOpsAccountErrorReminderSchedule(t *testing.T) {
+	cfg := defaultOpsEmailNotificationConfig()
+	require.False(t, cfg.Report.AccountErrorEnabled)
+	require.Equal(t, "*/5 * * * *", cfg.Report.AccountErrorSchedule)
+}
+
+func TestUpdateOpsEmailNotificationConfigPersistsAccountErrorReminder(t *testing.T) {
+	ctx := context.Background()
+	repo := newNotificationEmailMemorySettingRepo()
+	svc := &OpsService{settingRepo: repo}
+
+	updated, err := svc.UpdateEmailNotificationConfig(ctx, &OpsEmailNotificationConfigUpdateRequest{
+		Report: &OpsEmailReportConfig{
+			Enabled:              true,
+			Recipients:           []string{"ops@example.com"},
+			AccountErrorEnabled:  true,
+			AccountErrorSchedule: "*/10 * * * *",
+		},
+	})
+
+	require.NoError(t, err)
+	require.True(t, updated.Report.AccountErrorEnabled)
+	require.Equal(t, "*/10 * * * *", updated.Report.AccountErrorSchedule)
+
+	readBack, err := svc.GetEmailNotificationConfig(ctx)
+	require.NoError(t, err)
+	require.True(t, readBack.Report.AccountErrorEnabled)
+	require.Equal(t, "*/10 * * * *", readBack.Report.AccountErrorSchedule)
+}

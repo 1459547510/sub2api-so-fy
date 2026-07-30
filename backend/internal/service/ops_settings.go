@@ -87,6 +87,8 @@ func (s *OpsService) UpdateEmailNotificationConfig(ctx context.Context, req *Ops
 		cfg.Report.ErrorDigestEnabled = req.Report.ErrorDigestEnabled
 		cfg.Report.ErrorDigestSchedule = strings.TrimSpace(req.Report.ErrorDigestSchedule)
 		cfg.Report.ErrorDigestMinCount = req.Report.ErrorDigestMinCount
+		cfg.Report.AccountErrorEnabled = req.Report.AccountErrorEnabled
+		cfg.Report.AccountErrorSchedule = strings.TrimSpace(req.Report.AccountErrorSchedule)
 		cfg.Report.AccountHealthEnabled = req.Report.AccountHealthEnabled
 		cfg.Report.AccountHealthSchedule = strings.TrimSpace(req.Report.AccountHealthSchedule)
 		cfg.Report.AccountHealthErrorRateThreshold = req.Report.AccountHealthErrorRateThreshold
@@ -127,6 +129,8 @@ func defaultOpsEmailNotificationConfig() *OpsEmailNotificationConfig {
 			ErrorDigestEnabled:              false,
 			ErrorDigestSchedule:             "0 9 * * *",
 			ErrorDigestMinCount:             10,
+			AccountErrorEnabled:             false,
+			AccountErrorSchedule:            "*/5 * * * *",
 			AccountHealthEnabled:            false,
 			AccountHealthSchedule:           "0 9 * * *",
 			AccountHealthErrorRateThreshold: 10.0,
@@ -149,6 +153,7 @@ func normalizeOpsEmailNotificationConfig(cfg *OpsEmailNotificationConfig) {
 	cfg.Report.DailySummarySchedule = strings.TrimSpace(cfg.Report.DailySummarySchedule)
 	cfg.Report.WeeklySummarySchedule = strings.TrimSpace(cfg.Report.WeeklySummarySchedule)
 	cfg.Report.ErrorDigestSchedule = strings.TrimSpace(cfg.Report.ErrorDigestSchedule)
+	cfg.Report.AccountErrorSchedule = strings.TrimSpace(cfg.Report.AccountErrorSchedule)
 	cfg.Report.AccountHealthSchedule = strings.TrimSpace(cfg.Report.AccountHealthSchedule)
 
 	// Fill missing schedules with defaults to avoid breaking cron logic if clients send empty strings.
@@ -160,6 +165,9 @@ func normalizeOpsEmailNotificationConfig(cfg *OpsEmailNotificationConfig) {
 	}
 	if cfg.Report.ErrorDigestSchedule == "" {
 		cfg.Report.ErrorDigestSchedule = "0 9 * * *"
+	}
+	if cfg.Report.AccountErrorSchedule == "" {
+		cfg.Report.AccountErrorSchedule = "*/5 * * * *"
 	}
 	if cfg.Report.AccountHealthSchedule == "" {
 		cfg.Report.AccountHealthSchedule = "0 9 * * *"

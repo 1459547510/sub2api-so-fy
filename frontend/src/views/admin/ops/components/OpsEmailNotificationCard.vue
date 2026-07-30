@@ -127,6 +127,13 @@ const editorValidation = computed(() => {
     draft.value.report.error_digest_schedule
   )
   if (digestErr) errors.push(digestErr)
+
+  const accountErrorErr = validateCronField(
+    draft.value.report.account_error_enabled,
+    draft.value.report.account_error_schedule
+  )
+  if (accountErrorErr) errors.push(accountErrorErr)
+
   const accErr = validateCronField(
     draft.value.report.account_health_enabled,
     draft.value.report.account_health_schedule
@@ -409,6 +416,15 @@ onMounted(() => {
               <div>
                 <div class="mb-1 text-xs font-medium text-gray-600 dark:text-gray-300">{{ t('admin.ops.email.errorDigestMinCount') }}</div>
                 <input v-model.number="draft.report.error_digest_min_count" type="number" min="0" max="1000000" class="input" />
+              </div>
+              <div>
+                <div class="mb-1 text-xs font-medium text-gray-600 dark:text-gray-300">{{ t('admin.ops.email.accountError') }}</div>
+                <div class="flex items-center gap-2">
+                  <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input v-model="draft.report.account_error_enabled" type="checkbox" class="h-4 w-4 rounded border-gray-300" />
+                  </label>
+                  <input v-model="draft.report.account_error_schedule" type="text" class="input" :placeholder="t('admin.ops.email.cronPlaceholder')" />
+                </div>
               </div>
               <div>
                 <div class="mb-1 text-xs font-medium text-gray-600 dark:text-gray-300">{{ t('admin.ops.email.accountHealth') }}</div>

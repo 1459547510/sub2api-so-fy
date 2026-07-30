@@ -640,6 +640,7 @@ export default {
         weeklySummary: '每周摘要',
         errorDigest: '错误摘要',
         errorDigestMinCount: '错误摘要最小数量',
+        accountError: '新增账号错误提醒',
         accountHealth: '账号健康报告',
         accountHealthThreshold: '错误率阈值（%）',
         cronPlaceholder: 'Cron 表达式',

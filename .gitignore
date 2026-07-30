@@ -143,6 +143,7 @@ docs/*
 !docs/LEO_VIDEO_MODEL_SPECS.md
 !docs/CYBER_POLICY_REVOCATION_BAN.md
 !docs/CONTENT_MODERATION.md
+!docs/ACCOUNT_ERROR_EMAIL_ALERTS.md
 !docs/legal/
 !docs/legal/*.md
 .serena/

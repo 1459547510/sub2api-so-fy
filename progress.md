@@ -4356,3 +4356,35 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the release, production configuration changes, verification evidence, and rollback procedure.
 - `.superpowers/` remains untracked and excluded from the release and follow-up commit.
 - Production rollback: while `0.1.168-fy.3` is running, rename account `1682` mapping keys and channel `5` pricing model IDs back to `ltxv-2.3-fast/pro`, restore those names in announcement `21`, then call `POST /api/v1/admin/system/rollback` with `{"version":"0.1.168-fy.2"}` and restart the service. Source rollback is `git revert fda87c078` followed by a new release.
+
+## 2026-07-30 - Task: Add scheduled email alerts for new account errors
+
+### What was done
+- Added a configurable scheduled scan that sends an Ops email only when an account newly enters the error state or its error reason changes.
+- Persisted the current error baseline so unchanged errors are not repeated across scans or service restarts; the first scan establishes the baseline without sending historical errors.
+- Added the admin switch and Cron schedule field, defaulting to disabled with a five-minute schedule, and documented configuration and detection behavior.
+
+### Testing
+- `go test ./internal/service -count=1` passed (`98.533s`).
+- Targeted account error reminder, HTML escaping, default schedule, and config persistence tests passed.
+- `frontend/node_modules/.bin/vue-tsc.CMD --noEmit` passed.
+- ESLint passed for the changed Ops API, notification card, and English/Chinese locale files.
+- Vitest locale compilation and key-collision suites passed: 2 files, 8 tests.
+- `git diff --check` passed before the progress entry was appended; a final diff check is required after this entry.
+
+### Notes
+- `backend/internal/service/domain_constants.go`: adds the internal settings key for the persisted account error baseline.
+- `backend/internal/service/ops_settings_models.go`: adds account error alert enablement and schedule fields to the Ops email report config.
+- `backend/internal/service/ops_settings.go`: saves, normalizes, and defaults the new alert configuration.
+- `backend/internal/service/ops_scheduled_report_service.go`: schedules scans, detects new errors, sends detail emails, and persists the baseline after delivery.
+- `backend/internal/service/ops_scheduled_report_service_test.go`: verifies baseline, deduplication, changed reasons, recovery, escaping, defaults, and config persistence.
+- `frontend/src/api/admin/ops.ts`: exposes the new report configuration fields to the admin client.
+- `frontend/src/views/admin/ops/components/OpsEmailNotificationCard.vue`: adds validation and controls for the new alert schedule.
+- `frontend/src/i18n/locales/zh/admin/ops.ts`: adds the Chinese field label.
+- `frontend/src/i18n/locales/en/admin/ops.ts`: adds the English field label.
+- `docs/ACCOUNT_ERROR_EMAIL_ALERTS.md`: documents setup, defaults, detection semantics, and retry behavior.
+- `progress.md`: records implementation, verification evidence, changed files, and rollback instructions.
+- Before commit, roll back this task with `git restore -- backend/internal/service/domain_constants.go backend/internal/service/ops_settings_models.go backend/internal/service/ops_settings.go backend/internal/service/ops_scheduled_report_service.go backend/internal/service/ops_scheduled_report_service_test.go frontend/src/api/admin/ops.ts frontend/src/views/admin/ops/components/OpsEmailNotificationCard.vue frontend/src/i18n/locales/zh/admin/ops.ts frontend/src/i18n/locales/en/admin/ops.ts progress.md` and `Remove-Item -LiteralPath docs/ACCOUNT_ERROR_EMAIL_ALERTS.md`; after commit, use `git revert <account_error_email_alert_commit>`.
+- `.gitignore`: whitelists only the new account error alert document under the otherwise ignored `docs/` directory.
+- Rollback addendum: include `.gitignore` in the `git restore -- ...` command above so the document whitelist is reverted with the feature.
+- Final `git diff --check` completed after the progress entry and passed; only line-ending conversion warnings were reported.

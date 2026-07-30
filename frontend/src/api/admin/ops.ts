@@ -744,6 +744,8 @@ export interface EmailNotificationConfig {
     error_digest_enabled: boolean
     error_digest_schedule: string
     error_digest_min_count: number
+    account_error_enabled: boolean
+    account_error_schedule: string
     account_health_enabled: boolean
     account_health_schedule: string
     account_health_error_rate_threshold: number
