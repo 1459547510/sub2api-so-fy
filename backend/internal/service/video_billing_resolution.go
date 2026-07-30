@@ -3,8 +3,11 @@ package service
 import "strings"
 
 const (
+	VideoBillingResolution400P  = "400p"
 	VideoBillingResolution480P  = "480p"
+	VideoBillingResolution544P  = "544p"
 	VideoBillingResolution720P  = "720p"
+	VideoBillingResolution960P  = "960p"
 	VideoBillingResolution1080P = "1080p"
 	VideoBillingResolution1440P = "1440p"
 	VideoBillingResolution2160P = "2160p"
@@ -23,6 +26,17 @@ func LeoVideoPricingResolutions(model string) []string {
 	model = strings.ToLower(strings.TrimSpace(model))
 	if model == "seedance-2.0-mini" {
 		return []string{VideoBillingResolution720P}
+	}
+	if model == "happy-horse-1.1" {
+		return []string{VideoBillingResolution720P, VideoBillingResolution1080P}
+	}
+	if model == "grok-imagine-1.5" {
+		return []string{
+			VideoBillingResolution400P,
+			VideoBillingResolution544P,
+			VideoBillingResolution720P,
+			VideoBillingResolution960P,
+		}
 	}
 	if isLeoLTX23Model(model) {
 		return []string{
@@ -100,11 +114,37 @@ func NormalizeVideoBillingResolutionOrDefault(resolution string) string {
 }
 
 func NormalizeLeoVideoBillingResolutionOrDefault(model, resolution string) string {
+	model = normalizeLeoVideoModelID(model)
+	resolution = strings.ToLower(strings.TrimSpace(resolution))
+	switch model {
+	case "happy-horse-1.1":
+		switch resolution {
+		case "720", "720p", "hd", "resolution_720":
+			return VideoBillingResolution720P
+		case "1080", "1080p", "full_hd", "full-hd", "fhd", "resolution_1080":
+			return VideoBillingResolution1080P
+		default:
+			return VideoBillingResolution1080P
+		}
+	case "grok-imagine-1.5":
+		switch resolution {
+		case "400", "400p", "resolution_400":
+			return VideoBillingResolution400P
+		case "544", "544p", "resolution_544":
+			return VideoBillingResolution544P
+		case "720", "720p", "hd", "resolution_720":
+			return VideoBillingResolution720P
+		case "960", "960p", "resolution_960":
+			return VideoBillingResolution960P
+		default:
+			return VideoBillingResolution720P
+		}
+	}
 	if !isLeoLTX23Model(model) {
 		return NormalizeVideoBillingResolutionOrDefault(resolution)
 	}
 
-	switch strings.ToLower(strings.TrimSpace(resolution)) {
+	switch resolution {
 	case "1080", "1080p", "full_hd", "full-hd", "fhd", "resolution_1080":
 		return VideoBillingResolution1080P
 	case "1440", "1440p", "resolution_1440":

@@ -1021,6 +1021,20 @@ func TestCalculateLTXFastVideoCostAllowsTwentySeconds(t *testing.T) {
 	require.InDelta(t, 4.8, cost.TotalCost, 1e-10)
 }
 
+func TestCalculateLeoVideoCostUsesNativeHappyHorseAndGrokPrices(t *testing.T) {
+	svc := newTestBillingService()
+	price400P, price544P := 0.10, 0.10
+	price720P, price960P, price1080P := 0.17, 0.17, 0.19
+	config := &VideoPriceConfig{
+		Price400P: &price400P, Price544P: &price544P, Price720P: &price720P,
+		Price960P: &price960P, Price1080P: &price1080P,
+	}
+
+	require.InDelta(t, 0.17*6, svc.CalculateVideoCost("grok-imagine-1.5", "960p", 1, 6, config, 1).TotalCost, 1e-10)
+	require.InDelta(t, 0.10*6, svc.CalculateVideoCost("grok-imagine-1.5", "544p", 1, 6, config, 1).TotalCost, 1e-10)
+	require.InDelta(t, 0.19*5, svc.CalculateVideoCost("happy-horse-1.1", "1080p", 1, 5, config, 1).TotalCost, 1e-10)
+}
+
 func TestCalculateGrokImagineImageCostUsesDefaultRateCard(t *testing.T) {
 	svc := newTestBillingService()
 

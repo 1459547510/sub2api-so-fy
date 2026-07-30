@@ -135,7 +135,7 @@ func TestVideoJobBillingPrepareUsesChannelVideoPricingByBillingModelSource(t *te
 
 			var snapshot VideoJobBillingSnapshot
 			require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
-			require.Equal(t, 3, snapshot.Version)
+			require.Equal(t, 4, snapshot.Version)
 			require.Equal(t, int64(77), snapshot.ChannelID)
 			require.Equal(t, tt.wantBillingModel, snapshot.BillingModel)
 			require.Equal(t, tt.billingModelSource, snapshot.BillingModelSource)
@@ -215,6 +215,37 @@ func TestVideoJobBillingPrepareLTXUsesNativeResolutionPrice(t *testing.T) {
 	require.InDelta(t, 0.24, snapshot.Price2160P, 1e-12)
 }
 
+func TestVideoJobBillingPrepareGrokUsesNativeResolutionPrice(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{}
+	gateway, pricing := newNativeVideoJobChannelPricingServices(t, "grok-imagine-1.5", []PricingInterval{
+		{TierLabel: "400p", PerRequestPrice: f64p(0.10)},
+		{TierLabel: "544p", PerRequestPrice: f64p(0.10)},
+		{TierLabel: "720p", PerRequestPrice: f64p(0.17)},
+		{TierLabel: "960p", PerRequestPrice: f64p(0.17)},
+	})
+	service := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
+	groupID := int64(100)
+	job := &VideoJob{
+		JobID: "vidjob_grok_prepare", UserID: 1, APIKeyID: 2, GroupID: groupID,
+		RequestedModel: "grok-imagine-1.5", UpstreamModel: "grok-imagine-1.5",
+		Resolution: "544p", DurationSeconds: 6,
+	}
+
+	require.NoError(t, service.Prepare(context.Background(), job, newVideoJobBillingAPIKey(groupID), &User{ID: 1}, nil))
+	require.NotNil(t, job.HoldAmount)
+	require.InDelta(t, 0.60, *job.HoldAmount, 1e-12)
+
+	var snapshot VideoJobBillingSnapshot
+	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
+	require.Equal(t, 4, snapshot.Version)
+	require.InDelta(t, 0.10, snapshot.Price400P, 1e-12)
+	require.InDelta(t, 0.10, snapshot.Price544P, 1e-12)
+	require.InDelta(t, 0.17, snapshot.Price720P, 1e-12)
+	require.InDelta(t, 0.17, snapshot.Price960P, 1e-12)
+	require.Zero(t, snapshot.Price480P)
+	require.Zero(t, snapshot.Price1080P)
+}
+
 func TestVideoJobSettlementIsIdempotent(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	recorder := &fakeVideoUsageRecorder{}
@@ -281,6 +312,43 @@ func TestVideoJobSettlementLTXUsesNativeResolutionPrice(t *testing.T) {
 	require.Len(t, recorder.inputs, 1)
 	require.InDelta(t, 4.8, recorder.inputs[0].CostOverride.ActualCost, 1e-12)
 	require.Len(t, balance.releases, 1)
+}
+
+func TestVideoJobSettlementGrokUsesNativeResolutionPrice(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{}
+	recorder := &fakeVideoUsageRecorder{}
+	snapshot, err := json.Marshal(VideoJobBillingSnapshot{
+		Version: 4, BillingType: BillingTypeBalance,
+		Price400P: 0.10, Price544P: 0.10, Price720P: 0.17, Price960P: 0.17, RateMultiplier: 1,
+		BillingModel: "grok-imagine-1.5",
+	})
+	require.NoError(t, err)
+	job := &VideoJob{
+		JobID: "vidjob_grok_settle", UserID: 1, APIKeyID: 2, GroupID: 3, AccountID: 9,
+		RequestedModel: "grok-imagine-1.5", UpstreamModel: "grok-imagine-1.5", Resolution: "720p",
+		DurationSeconds: 6, BillingSnapshot: snapshot, HoldAmount: f64p(1.02), RequestHash: "request-hash",
+	}
+	service := &VideoJobBillingService{
+		BillingRepo: balance, UsageRecorder: recorder,
+		APIKeyService: fakeVideoAPIKeyQuotaUpdater{},
+		APIKeys:       fakeVideoBillingAPIKeyLoader{apiKey: &APIKey{ID: 2}},
+		Users:         fakeVideoBillingUserLoader{user: &User{ID: 1}},
+		Accounts:      fakeVideoBillingAccountLoader{account: &Account{ID: 9, Type: AccountTypeAPIKey}},
+	}
+
+	result := json.RawMessage(`{"data":[{"url":"https://cdn.example/video.mp4"}],"provider":{"resolution":"960p","duration":10}}`)
+	require.NoError(t, service.SettleCompleted(context.Background(), job, result))
+	require.Len(t, recorder.inputs, 1)
+	require.InDelta(t, 1.70, recorder.inputs[0].CostOverride.ActualCost, 1e-12)
+}
+
+func TestVideoJobBillingSnapshotV3GrokKeepsCompatibilityPrices(t *testing.T) {
+	snapshot := VideoJobBillingSnapshot{
+		Version: 3, Price480P: 0.10, Price720P: 0.17, Price1080P: 0.17, RateMultiplier: 1,
+	}
+
+	require.InDelta(t, 0.60, snapshot.Cost("grok-imagine-1.5", "544p", 6, 1).ActualCost, 1e-12)
+	require.InDelta(t, 1.02, snapshot.Cost("grok-imagine-1.5", "960p", 6, 1).ActualCost, 1e-12)
 }
 
 func TestVideoJobBillingSnapshotV2LTXUses1080PCompatibilityPrice(t *testing.T) {
@@ -405,6 +473,29 @@ func newLTXVideoJobChannelPricingServices(
 					{TierLabel: "1440p", PerRequestPrice: f64p(price1440P)},
 					{TierLabel: "2160p", PerRequestPrice: f64p(price2160P)},
 				},
+			}},
+		}},
+		groupPlatforms: map[int64]string{groupID: PlatformLeo},
+	}
+	channelService := NewChannelService(repo, nil, nil, nil)
+	resolver := NewModelPricingResolver(channelService, &BillingService{fallbackPrices: map[string]*ModelPricing{}})
+	return &OpenAIGatewayService{channelService: channelService}, resolver
+}
+
+func newNativeVideoJobChannelPricingServices(
+	t *testing.T,
+	model string,
+	intervals []PricingInterval,
+) (*OpenAIGatewayService, *ModelPricingResolver) {
+	t.Helper()
+	const groupID int64 = 100
+	repo := &fakeVideoBillingChannelRepository{
+		channels: []Channel{{
+			ID: 77, Name: "leo-video", Status: StatusActive, GroupIDs: []int64{groupID},
+			BillingModelSource: BillingModelSourceRequested,
+			ModelPricing: []ChannelModelPricing{{
+				Platform: PlatformLeo, Models: []string{model}, BillingMode: BillingModeVideo,
+				Intervals: intervals,
 			}},
 		}},
 		groupPlatforms: map[int64]string{groupID: PlatformLeo},

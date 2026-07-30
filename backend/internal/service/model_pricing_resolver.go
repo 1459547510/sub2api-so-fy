@@ -317,13 +317,16 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 		return nil, false
 	}
 
-	var price480P, price720P, price1080P, price1440P, price2160P float64
+	var price400P, price480P, price544P, price720P, price960P, price1080P, price1440P, price2160P float64
 	model := ""
 	if resolved.channelPricing != nil && len(resolved.channelPricing.Models) == 1 {
 		model = resolved.channelPricing.Models[0]
 	}
 	requiredResolutions := LeoVideoPricingResolutions(model)
 	if len(resolved.RequestTiers) != len(requiredResolutions) {
+		if config, ok := legacyLeoVideoPriceConfig(resolved, model); ok {
+			return config, true
+		}
 		return nil, false
 	}
 	seen := make(map[string]bool, len(requiredResolutions))
@@ -333,10 +336,16 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 			return nil, false
 		}
 		switch label {
+		case VideoBillingResolution400P:
+			price400P = *tier.PerRequestPrice
 		case VideoBillingResolution480P:
 			price480P = *tier.PerRequestPrice
+		case VideoBillingResolution544P:
+			price544P = *tier.PerRequestPrice
 		case VideoBillingResolution720P:
 			price720P = *tier.PerRequestPrice
+		case VideoBillingResolution960P:
+			price960P = *tier.PerRequestPrice
 		case VideoBillingResolution1080P:
 			price1080P = *tier.PerRequestPrice
 		case VideoBillingResolution1440P:
@@ -354,11 +363,20 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 		}
 	}
 	config := &VideoPriceConfig{}
+	if seen[VideoBillingResolution400P] {
+		config.Price400P = &price400P
+	}
 	if seen[VideoBillingResolution480P] {
 		config.Price480P = &price480P
 	}
+	if seen[VideoBillingResolution544P] {
+		config.Price544P = &price544P
+	}
 	if seen[VideoBillingResolution720P] {
 		config.Price720P = &price720P
+	}
+	if seen[VideoBillingResolution960P] {
+		config.Price960P = &price960P
 	}
 	if seen[VideoBillingResolution1080P] {
 		config.Price1080P = &price1080P
@@ -370,4 +388,34 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 		config.Price2160P = &price2160P
 	}
 	return config, true
+}
+
+func legacyLeoVideoPriceConfig(resolved *ResolvedPricing, model string) (*VideoPriceConfig, bool) {
+	model = strings.ToLower(strings.TrimSpace(model))
+	if model != "happy-horse-1.1" && model != "grok-imagine-1.5" {
+		return nil, false
+	}
+	prices := make(map[string]*float64, len(resolved.RequestTiers))
+	for _, tier := range resolved.RequestTiers {
+		label := strings.ToLower(strings.TrimSpace(tier.TierLabel))
+		if prices[label] != nil || tier.PerRequestPrice == nil || *tier.PerRequestPrice < 0 {
+			return nil, false
+		}
+		prices[label] = tier.PerRequestPrice
+	}
+	if len(prices) != 3 || prices[VideoBillingResolution480P] == nil || prices[VideoBillingResolution720P] == nil || prices[VideoBillingResolution1080P] == nil {
+		return nil, false
+	}
+	if model == "happy-horse-1.1" {
+		return &VideoPriceConfig{
+			Price720P:  prices[VideoBillingResolution720P],
+			Price1080P: prices[VideoBillingResolution1080P],
+		}, true
+	}
+	return &VideoPriceConfig{
+		Price400P: prices[VideoBillingResolution480P],
+		Price544P: prices[VideoBillingResolution480P],
+		Price720P: prices[VideoBillingResolution720P],
+		Price960P: prices[VideoBillingResolution1080P],
+	}, true
 }

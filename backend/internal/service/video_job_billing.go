@@ -31,8 +31,11 @@ type VideoJobBillingSnapshot struct {
 	Version            int     `json:"version"`
 	BillingType        int8    `json:"billing_type"`
 	SubscriptionID     *int64  `json:"subscription_id,omitempty"`
+	Price400P          float64 `json:"price_400p,omitempty"`
 	Price480P          float64 `json:"price_480p"`
+	Price544P          float64 `json:"price_544p,omitempty"`
 	Price720P          float64 `json:"price_720p"`
+	Price960P          float64 `json:"price_960p,omitempty"`
 	Price1080P         float64 `json:"price_1080p"`
 	Price1440P         float64 `json:"price_1440p,omitempty"`
 	Price2160P         float64 `json:"price_2160p,omitempty"`
@@ -50,13 +53,19 @@ func (s VideoJobBillingSnapshot) Cost(durationModel, resolution string, duration
 	}
 	durationSeconds = NormalizeLeoVideoBillingDurationSecondsOrDefault(durationModel, durationSeconds)
 	billingResolution := NormalizeVideoBillingResolutionOrDefault(resolution)
-	if s.Version >= 3 {
+	if s.Version >= 4 || (s.Version >= 3 && isLeoLTX23Model(durationModel)) {
 		billingResolution = NormalizeLeoVideoBillingResolutionOrDefault(durationModel, resolution)
 	}
 	var unitPrice float64
 	switch billingResolution {
+	case VideoBillingResolution400P:
+		unitPrice = s.Price400P
+	case VideoBillingResolution544P:
+		unitPrice = s.Price544P
 	case VideoBillingResolution720P:
 		unitPrice = s.Price720P
+	case VideoBillingResolution960P:
+		unitPrice = s.Price960P
 	case VideoBillingResolution1080P:
 		unitPrice = s.Price1080P
 	case VideoBillingResolution1440P:
@@ -121,24 +130,34 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 	}
 	billingModel := resolveVideoJobBillingModel(mapping.BillingModelSource, job.RequestedModel, channelMappedModel, job.UpstreamModel)
 	price480P, price720P, price1080P := group.VideoPrice480P, group.VideoPrice720P, group.VideoPrice1080P
-	var price1440P, price2160P *float64
+	var price400P, price544P, price960P, price1440P, price2160P *float64
 	pricingSource := "group"
 	if s != nil && s.Pricing != nil {
 		resolved := s.Pricing.Resolve(ctx, PricingInput{Model: billingModel, GroupID: &group.ID})
 		if channelPrices, ok := VideoPriceConfigFromResolvedPricing(resolved); ok {
 			price480P, price720P, price1080P = channelPrices.Price480P, channelPrices.Price720P, channelPrices.Price1080P
+			price400P, price544P, price960P = channelPrices.Price400P, channelPrices.Price544P, channelPrices.Price960P
 			price1440P, price2160P = channelPrices.Price1440P, channelPrices.Price2160P
 			pricingSource = resolved.Source
 		}
 	}
-	if !videoPricingIsCompleteForModel(billingModel, price480P, price720P, price1080P, price1440P, price2160P) {
+	if !videoPricingIsCompleteForModel(billingModel, price400P, price480P, price544P, price720P, price960P, price1080P, price1440P, price2160P) {
 		return errors.New("video pricing is incomplete")
+	}
+	if price400P == nil {
+		price400P = float64Pointer(0)
 	}
 	if price480P == nil {
 		price480P = float64Pointer(0)
 	}
+	if price544P == nil {
+		price544P = float64Pointer(0)
+	}
 	if price720P == nil {
 		price720P = float64Pointer(0)
+	}
+	if price960P == nil {
+		price960P = float64Pointer(0)
 	}
 	if price1080P == nil {
 		price1080P = float64Pointer(0)
@@ -150,8 +169,10 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 		price2160P = float64Pointer(0)
 	}
 	snapshot := VideoJobBillingSnapshot{
-		Version: 3, BillingType: BillingTypeBalance,
+		Version: 4, BillingType: BillingTypeBalance,
+		Price400P: *price400P,
 		Price480P: *price480P, Price720P: *price720P, Price1080P: *price1080P,
+		Price544P: *price544P, Price960P: *price960P,
 		Price1440P: *price1440P, Price2160P: *price2160P,
 		RateMultiplier: resolveVideoRateMultiplier(apiKey, baseMultiplier), ChannelID: mapping.ChannelID,
 		BillingModel: billingModel, BillingModelSource: mapping.BillingModelSource,
@@ -182,15 +203,27 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 	return err
 }
 
-func videoPricingIsCompleteForModel(model string, price480P, price720P, price1080P, price1440P, price2160P *float64) bool {
+func videoPricingIsCompleteForModel(model string, price400P, price480P, price544P, price720P, price960P, price1080P, price1440P, price2160P *float64) bool {
 	for _, resolution := range LeoVideoPricingResolutions(model) {
 		switch resolution {
+		case VideoBillingResolution400P:
+			if price400P == nil {
+				return false
+			}
 		case VideoBillingResolution480P:
 			if price480P == nil {
 				return false
 			}
+		case VideoBillingResolution544P:
+			if price544P == nil {
+				return false
+			}
 		case VideoBillingResolution720P:
 			if price720P == nil {
+				return false
+			}
+		case VideoBillingResolution960P:
+			if price960P == nil {
 				return false
 			}
 		case VideoBillingResolution1080P:

@@ -139,6 +139,23 @@ describe('video pricing', () => {
     expect(validateVideoPricing(entry, t)).toBeNull()
   })
 
+  it('creates Happy Horse pricing with only native 720p and 1080p tiers', () => {
+    const entry = createPricingFormEntry(['happy-horse-1.1'], 'video')
+    expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['720p', '1080p'])
+    entry.intervals[0].per_request_price = 0.15
+    entry.intervals[1].per_request_price = 0.19
+    expect(validateVideoPricing(entry, t)).toBeNull()
+  })
+
+  it('creates Grok pricing with only native 400p, 544p, 720p, and 960p tiers', () => {
+    const entry = createPricingFormEntry(['grok-imagine-1.5'], 'video')
+    expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['400p', '544p', '720p', '960p'])
+    entry.intervals.forEach((interval, index) => {
+      interval.per_request_price = [0.10, 0.10, 0.17, 0.17][index]
+    })
+    expect(validateVideoPricing(entry, t)).toBeNull()
+  })
+
   it('creates LTX pricing entries with native 1080p, 1440p, and 2160p tiers', () => {
     for (const model of ['ltx-2.3-pro', 'ltx-2.3-fast']) {
       const entry = createPricingFormEntry([model], 'video')

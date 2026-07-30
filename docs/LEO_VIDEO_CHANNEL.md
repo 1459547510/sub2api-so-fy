@@ -41,7 +41,7 @@ Sub2API 的连接测试会请求去掉 `/v1` 后的 `/health`；视频生成会�
 2. 开启“允许当前分组生成视频”。
 3. 在分组中填写 480p、720p、1080p 三档 USD/秒回退价格。Leo 分组三档都必填，`0` 表示免费。
 4. 在“渠道管理”中创建或编辑关联该分组的渠道，并进入 `Leo` 平台的模型定价。
-5. 为已经配置计费的模型分别添加“视频（按秒）”定价。当前定价编辑器仍只有 480p、720p、1080p 三档，因此不要把 `happy-horse-1.1` 或 `grok-imagine-1.5` 加入旧的三档定价目录，除非计费结构同时扩展到 400p、544p、960p。每条只能绑定一个精确模型，不能使用通配符；不要配置在账号统计定价规则中。
+5. 为已经配置计费的模型分别添加“视频（按秒）”定价。定价编辑器会按模型显示实际支持的分辨率：`happy-horse-1.1` 仅显示 720p、1080p，`grok-imagine-1.5` 仅显示 400p、544p、720p、960p，LTX 2.3 仅显示 1080p、1440p、2160p，Seedance 显示各自支持的档位。每条只能绑定一个精确模型，不能使用通配符；不要配置在账号统计定价规则中。
 6. 创建平台为 `Leo`、类型为 `API Key` 的账号。
 7. 填写 LeoStudio `/v1` Base URL、Bearer API Key、代理和并发。
 8. 保留或调整默认模型映射：
@@ -230,20 +230,12 @@ reject image, video, and audio references. Existing Leo accounts must add both
 exact model mappings before these models can be scheduled; newly created
 accounts include them by default.
 
-Channel model pricing entries continue to use the existing 480p/720p/1080p
-tiers for the Seedance models. Happy Horse and Grok are exposed in the
-workbench/API and use the compatibility mapping below until billing tiers for
-400p, 544p, and 960p are represented as first-class labels.
+Channel model pricing entries use each model's native resolution tiers:
 
-For the current rightmost retail-price table, the compatible channel tiers are:
-
-- Happy Horse: `480p = 0.15`, `720p = 0.15`, `1080p = 0.19` USD/s. The model
-  exposes only 720p and 1080p; the 480p value is a required compatibility tier
-  and is not selectable by the model.
-- Grok Imagine 1.5: `480p = 0.10`, `720p = 0.17`, `1080p = 0.17` USD/s.
-  The billing normalizer maps both 400p and 544p to the 480p tier, and maps
-  960p to the 1080p tier, so the table's 400p/544p and 720p/960p price pairs
-  remain aligned with the legacy three-tier snapshot.
+- Happy Horse: `720p = 0.15` and `1080p = 0.19` USD/s.
+- Grok Imagine 1.5: `400p = 0.10`, `544p = 0.10`, `720p = 0.17`, and
+  `960p = 0.17` USD/s.
+- Seedance models retain their model-specific `480p`/`720p`/`1080p` subset.
 - LTX 2.3 Pro/Fast: configure independent `1080p`, `1440p`, and `2160p`
   channel prices. Reserve and settlement use the exact request/result tier;
   LTX pricing does not fall back to the group's legacy 480p/720p/1080p table.

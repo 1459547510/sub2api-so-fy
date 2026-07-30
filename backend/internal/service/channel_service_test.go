@@ -2451,6 +2451,58 @@ func TestValidatePricingBillingMode(t *testing.T) {
 			}},
 		},
 		{
+			name: "video Happy Horse native resolution tiers - valid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"happy-horse-1.1"},
+				Intervals: []PricingInterval{
+					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.15)},
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.19)},
+				},
+			}},
+		},
+		{
+			name: "video Grok native resolution tiers - valid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"grok-imagine-1.5"},
+				Intervals: []PricingInterval{
+					{TierLabel: "400p", PerRequestPrice: testPtrFloat64(0.10)},
+					{TierLabel: "544p", PerRequestPrice: testPtrFloat64(0.10)},
+					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.17)},
+					{TierLabel: "960p", PerRequestPrice: testPtrFloat64(0.17)},
+				},
+			}},
+		},
+		{
+			name: "video Happy Horse compatibility tier - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"happy-horse-1.1"},
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.15)},
+					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.15)},
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.19)},
+				},
+			}},
+			wantErr: true,
+			errMsg:  "requires exactly 720p and 1080p",
+		},
+		{
+			name: "video Grok compatibility tiers - invalid",
+			pricing: []ChannelModelPricing{{
+				BillingMode: BillingModeVideo,
+				Models:      []string{"grok-imagine-1.5"},
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.10)},
+					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.17)},
+					{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.17)},
+				},
+			}},
+			wantErr: true,
+			errMsg:  "requires exactly 400p, 544p, 720p, and 960p",
+		},
+		{
 			name: "video multiple models - invalid",
 			pricing: []ChannelModelPricing{{
 				BillingMode: BillingModeVideo,

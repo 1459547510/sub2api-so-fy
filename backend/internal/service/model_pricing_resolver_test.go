@@ -530,6 +530,72 @@ func TestVideoPriceConfigFromResolvedPricing(t *testing.T) {
 		require.InDelta(t, 0.24, *config.Price2160P, 1e-12)
 	})
 
+	t.Run("Happy Horse config uses only native resolution tiers", func(t *testing.T) {
+		resolved := &ResolvedPricing{
+			Mode:           BillingModeVideo,
+			channelPricing: &ChannelModelPricing{Models: []string{"happy-horse-1.1"}},
+			RequestTiers: []PricingInterval{
+				{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.15)},
+				{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.19)},
+			},
+		}
+
+		config, ok := VideoPriceConfigFromResolvedPricing(resolved)
+		require.True(t, ok)
+		require.Nil(t, config.Price480P)
+		require.InDelta(t, 0.15, *config.Price720P, 1e-12)
+		require.InDelta(t, 0.19, *config.Price1080P, 1e-12)
+	})
+
+	t.Run("Grok config preserves all four native resolution tiers", func(t *testing.T) {
+		resolved := &ResolvedPricing{
+			Mode:           BillingModeVideo,
+			channelPricing: &ChannelModelPricing{Models: []string{"grok-imagine-1.5"}},
+			RequestTiers: []PricingInterval{
+				{TierLabel: "400p", PerRequestPrice: testPtrFloat64(0.10)},
+				{TierLabel: "544p", PerRequestPrice: testPtrFloat64(0.10)},
+				{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.17)},
+				{TierLabel: "960p", PerRequestPrice: testPtrFloat64(0.17)},
+			},
+		}
+
+		config, ok := VideoPriceConfigFromResolvedPricing(resolved)
+		require.True(t, ok)
+		require.InDelta(t, 0.10, *config.Price400P, 1e-12)
+		require.InDelta(t, 0.10, *config.Price544P, 1e-12)
+		require.InDelta(t, 0.17, *config.Price720P, 1e-12)
+		require.InDelta(t, 0.17, *config.Price960P, 1e-12)
+		require.Nil(t, config.Price480P)
+		require.Nil(t, config.Price1080P)
+	})
+
+	t.Run("legacy Happy Horse and Grok tiers remain readable during migration", func(t *testing.T) {
+		legacy := []PricingInterval{
+			{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.10)},
+			{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.17)},
+			{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.17)},
+		}
+		grokConfig, ok := VideoPriceConfigFromResolvedPricing(&ResolvedPricing{
+			Mode: BillingModeVideo, channelPricing: &ChannelModelPricing{Models: []string{"grok-imagine-1.5"}}, RequestTiers: legacy,
+		})
+		require.True(t, ok)
+		require.InDelta(t, 0.10, *grokConfig.Price400P, 1e-12)
+		require.InDelta(t, 0.10, *grokConfig.Price544P, 1e-12)
+		require.InDelta(t, 0.17, *grokConfig.Price960P, 1e-12)
+
+		happyConfig, ok := VideoPriceConfigFromResolvedPricing(&ResolvedPricing{
+			Mode: BillingModeVideo, channelPricing: &ChannelModelPricing{Models: []string{"happy-horse-1.1"}}, RequestTiers: []PricingInterval{
+				{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.15)},
+				{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.15)},
+				{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.19)},
+			},
+		})
+		require.True(t, ok)
+		require.Nil(t, happyConfig.Price480P)
+		require.InDelta(t, 0.15, *happyConfig.Price720P, 1e-12)
+		require.InDelta(t, 0.19, *happyConfig.Price1080P, 1e-12)
+	})
+
 	tests := []struct {
 		name     string
 		resolved *ResolvedPricing
