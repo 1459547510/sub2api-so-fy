@@ -144,6 +144,8 @@ docs/*
 !docs/CYBER_POLICY_REVOCATION_BAN.md
 !docs/CONTENT_MODERATION.md
 !docs/ACCOUNT_ERROR_EMAIL_ALERTS.md
+!docs/OPENAI_CODEX_FINGERPRINT.md
+!docs/对接二开文档.md
 !docs/legal/
 !docs/legal/*.md
 .serena/

@@ -3233,7 +3233,7 @@ func accountEntityToService(m *dbent.Account) *service.Account {
 
 	rateMultiplier := m.RateMultiplier
 
-	return &service.Account{
+	account := &service.Account{
 		ID:                      m.ID,
 		Name:                    m.Name,
 		Notes:                   m.Notes,
@@ -3266,6 +3266,8 @@ func accountEntityToService(m *dbent.Account) *service.Account {
 		ParentAccountID:         m.ParentAccountID,
 		QuotaDimension:          string(m.QuotaDimension),
 	}
+	service.MarkOpenAICodexLegacyFingerprint(account)
+	return account
 }
 
 func normalizeJSONMap(in map[string]any) map[string]any {

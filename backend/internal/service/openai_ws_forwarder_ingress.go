@@ -375,6 +375,19 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 			)
 		}
 		normalized = policyApplied
+		if account.Type == AccountTypeOAuth {
+			inboundDeviceID := ""
+			if c != nil && c.Request != nil {
+				inboundDeviceID = c.Request.Header.Get("X-Codex-Installation-ID")
+			}
+			normalized, _ = applyOpenAICodexFingerprintBody(
+				normalized,
+				account,
+				getAPIKeyIDFromContext(c),
+				inboundDeviceID,
+				true,
+			)
+		}
 		ingressSessionOriginalModel = originalModel
 
 		return openAIWSClientPayload{

@@ -1006,6 +1006,21 @@ func (s *OpenAIGatewayService) buildUpstreamRequest(ctx context.Context, c *gin.
 		targetURL = openaiPlatformAPIURL
 	}
 	targetURL = appendOpenAIResponsesRequestPathSuffix(targetURL, openAIResponsesRequestPathSuffix(c))
+	apiKeyID := getAPIKeyIDFromContext(c)
+	deviceFingerprint := openAICodexDeviceFingerprint{}
+	if account.Type == AccountTypeOAuth {
+		inboundDeviceID := ""
+		if c != nil && c.Request != nil {
+			inboundDeviceID = c.Request.Header.Get("X-Codex-Installation-ID")
+		}
+		body, deviceFingerprint = applyOpenAICodexFingerprintBody(
+			body,
+			account,
+			apiKeyID,
+			inboundDeviceID,
+			!isOpenAIResponsesCompactPath(c),
+		)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewReader(body))
 	if err != nil {
@@ -1057,19 +1072,18 @@ func (s *OpenAIGatewayService) buildUpstreamRequest(ctx context.Context, c *gin.
 			req.Header.Set("OpenAI-Beta", "responses=experimental")
 			req.Header.Set("originator", resolveOpenAIUpstreamOriginator(c, isCodexCLI))
 		}
-		apiKeyID := getAPIKeyIDFromContext(c)
 		if isOpenAIResponsesCompactPath(c) {
 			req.Header.Set("accept", "application/json")
 			if req.Header.Get("version") == "" {
 				req.Header.Set("version", codexCLIVersion)
 			}
 			compactSession := resolveOpenAICompactSessionID(c)
-			req.Header.Set("session_id", isolateOpenAISessionID(apiKeyID, compactSession))
+			req.Header.Set("session_id", isolateOpenAIAccountSessionID(account, apiKeyID, compactSession))
 		} else {
 			req.Header.Set("accept", "text/event-stream")
 		}
 		if promptCacheKey != "" {
-			isolated := isolateOpenAISessionID(apiKeyID, promptCacheKey)
+			isolated := isolateOpenAIAccountSessionID(account, apiKeyID, promptCacheKey)
 			req.Header.Set("session_id", isolated)
 			if !compatMessagesBridge || clientConversationID != "" {
 				req.Header.Set("conversation_id", isolated)
@@ -1099,6 +1113,7 @@ func (s *OpenAIGatewayService) buildUpstreamRequest(ctx context.Context, c *gin.
 
 	// 终态收口：originator 必须与最终 User-Agent 首段配套且为官方身份，否则上游 404（issue #3901）。
 	if account.Type == AccountTypeOAuth {
+		applyOpenAICodexFingerprintHeaders(req.Header, account, apiKeyID, promptCacheKey, deviceFingerprint)
 		enforceCodexIdentityHeaders(req.Header)
 	}
 

@@ -1033,6 +1033,27 @@ func isolateOpenAISessionID(apiKeyID int64, raw string) string {
 	return fmt.Sprintf("%016x", h.Sum64())
 }
 
+// isolateOpenAIAccountSessionID adds the selected upstream account to the
+// existing downstream API-key namespace. This keeps a conversation stable on
+// one account without leaking the same session/cache identity to another one.
+func isolateOpenAIAccountSessionID(account *Account, apiKeyID int64, raw string) string {
+	if !openAICodexFingerprintUsesV1(account) {
+		return isolateOpenAISessionID(apiKeyID, raw)
+	}
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	accountKey := openAICodexFingerprintAccountKey(account)
+	if accountKey == "" {
+		return isolateOpenAISessionID(apiKeyID, raw)
+	}
+	h := xxhash.New()
+	_, _ = fmt.Fprintf(h, "a%s:k%d:", accountKey, apiKeyID)
+	_, _ = h.WriteString(raw)
+	return fmt.Sprintf("%016x", h.Sum64())
+}
+
 func logCodexCLIOnlyDetection(ctx context.Context, c *gin.Context, account *Account, apiKeyID int64, result CodexClientRestrictionDetectionResult, body []byte) {
 	if !result.Enabled {
 		return

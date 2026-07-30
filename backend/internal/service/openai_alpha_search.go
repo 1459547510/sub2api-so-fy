@@ -259,12 +259,15 @@ func (s *OpenAIGatewayService) buildOpenAIAlphaSearchResponsesWebSearchRequest(c
 		req.Header.Set("User-Agent", codexCLIUserAgent)
 	}
 	apiKeyID := getAPIKeyIDFromContext(c)
+	fingerprintWindowSeed := ""
 	if sessionID := strings.TrimSpace(gjson.GetBytes(alphaBody, "id").String()); sessionID != "" {
-		isolated := isolateOpenAISessionID(apiKeyID, sessionID)
+		fingerprintWindowSeed = sessionID
+		isolated := isolateOpenAIAccountSessionID(account, apiKeyID, sessionID)
 		req.Header.Set("Session_ID", isolated)
 		req.Header.Set("Conversation_ID", isolated)
 	}
 	s.overrideBrowserUserAgent(ctx, account, req)
+	applyOpenAICodexFingerprintHeaders(req.Header, account, apiKeyID, fingerprintWindowSeed, openAICodexDeviceFingerprint{})
 	enforceCodexIdentityHeaders(req.Header)
 	account.ApplyHeaderOverrides(req.Header)
 	return req, nil

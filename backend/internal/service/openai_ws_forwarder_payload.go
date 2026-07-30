@@ -101,10 +101,10 @@ func (s *OpenAIGatewayService) buildOpenAIWSHeaders(
 	if account != nil && account.Type == AccountTypeOAuth {
 		apiKeyID := getAPIKeyIDFromContext(c)
 		if sessionResolution.SessionID != "" {
-			headers.Set("session_id", isolateOpenAISessionID(apiKeyID, sessionResolution.SessionID))
+			headers.Set("session_id", isolateOpenAIAccountSessionID(account, apiKeyID, sessionResolution.SessionID))
 		}
 		if sessionResolution.ConversationID != "" {
-			headers.Set("conversation_id", isolateOpenAISessionID(apiKeyID, sessionResolution.ConversationID))
+			headers.Set("conversation_id", isolateOpenAIAccountSessionID(account, apiKeyID, sessionResolution.ConversationID))
 		}
 	} else {
 		if sessionResolution.SessionID != "" {
@@ -152,6 +152,7 @@ func (s *OpenAIGatewayService) buildOpenAIWSHeaders(
 	// 默认 Codex CLI 身份（承接原「非 Codex UA 兜底」，并修复其把 codex-tui 等官方 UA 改写为
 	// codex_cli_rs 造成的 originator 错配 404），详见 issue #3901。
 	if account != nil && account.Type == AccountTypeOAuth {
+		applyOpenAICodexFingerprintHeaders(headers, account, getAPIKeyIDFromContext(c), promptCacheKey, openAICodexDeviceFingerprint{})
 		enforceCodexIdentityHeaders(headers)
 	}
 

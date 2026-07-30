@@ -701,6 +701,7 @@ func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account
 			req.Header.Set("User-Agent", codexCLIUserAgent)
 		}
 		setOpenAIChatGPTAccountHeaders(req.Header, credentialAccount)
+		applyOpenAICodexFingerprintHeaders(req.Header, credentialAccount, 0, "account-test:"+upstreamTestModelID, openAICodexDeviceFingerprint{})
 		// 与真实转发一致：originator 与最终 User-Agent 首段配套，否则上游 404（issue #3901）。
 		enforceCodexIdentityHeaders(req.Header)
 	}
@@ -1012,7 +1013,12 @@ func (s *AccountTestService) testOpenAICompactConnection(c *gin.Context, account
 	} else {
 		req.Header.Set("Authorization", "Bearer "+authToken)
 	}
-	applyOpenAICodexProbeHeaders(req.Header)
+	if isOAuth {
+		ensureCodexIdentityHeaders(req.Header)
+		applyOpenAICodexFingerprintHeaders(req.Header, credentialAccount, 0, "compact-probe", openAICodexDeviceFingerprint{})
+	} else {
+		applyOpenAICodexProbeHeaders(req.Header)
+	}
 	probeSessionID := compactProbeSessionID(account.ID)
 	req.Header.Set("Session_ID", probeSessionID)
 	req.Header.Set("Conversation_ID", probeSessionID)
@@ -1909,6 +1915,7 @@ func (s *AccountTestService) testOpenAIImageOAuth(c *gin.Context, ctx context.Co
 		req.Header.Set("User-Agent", codexCLIUserAgent)
 	}
 	setOpenAIChatGPTAccountHeaders(req.Header, credentialAccount)
+	applyOpenAICodexFingerprintHeaders(req.Header, credentialAccount, 0, "account-test", openAICodexDeviceFingerprint{})
 	// 与真实转发一致：originator 与最终 User-Agent 首段配套（原 opencode 与 Codex UA 错配会 404，issue #3901）。
 	enforceCodexIdentityHeaders(req.Header)
 

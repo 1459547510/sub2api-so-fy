@@ -48,3 +48,18 @@ func TestIsolateOpenAISessionID(t *testing.T) {
 		assert.NotEqual(t, result, other)
 	})
 }
+
+func TestIsolateOpenAIAccountSessionID(t *testing.T) {
+	accountA := &Account{ID: 101, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1}}
+	accountB := &Account{ID: 102, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1}}
+
+	a1 := isolateOpenAIAccountSessionID(accountA, 7, "conversation")
+	a2 := isolateOpenAIAccountSessionID(accountA, 7, "conversation")
+	b := isolateOpenAIAccountSessionID(accountB, 7, "conversation")
+	otherTenant := isolateOpenAIAccountSessionID(accountA, 8, "conversation")
+
+	assert.Equal(t, a1, a2)
+	assert.NotEqual(t, a1, b)
+	assert.NotEqual(t, a1, otherTenant)
+	assert.Len(t, a1, 16)
+}

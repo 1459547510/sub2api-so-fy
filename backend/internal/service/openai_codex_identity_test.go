@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func requireOpenAICodexProbeHeaders(t *testing.T, h http.Header) {
@@ -151,4 +153,100 @@ func TestEnforceCodexIdentityHeaders_NoOriginatorIsNoop(t *testing.T) {
 
 	require.Empty(t, h.Get("originator"))
 	require.Equal(t, "third-party-client/1.0.0", h.Get("user-agent"))
+}
+
+func TestOpenAICodexDeviceFingerprintLifecycle(t *testing.T) {
+	account := &Account{
+		ID:       41,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+		Credentials: map[string]any{
+			"chatgpt_account_id": "acct-41",
+			"access_token":       "token-before-refresh",
+		},
+	}
+
+	first := resolveOpenAICodexDeviceFingerprint(account, "")
+	require.True(t, first.managed)
+	require.NotEmpty(t, first.deviceID)
+	_, err := uuid.Parse(first.deviceID)
+	require.NoError(t, err)
+
+	account.Credentials["access_token"] = "token-after-refresh"
+	proxyID := int64(7001)
+	account.ProxyID = &proxyID
+	second := resolveOpenAICodexDeviceFingerprint(account, "")
+	require.Equal(t, first, second, "token and proxy changes must not rotate a device")
+
+	other := &Account{
+		ID:          42,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Credentials: map[string]any{"chatgpt_account_id": "acct-42"},
+	}
+	require.NotEqual(t, first.deviceID, resolveOpenAICodexDeviceFingerprint(other, "").deviceID)
+
+	account.Extra = map[string]any{"openai_device_profile_id": "generation-2"}
+	require.NotEqual(t, first.deviceID, resolveOpenAICodexDeviceFingerprint(account, "").deviceID)
+}
+
+func TestApplyOpenAICodexFingerprintHeadersPreservesOfficialInboundDevice(t *testing.T) {
+	account := &Account{ID: 51, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1}}
+	h := make(http.Header)
+	h.Set("X-Codex-Installation-ID", "official-installation")
+	h.Set("X-Codex-Window-ID", "official-window")
+
+	applyOpenAICodexFingerprintHeaders(h, account, 9, "fallback-window", openAICodexDeviceFingerprint{})
+
+	require.Equal(t, "official-installation", h.Get("X-Codex-Installation-ID"))
+	require.Equal(t, "official-window", h.Get("X-Codex-Window-ID"))
+}
+
+func TestApplyOpenAICodexFingerprintHeadersUsesManagedAccountDevice(t *testing.T) {
+	account := &Account{
+		ID:       52,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+		Extra:    map[string]any{"openai_device_id": "managed-installation", openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1},
+	}
+	h := make(http.Header)
+	h.Set("X-Codex-Installation-ID", "downstream-installation")
+	h.Set("X-Codex-Window-ID", "downstream-window")
+
+	applyOpenAICodexFingerprintHeaders(h, account, 9, "", openAICodexDeviceFingerprint{})
+
+	require.Equal(t, "managed-installation", h.Get("X-Codex-Installation-ID"))
+	require.Equal(t, mapOpenAICodexFingerprintIdentifier(account, 9, "window", "downstream-window"), h.Get("X-Codex-Window-ID"))
+}
+
+func TestApplyOpenAICodexFingerprintBodyAlignsSessionAndDevice(t *testing.T) {
+	account := &Account{ID: 61, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1}}
+	body := []byte(`{"prompt_cache_key":"conversation-1","client_metadata":{"x-codex-window-id":"window-1"}}`)
+
+	mapped, fingerprint := applyOpenAICodexFingerprintBody(body, account, 17, "", true)
+
+	require.True(t, fingerprint.managed)
+	require.Equal(t, isolateOpenAIAccountSessionID(account, 17, "conversation-1"), gjson.GetBytes(mapped, "prompt_cache_key").String())
+	require.Equal(t, fingerprint.deviceID, gjson.GetBytes(mapped, "client_metadata.x-codex-installation-id").String())
+	require.Equal(t, mapOpenAICodexFingerprintIdentifier(account, 17, "window", "window-1"), gjson.GetBytes(mapped, "client_metadata.x-codex-window-id").String())
+
+	mappedAgain, fingerprintAgain := applyOpenAICodexFingerprintBody(body, account, 17, "", true)
+	require.Equal(t, string(mapped), string(mappedAgain))
+	require.Equal(t, fingerprint, fingerprintAgain)
+}
+
+func TestOpenAICodexLegacyFingerprintRemainsUnchanged(t *testing.T) {
+	account := &Account{ID: 71, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeLegacy}}
+	header := http.Header{}
+	header.Set("X-Codex-Installation-ID", "legacy-installation")
+	header.Set("X-Codex-Window-ID", "legacy-window")
+	applyOpenAICodexFingerprintHeaders(header, account, 9, "new-window-seed", openAICodexDeviceFingerprint{})
+	require.Equal(t, "legacy-installation", header.Get("X-Codex-Installation-ID"))
+	require.Equal(t, "legacy-window", header.Get("X-Codex-Window-ID"))
+
+	body := []byte(`{"prompt_cache_key":"legacy-cache","client_metadata":{"x-codex-installation-id":"legacy-installation"}}`)
+	mapped, fingerprint := applyOpenAICodexFingerprintBody(body, account, 9, "", true)
+	require.Equal(t, string(body), string(mapped))
+	require.Empty(t, fingerprint.deviceID)
+	require.Equal(t, isolateOpenAISessionID(9, "legacy-cache"), isolateOpenAIAccountSessionID(account, 9, "legacy-cache"))
 }

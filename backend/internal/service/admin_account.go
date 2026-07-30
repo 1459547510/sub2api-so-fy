@@ -472,6 +472,14 @@ func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]an
 		Status:      StatusActive,
 		Schedulable: true,
 	}
+	if input.Platform == PlatformOpenAI && input.Type == AccountTypeOAuth {
+		if account.Extra == nil {
+			account.Extra = make(map[string]any)
+		}
+		if _, exists := account.Extra[openAICodexFingerprintModeExtraKey]; !exists {
+			account.Extra[openAICodexFingerprintModeExtraKey] = openAICodexFingerprintModeV1
+		}
+	}
 	if input.ProbeEnabled != nil && *input.ProbeEnabled {
 		if !isUpstreamBillingProbeAccount(account) {
 			return nil, ErrUpstreamBillingProbeAccountInvalid
@@ -1342,6 +1350,7 @@ func (s *adminServiceImpl) CreateShadow(ctx context.Context, parentID int64, opt
 		Schedulable:     true,
 		Extra: map[string]any{
 			openAILongContextBillingEnabledKey: parent.IsOpenAILongContextBillingEnabled(),
+			openAICodexFingerprintModeExtraKey: openAICodexFingerprintMode(parent),
 		},
 	}
 

@@ -226,6 +226,14 @@ func (s *AccountService) Create(ctx context.Context, req CreateAccountRequest) (
 		Status:      StatusActive,
 		ExpiresAt:   req.ExpiresAt,
 	}
+	if req.Platform == PlatformOpenAI && req.Type == AccountTypeOAuth {
+		if account.Extra == nil {
+			account.Extra = make(map[string]any)
+		}
+		if _, exists := account.Extra[openAICodexFingerprintModeExtraKey]; !exists {
+			account.Extra[openAICodexFingerprintModeExtraKey] = openAICodexFingerprintModeV1
+		}
+	}
 	if req.AutoPauseOnExpired != nil {
 		account.AutoPauseOnExpired = *req.AutoPauseOnExpired
 	} else {

@@ -345,6 +345,23 @@ func (s *OpenAIGatewayService) buildUpstreamRequestOpenAIPassthrough(
 		}
 	}
 	targetURL = appendOpenAIResponsesRequestPathSuffix(targetURL, openAIResponsesRequestPathSuffix(c))
+	apiKeyID := getAPIKeyIDFromContext(c)
+	deviceFingerprint := openAICodexDeviceFingerprint{}
+	promptCacheKey := ""
+	if account.Type == AccountTypeOAuth {
+		promptCacheKey = strings.TrimSpace(gjson.GetBytes(body, "prompt_cache_key").String())
+		inboundDeviceID := ""
+		if c != nil && c.Request != nil {
+			inboundDeviceID = c.Request.Header.Get("X-Codex-Installation-ID")
+		}
+		body, deviceFingerprint = applyOpenAICodexFingerprintBody(
+			body,
+			account,
+			apiKeyID,
+			inboundDeviceID,
+			!isOpenAIResponsesCompactPath(c),
+		)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(body))
 	if err != nil {
@@ -382,12 +399,10 @@ func (s *OpenAIGatewayService) buildUpstreamRequestOpenAIPassthrough(
 
 	// OAuth 透传到 ChatGPT internal API 时补齐必要头。
 	if account.Type == AccountTypeOAuth {
-		promptCacheKey := strings.TrimSpace(gjson.GetBytes(body, "prompt_cache_key").String())
 		req.Host = "chatgpt.com"
 		if err := resolveAndSetOpenAIChatGPTAccountHeaders(ctx, s.accountRepo, req.Header, account); err != nil {
 			return nil, fmt.Errorf("resolve chatgpt account headers: %w", err)
 		}
-		apiKeyID := getAPIKeyIDFromContext(c)
 		// 先保存客户端原始值，再做 compact 补充，避免后续统一隔离时读到已处理的值。
 		clientSessionID := strings.TrimSpace(req.Header.Get("session_id"))
 		clientConversationID := strings.TrimSpace(req.Header.Get("conversation_id"))
@@ -416,10 +431,10 @@ func (s *OpenAIGatewayService) buildUpstreamRequestOpenAIPassthrough(
 			clientConversationID = promptCacheKey
 		}
 		if clientSessionID != "" {
-			req.Header.Set("session_id", isolateOpenAISessionID(apiKeyID, clientSessionID))
+			req.Header.Set("session_id", isolateOpenAIAccountSessionID(account, apiKeyID, clientSessionID))
 		}
 		if clientConversationID != "" {
-			req.Header.Set("conversation_id", isolateOpenAISessionID(apiKeyID, clientConversationID))
+			req.Header.Set("conversation_id", isolateOpenAIAccountSessionID(account, apiKeyID, clientConversationID))
 		}
 	} else if isOpenAIResponsesCompactPath(c) {
 		// 透传白名单会放行客户端的 Accept: text/event-stream；compact 上游是
@@ -444,6 +459,7 @@ func (s *OpenAIGatewayService) buildUpstreamRequestOpenAIPassthrough(
 	// 默认 Codex CLI 身份（承接原「非 Codex UA 安全兜底」，并修复其把 codex-tui 等官方 UA 改写为
 	// codex_cli_rs 造成的 originator 错配 404），详见 issue #3901。
 	if account.Type == AccountTypeOAuth {
+		applyOpenAICodexFingerprintHeaders(req.Header, account, apiKeyID, promptCacheKey, deviceFingerprint)
 		enforceCodexIdentityHeaders(req.Header)
 	}
 

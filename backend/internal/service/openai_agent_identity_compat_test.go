@@ -133,15 +133,14 @@ func TestOpenAIAgentIdentityPassthroughKeepsSessionAndPromptCacheHeaders(t *test
 	require.Equal(t, "account-agent-passthrough", req.Header.Get("chatgpt-account-id"))
 	require.NotEqual(t, "client-session", req.Header.Get("session_id"))
 	require.NotEqual(t, "client-conversation", req.Header.Get("conversation_id"))
-	require.Equal(t, isolateOpenAISessionID(0, "client-session"), req.Header.Get("session_id"))
-	require.Equal(t, isolateOpenAISessionID(0, "client-conversation"), req.Header.Get("conversation_id"))
+	require.Equal(t, isolateOpenAIAccountSessionID(account, 0, "client-session"), req.Header.Get("session_id"))
+	require.Equal(t, isolateOpenAIAccountSessionID(account, 0, "client-conversation"), req.Header.Get("conversation_id"))
 	requestBody, err := io.ReadAll(req.Body)
 	require.NoError(t, err)
-	require.Contains(t, string(requestBody), `"prompt_cache_key":"cache-agent"`)
+	require.Contains(t, string(requestBody), `"prompt_cache_key":"`+isolateOpenAIAccountSessionID(account, 0, "cache-agent")+`"`)
 
-	// Authentication mode must not affect session isolation or prompt-cache
-	// behavior. Compare the same request with the existing OAuth path instead
-	// of pinning this test to an implementation-specific hash.
+	// Authentication modes share the same isolation algorithm, while different
+	// upstream accounts must still receive different session namespaces.
 	oauthAccount := &Account{
 		ID:       26,
 		Platform: PlatformOpenAI,
@@ -157,8 +156,8 @@ func TestOpenAIAgentIdentityPassthroughKeepsSessionAndPromptCacheHeaders(t *test
 	oauthContext.Request.Header.Set("conversation_id", "client-conversation")
 	oauthReq, err := svc.buildUpstreamRequestOpenAIPassthrough(context.Background(), oauthContext, oauthAccount, body, "oauth-token")
 	require.NoError(t, err)
-	require.Equal(t, oauthReq.Header.Get("session_id"), req.Header.Get("session_id"))
-	require.Equal(t, oauthReq.Header.Get("conversation_id"), req.Header.Get("conversation_id"))
+	require.NotEqual(t, oauthReq.Header.Get("session_id"), req.Header.Get("session_id"))
+	require.NotEqual(t, oauthReq.Header.Get("conversation_id"), req.Header.Get("conversation_id"))
 }
 
 func TestOpenAIAgentIdentityErrorRedactionDoesNotLeakCredentialValues(t *testing.T) {

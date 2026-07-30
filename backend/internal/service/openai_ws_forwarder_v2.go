@@ -60,10 +60,20 @@ func (s *OpenAIGatewayService) forwardOpenAIWSV2(
 	)
 
 	payload := s.buildOpenAIWSCreatePayload(reqBody, account)
+	promptCacheKey := openAIWSPayloadString(payload, "prompt_cache_key")
+	if account.Type == AccountTypeOAuth {
+		inboundDeviceID := ""
+		if c != nil && c.Request != nil {
+			inboundDeviceID = c.Request.Header.Get("X-Codex-Installation-ID")
+		}
+		if rawPayload, marshalErr := json.Marshal(payload); marshalErr == nil {
+			mappedPayload, _ := applyOpenAICodexFingerprintBody(rawPayload, account, getAPIKeyIDFromContext(c), inboundDeviceID, true)
+			_ = json.Unmarshal(mappedPayload, &payload)
+		}
+	}
 	payloadStrategy, removedKeys := applyOpenAIWSRetryPayloadStrategy(payload, attempt)
 	previousResponseID := openAIWSPayloadString(payload, "previous_response_id")
 	previousResponseIDKind := ClassifyOpenAIPreviousResponseIDKind(previousResponseID)
-	promptCacheKey := openAIWSPayloadString(payload, "prompt_cache_key")
 	_, hasTools := payload["tools"]
 	debugEnabled := isOpenAIWSModeDebugEnabled()
 	payloadBytes := -1

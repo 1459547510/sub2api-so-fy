@@ -4408,3 +4408,189 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - The published tag remains on feature commit `9e503395f1`; this release-record commit is intentionally branch-only.
 - Unrelated local OpenAI, account usage, and `.superpowers/` changes remain uncommitted and were excluded from the feature commit, tag, and release package.
 - Rollback point: run `git revert 9e503395f1`, publish the resulting rollback release, or redeploy `v0.1.168-fy.3` if an immediate binary rollback is required.
+
+## 2026-07-30 - Task: Rebuild OpenAI Codex reverse-proxy identity fingerprinting
+
+### What was done
+- Added a stable OpenAI OAuth device fingerprint domain that preserves official inbound installation identities, honors an operator-managed `openai_device_id`, and otherwise derives a deterministic account device without using tokens or proxy addresses.
+- Added controlled device generations through `openai_device_profile_id`; token refreshes and normal proxy rotation keep the same device, while an intentional profile-generation change rotates managed identifiers together.
+- Extended session, conversation, and prompt-cache isolation from downstream API Key only to upstream account plus downstream API Key, preventing identifiers from crossing scheduled accounts.
+- Applied the same device/session behavior to Responses HTTP, passthrough, Messages and Chat bridges, WebSocket v2 and ingress, alpha/search, Live, account tests, compact probes, and usage probes. OpenAI API-key upstream behavior remains unchanged.
+- Kept the existing OpenAI HTTP/2 transport and did not apply the Anthropic Node.js TLS profile to Codex, because that would contradict the declared `codex_cli_rs` application identity.
+
+### Testing
+- `go test ./internal/service -run 'Test(OpenAICodex|ApplyOpenAICodex|IsolateOpenAIAccountSessionID|EnsureCodexIdentityHeaders|EnforceCodexIdentityHeaders)' -count=1`: passed.
+- HTTP/WS/compatibility/compact/alpha regression group: passed (`27.460s`).
+- Live/account/probe/session regression group: passed (`2.441s`).
+- Session/prompt-cache/Codex identity/Chat Completions regression group: passed (`8.312s`).
+- `go test ./internal/service -count=1`: passed (`98.747s`).
+- `git diff --check`: passed before and after documentation/progress updates.
+
+### Notes
+- `.gitignore`: allows the Codex fingerprint document under the repository's ignored-by-default `docs/` directory.
+- `backend/internal/service/openai_codex_identity.go`: defines device resolution precedence, deterministic account/window mapping, and body/header synchronization.
+- `backend/internal/service/openai_codex_identity_test.go`: verifies official identity preservation, managed identity stability, token/proxy independence, account rotation, and body/header alignment.
+- `backend/internal/service/openai_gateway_service.go`: adds account-aware session and prompt-cache isolation while retaining the existing hash format.
+- `backend/internal/service/openai_gateway_service_session_isolation_test.go`: verifies account and downstream-tenant isolation.
+- `backend/internal/service/openai_gateway_forward.go`: applies the unified fingerprint at the final Responses HTTP outbound boundary.
+- `backend/internal/service/openai_gateway_passthrough.go`: applies the same body, session, installation, and window mapping to passthrough requests.
+- `backend/internal/service/openai_gateway_chat_completions.go`: uses the selected upstream account when deriving bridged session IDs.
+- `backend/internal/service/openai_gateway_messages.go`: uses the selected upstream account when deriving Messages bridge session IDs.
+- `backend/internal/service/openai_alpha_search.go`: adds account-aware sessions and stable synthetic device/window identity to alpha/search.
+- `backend/internal/service/openai_live.go`: gives Live calls stable account devices and per-call session/window lifetimes.
+- `backend/internal/service/openai_ws_forwarder_payload.go`: aligns OAuth WebSocket handshake sessions and device headers with HTTP forwarding.
+- `backend/internal/service/openai_ws_forwarder_v2.go`: maps WebSocket v2 prompt-cache and client metadata into the account device domain.
+- `backend/internal/service/openai_ws_forwarder_ingress.go`: applies the same mapping to each WebSocket ingress turn.
+- `backend/internal/service/account_test_service.go`: makes account and compact probes use the account's stable synthetic fingerprint.
+- `backend/internal/service/account_usage_service.go`: makes Codex usage probes use the account's stable synthetic fingerprint.
+- `backend/internal/service/openai_agent_identity_compat_test.go`: updates Agent Identity expectations for upstream-account isolation and mapped prompt-cache keys.
+- `backend/internal/service/openai_compat_model_test.go`: updates OAuth Messages continuation expectations for account-aware sessions.
+- `backend/internal/service/openai_ws_forwarder_ingress_session_test.go`: verifies account-aware ingress session headers.
+- `backend/internal/service/openai_ws_forwarder_success_test.go`: verifies account-aware OAuth WebSocket session headers.
+- `docs/OPENAI_CODEX_FINGERPRINT.md`: documents identity precedence, lifetimes, covered paths, transport boundaries, operation, and verification.
+- `progress.md`: records implementation, verification evidence, changed files, and rollback instructions.
+- No database schema, authentication credential format, proxy binding, or OpenAI TLS transport was changed.
+- Rollback point: `9e503395f1eed0fa0fb43fce6bd42563eb652b82`. Before commit, restore the listed source/test files plus `.gitignore` and `progress.md` with `git restore -- <paths>` and remove `docs/OPENAI_CODEX_FINGERPRINT.md`; after a dedicated commit, use `git revert <codex_fingerprint_commit>`.
+
+## 2026-07-30 - Task: Document video-group integration for other Sub2API instances
+
+### What was done
+- Added a Chinese secondary-development guide that defines the supported Sub2API-to-Sub2API video-group integration boundary, including dedicated API Key binding, configuration-only synchronous cascading, source-porting scope, and the contract changes required for full asynchronous cascading.
+- Documented the current incompatibilities instead of presenting account health success as end-to-end compatibility: public string job IDs, RFC 3339 timestamps, authenticated relative content URLs, and cross-host media uploads all require explicit handling.
+
+### Testing
+- Cross-checked the guide against the current Leo route dispatch, account Base URL validation, asynchronous client DTOs, `video_jobs` schema, task runtime, protected content handler, and video output downloader.
+- Verified all documented endpoint paths, public model mappings, permission behavior, task states, and migration references with repository source and existing video documents.
+- `git diff --check` passed after this progress entry; only line-ending conversion warnings were reported.
+
+### Notes
+- `.gitignore`: allows the new tracked video-group secondary-development guide under the repository's ignored-by-default `docs/` directory.
+- `docs/SUB2API_VIDEO_GROUP_SECONDARY_DEVELOPMENT_CN.md`: documents the integration model, synchronous setup, required source capabilities, asynchronous contract changes, security boundaries, acceptance checks, and rollback constraints.
+- `progress.md`: records the documentation scope, evidence, changed files, and rollback method.
+- No application code, API behavior, database schema, authentication path, pricing logic, or deployment configuration was changed.
+- Before commit, roll back this task with `git restore -- .gitignore progress.md` and `Remove-Item -LiteralPath docs/SUB2API_VIDEO_GROUP_SECONDARY_DEVELOPMENT_CN.md`; after a dedicated commit, use `git revert <video_group_secondary_development_doc_commit>`.
+
+## 2026-07-30 - Task: Redact internal provider identifiers from video integration guide
+
+### What was done
+- Reworked the public-facing video integration guide to use neutral terms such as “视频平台”“上游视频服务”和“视频上游账号”。
+- Removed the internal provider name, provider-specific aliases, platform values, implementation field names, provider-named source filenames, and internal migration filenames from the guide while retaining the public API contract and integration steps.
+
+### Testing
+- Confirmed the guide contains no case-insensitive match for the removed provider identifier or its service name.
+- Confirmed the guide no longer contains provider-specific model aliases or internal group/account/task field names.
+- `git diff --check` passed after the redaction update; only existing line-ending conversion warnings were reported.
+
+### Notes
+- `docs/SUB2API_VIDEO_GROUP_SECONDARY_DEVELOPMENT_CN.md`: redacts internal provider and implementation identifiers from the externally shareable guide.
+- `progress.md`: records the redaction scope, verification evidence, changed files, and rollback method.
+- No application code, API behavior, database schema, authentication path, pricing logic, or deployment configuration was changed.
+- Before commit, roll back this redaction with `git restore -- progress.md` and restore the previous version of `docs/SUB2API_VIDEO_GROUP_SECONDARY_DEVELOPMENT_CN.md`; after a dedicated commit, use `git revert <video_group_guide_redaction_commit>`.
+
+## 2026-07-30 - Task: Remove provider-named model examples from video integration guide
+
+### What was done
+- Replaced the remaining concrete provider-named model mapping example with a neutral rule: use the upstream `/v1/models` result and perform any alias conversion only at the final hop.
+
+### Testing
+- Re-ran the redaction scan; the guide contains no target provider name, provider service name, provider alias, or internal group/account/task field name.
+- `git diff --check` passed after the final guide edit; only existing line-ending conversion warnings were reported.
+
+### Notes
+- `docs/SUB2API_VIDEO_GROUP_SECONDARY_DEVELOPMENT_CN.md`: removes the final provider-specific model example from the externally shareable guide.
+- `progress.md`: records the final redaction adjustment and verification evidence.
+- No application code or runtime behavior was changed.
+- Before commit, roll back this final adjustment with `git restore -- progress.md` and restore the previous version of `docs/SUB2API_VIDEO_GROUP_SECONDARY_DEVELOPMENT_CN.md`; after a dedicated commit, use `git revert <video_group_model_example_redaction_commit>`.
+
+## 2026-07-30 - Task: Rename video integration guide
+
+### What was done
+- Renamed the externally shareable guide to `docs/对接二开文档.md` as requested.
+- Updated the `docs/` ignore whitelist to track the new filename; document content and runtime behavior are unchanged.
+
+### Testing
+- Confirmed the new file exists with the same 14,362-byte content size as before the rename.
+- `git diff --check` passed after the rename and whitelist update; only existing line-ending conversion warnings were reported.
+
+### Notes
+- `.gitignore`: replaces the old guide whitelist entry with `!docs/对接二开文档.md`.
+- `docs/对接二开文档.md`: renamed from the previous English-named guide; content unchanged.
+- `progress.md`: records the rename, verification evidence, and rollback method.
+- Before commit, roll back this rename with `Move-Item -LiteralPath 'docs\对接二开文档.md' -Destination 'docs\SUB2API_VIDEO_GROUP_SECONDARY_DEVELOPMENT_CN.md'`, then restore the previous `.gitignore` whitelist line and `progress.md`; after a dedicated commit, use `git revert <video_integration_guide_rename_commit>`.
+
+## 2026-07-30 - Task: Split legacy and new OpenAI Codex fingerprint modes
+
+### What was done
+- Kept pre-existing OpenAI OAuth accounts on the legacy device, window, session, conversation, and prompt-cache behavior through a runtime-only compatibility marker applied when unversioned accounts are loaded.
+- Made newly created OpenAI OAuth accounts default to the `v1` fingerprint mode, while allowing an explicit per-account `legacy` or `v1` override in `accounts.extra`.
+- Kept the split limited to OpenAI OAuth traffic; API-key accounts and other platforms remain unchanged.
+
+### Testing
+- `gofmt` passed for all modified service, repository, and test files.
+- `git diff --check` passed; only existing line-ending conversion warnings were reported.
+- Targeted Go tests could not compile because pre-existing unrelated edits in `backend/internal/service/billing_service.go` and `backend/internal/service/video_job_billing.go` contain top-level statements outside functions. Those files were not changed in this task.
+
+### Notes
+- `backend/internal/service/account.go`: adds the runtime-only legacy compatibility marker.
+- `backend/internal/service/openai_codex_identity.go`: gates the new fingerprint contract by account mode and exposes repository marking for unversioned legacy accounts.
+- `backend/internal/service/openai_gateway_service.go`: falls back to the previous API-key/session namespace for legacy accounts.
+- `backend/internal/service/admin_account.go`: defaults new OpenAI OAuth accounts to `v1` and propagates the mode to new Spark shadows.
+- `backend/internal/service/account_service.go`: defaults the alternate account creation service to `v1` for new OpenAI OAuth accounts.
+- `backend/internal/repository/account_repo.go`: marks unversioned persisted OpenAI OAuth accounts as legacy in memory without writing the marker back during reads.
+- `backend/internal/service/openai_codex_identity_test.go`: covers legacy no-op behavior alongside v1 identity behavior.
+- `backend/internal/service/openai_codex_fingerprint_mode_test.go`: covers new-account defaults and explicit legacy overrides.
+- `backend/internal/service/openai_gateway_service_session_isolation_test.go`: opts the account-isolation fixture into v1 mode.
+- `docs/OPENAI_CODEX_FINGERPRINT.md`: documents the staged legacy/v1 rollout and per-account override.
+- `progress.md`: records this implementation and verification status.
+- Rollback point: restore the files listed above and the documentation change with `git restore -- <paths>` before commit; after a dedicated commit, use `git revert <codex_fingerprint_mode_commit>`. This rollback removes the mode split but does not alter account data.
+
+## 2026-07-30 - Task: Verify OpenAI Codex fingerprint mode split
+
+### What was done
+- Corrected the mode coverage test to pass the normalized `Extra` map used by the administrator account creation path.
+- Verified that runtime legacy marking only affects unversioned OpenAI OAuth accounts, preserves explicit `v1`, and ignores OpenAI API-key accounts.
+
+### Testing
+- `gofmt -w` passed for the fingerprint-related Go files.
+- Targeted fingerprint mode and Codex identity tests passed.
+- `go test ./internal/service -count=1` passed (`98.072s`).
+- `git diff --check` passed; only existing line-ending conversion warnings were reported.
+
+### Notes
+- `backend/internal/service/openai_codex_fingerprint_mode_test.go`: fixes the creation-path fixture and adds legacy-marker boundary assertions.
+- `progress.md`: records the final verification result and corrected test coverage.
+- Correction to the previous task entry: `backend/internal/service/account.go` was not changed; the runtime compatibility marker is implemented in `backend/internal/service/openai_codex_identity.go`.
+- Rollback point: restore `backend/internal/service/openai_codex_fingerprint_mode_test.go` and `progress.md` before commit; after a dedicated commit, use `git revert <codex_fingerprint_mode_verification_commit>`.
+
+## 2026-07-30 - Task: Align video pricing with native resolutions
+
+### What was done
+- Updated Happy Horse pricing to use only `720p` and `1080p`, and Grok Imagine 1.5 pricing to use only `400p`, `544p`, `720p`, and `960p`; legacy three-tier entries remain readable during migration but are no longer accepted for new channel saves.
+- Added native resolution prices to synchronous and asynchronous video billing snapshots, preserving LTX and Seedance model-specific tiers.
+- Updated the admin pricing editor and the Leo video channel guide so no compatibility or unsupported resolution is presented.
+- Committed as `26c82af5b` and pushed branch `codex/leo-video-channel`; created and re-created annotated tag `v0.1.168-fy.5` at the same commit after the first release trigger produced no visible Release.
+
+### Testing
+- Targeted native-resolution backend billing, channel validation, resolver, async reserve/settlement, and legacy snapshot compatibility tests passed.
+- `go test -p 2 -tags=unit -timeout 10m ./... -count=1` passed in a clean detached worktree (`317.4s`).
+- Frontend channel pricing tests passed (`16` tests); `pnpm.cmd typecheck`, `pnpm.cmd lint:check`, and `pnpm.cmd build` passed.
+- A clean-tag Release reproduction passed frontend dependency installation/build and Linux amd64 `go build -tags embed`; the binary was produced successfully.
+- `git diff --cached --check` and `git diff --check` passed; the dirty worktree service-wide test failure is isolated to the unrelated OpenAI fingerprint test `TestBuildAccountForCreatePreservesExplicitLegacyFingerprintMode`.
+- Production readback before migration: `/health` returned `ok`, version `0.1.168-fy.3`, and channel `5` contained seven entries with legacy Happy Horse/Grok tiers.
+- Production updater checks still return fork version `0.1.168-fy.3` and `GitHub API returned 404`; no production binary restart or pricing mutation was performed.
+
+### Notes
+- `backend/internal/service/billing_service.go`: adds native per-second video price slots.
+- `backend/internal/service/billing_service_test.go`: verifies native Happy Horse and Grok direct costs.
+- `backend/internal/service/channel_service_test.go`: validates exact native tier sets and rejects compatibility tiers.
+- `backend/internal/service/model_pricing_resolver.go`: resolves native prices and reads legacy entries during migration.
+- `backend/internal/service/model_pricing_resolver_test.go`: covers native and legacy resolver behavior.
+- `backend/internal/service/video_billing_resolution.go`: defines native model resolution sets and normalization.
+- `backend/internal/service/video_billing_resolution_test.go`: covers native resolution support and normalization.
+- `backend/internal/service/video_job_billing.go`: snapshots native prices and settles native result tiers.
+- `backend/internal/service/video_job_billing_test.go`: covers native reserve/settlement and v3 compatibility snapshots.
+- `frontend/src/components/admin/channel/types.ts`: generates only model-supported pricing tiers.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: verifies Happy Horse and Grok editor tiers.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents native pricing tiers and removes the stale three-tier editor instruction.
+- `progress.md`: records this implementation, verification, release attempt, and production blocker.
+- Rollback point: source rollback is `git revert 26c82af5b`; release rollback is to remove/recreate `v0.1.168-fy.5` only if necessary and keep production at `0.1.168-fy.3` until a verified Release asset is available. The untracked temporary reproduction directory is `C:\Users\feiyu\AppData\Local\Temp\sub2api-fy5-release-repro` and contains only generated build files.

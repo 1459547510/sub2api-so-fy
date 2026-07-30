@@ -299,7 +299,7 @@ func (s *OpenAIGatewayService) createUpstreamLiveCall(
 	upstreamReq.Header.Set("Content-Type", "application/json")
 	upstreamReq.Header.Set("Accept", "application/sdp")
 	upstreamReq.Header.Set(liveAttestationHeader, attestation)
-	applyLiveUpstreamIdentityHeaders(upstreamReq.Header)
+	applyLiveUpstreamIdentityHeaders(upstreamReq.Header, account, "")
 
 	resp, err := s.httpUpstream.Do(upstreamReq, resolveAccountProxyURL(account), account.ID, account.Concurrency)
 	if err != nil {
@@ -396,13 +396,17 @@ func liveCallIDFromLocation(location string) (string, error) {
 	return callID, nil
 }
 
-func applyLiveUpstreamIdentityHeaders(headers http.Header) {
+func applyLiveUpstreamIdentityHeaders(headers http.Header, account *Account, sessionSeed string) {
 	headers.Set("OpenAI-Alpha", "quicksilver=v2")
 	ensureCodexIdentityHeaders(headers)
-	enforceCodexIdentityHeaders(headers)
-	if strings.TrimSpace(headers.Get("session-id")) == "" {
-		headers.Set("session-id", uuid.NewString())
+	if strings.TrimSpace(sessionSeed) == "" {
+		sessionSeed = uuid.NewString()
 	}
+	if strings.TrimSpace(headers.Get("session-id")) == "" {
+		headers.Set("session-id", isolateOpenAIAccountSessionID(account, 0, sessionSeed))
+	}
+	applyOpenAICodexFingerprintHeaders(headers, account, 0, sessionSeed, openAICodexDeviceFingerprint{})
+	enforceCodexIdentityHeaders(headers)
 	if strings.TrimSpace(headers.Get("thread-id")) == "" {
 		headers.Set("thread-id", uuid.NewString())
 	}
@@ -431,7 +435,7 @@ func (s *OpenAIGatewayService) liveSidebandHeaders(
 		return nil, err
 	}
 	headers.Set(liveAttestationHeader, attestation)
-	applyLiveUpstreamIdentityHeaders(headers)
+	applyLiveUpstreamIdentityHeaders(headers, account, record.CallID)
 	return headers, nil
 }
 
