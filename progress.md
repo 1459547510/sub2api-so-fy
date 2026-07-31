@@ -4691,3 +4691,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/OPENAI_CODEX_FINGERPRINT.md`: documents immediate next-account failover for the explicit capacity response.
 - `progress.md`: records the implementation, verification evidence, changed files, and rollback point.
 - Before commit, roll back with `git restore -- backend/internal/service/openai_gateway_upstream_errors.go backend/internal/service/openai_gateway_service_codex_cli_only_test.go backend/internal/handler/openai_responses_failover_cancel_test.go docs/OPENAI_CODEX_FINGERPRINT.md progress.md`; after a dedicated commit, use `git revert <openai_capacity_failover_commit>`.
+
+## 2026-07-31 - Task: Release immediate OpenAI capacity failover
+
+### What was done
+- Published commit `2c3c50c05` on `codex/leo-video-channel` and created annotated tag `v0.1.168-fy.8`.
+- Confirmed the GitHub Release page and Linux amd64 asset were generated for `v0.1.168-fy.8`.
+- Kept `.superpowers/` temporary files outside the commit, tag, and Release package.
+
+### Testing
+- Clean-candidate service and handler targeted tests passed in `5.994s` and `5.969s`.
+- Clean-candidate package regression passed with service in `163.042s` and handler in `29.323s`.
+- Release package `sub2api_0.1.168-fy.8_linux_amd64.tar.gz` is `36,066,718` bytes with SHA256 `937e92e08a2fd6d711a0435d2f5a61ca456f372889e5c018cc796d45139a9de7`, exactly matching `checksums.txt`.
+- `tar -tzf` listed only the expected `sub2api` executable.
+
+### Notes
+- `progress.md`: records the release commit, package verification, excluded temporary files, and rollback point.
+- The published tag remains on feature commit `2c3c50c05`; the later release-record commit is branch-only.
+- Rollback point: run `git revert 2c3c50c05`, publish the resulting rollback release, or redeploy `v0.1.168-fy.7` if an immediate binary rollback is required.
