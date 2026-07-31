@@ -144,7 +144,7 @@ func isOpenAITransientProcessingError(upstreamStatusCode int, upstreamMsg string
 		if strings.Contains(lower, "an error occurred while processing your request") {
 			return true
 		}
-		if strings.Contains(lower, "selected model is at capacity") {
+		if isOpenAIModelCapacityError(text, nil) {
 			return true
 		}
 		return strings.Contains(lower, "you can retry your request") &&
@@ -152,6 +152,22 @@ func isOpenAITransientProcessingError(upstreamStatusCode int, upstreamMsg string
 			strings.Contains(lower, "request id")
 	}
 
+	if match(upstreamMsg) {
+		return true
+	}
+	if len(upstreamBody) == 0 {
+		return false
+	}
+	if match(gjson.GetBytes(upstreamBody, "error.message").String()) {
+		return true
+	}
+	return match(string(upstreamBody))
+}
+
+func isOpenAIModelCapacityError(upstreamMsg string, upstreamBody []byte) bool {
+	match := func(text string) bool {
+		return strings.Contains(strings.ToLower(strings.TrimSpace(text)), "selected model is at capacity")
+	}
 	if match(upstreamMsg) {
 		return true
 	}
@@ -261,6 +277,9 @@ func newOpenAIUpstreamFailoverError(
 		failoverErr.NextAccountAction = NextAccountRetry
 		failoverErr.ClientStatusCode = http.StatusRequestEntityTooLarge
 		failoverErr.ClientMessage = OpenAIRequestBodyTooLargeClientMessage
+	}
+	if isOpenAIModelCapacityError(upstreamMsg, responseBody) {
+		failoverErr.RetryableOnSameAccount = false
 	}
 	return failoverErr
 }

@@ -4670,3 +4670,24 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the release commit, package verification, excluded temporary files, and rollback point.
 - The published tag remains on feature commit `004b9fa3f`; the later release-record commit is branch-only.
 - Rollback point: run `git revert 004b9fa3f`, publish the resulting rollback release, or redeploy `v0.1.168-fy.6` if an immediate binary rollback is required.
+
+## 2026-07-31 - Task: Immediately fail over OpenAI model-capacity errors
+
+### What was done
+- Changed the explicit `Selected model is at capacity` response from same-account retry to immediate failover to another eligible account.
+- Preserved the existing bounded same-account retry policy for other transient processing errors and left account selection, authentication, and concurrency behavior unchanged.
+- Added an end-to-end two-account regression that verifies the failed account is excluded before the request is replayed.
+
+### Testing
+- Targeted OpenAI service capacity and stream failover tests passed with `go test ./internal/service -run 'Test(OpenAIGatewayService_Forward_ModelCapacityErrorTriggersImmediateAccountFailover|OpenAIStreamingResponseFailedBeforeOutputCapacityErrorReturnsFailover|OpenAIStreamFailedTransientProcessingStillFailsOver)$' -count=1`.
+- Targeted handler account-switch tests passed with `go test -tags=unit ./internal/handler -run 'TestOpenAIGatewayHandlerResponses_(ModelCapacityImmediatelySwitchesAccount|FailoverContinuesForConnectedClient)$' -count=1`.
+- Package-level regression passed with `go test -p 2 -tags=unit -timeout 10m ./internal/service ./internal/handler -count=1`; service completed in `161.630s` and handler completed in `29.525s`.
+- `git diff --check` passed; only line-ending conversion warnings for `docs/OPENAI_CODEX_FINGERPRINT.md` and `progress.md` were reported.
+
+### Notes
+- `backend/internal/service/openai_gateway_upstream_errors.go`: identifies the explicit model-capacity response and prevents same-account replay while retaining next-account failover.
+- `backend/internal/service/openai_gateway_service_codex_cli_only_test.go`: verifies HTTP capacity failures request immediate account failover.
+- `backend/internal/handler/openai_responses_failover_cancel_test.go`: verifies a pool-mode capacity failure calls account 1 once and then account 2.
+- `docs/OPENAI_CODEX_FINGERPRINT.md`: documents immediate next-account failover for the explicit capacity response.
+- `progress.md`: records the implementation, verification evidence, changed files, and rollback point.
+- Before commit, roll back with `git restore -- backend/internal/service/openai_gateway_upstream_errors.go backend/internal/service/openai_gateway_service_codex_cli_only_test.go backend/internal/handler/openai_responses_failover_cancel_test.go docs/OPENAI_CODEX_FINGERPRINT.md progress.md`; after a dedicated commit, use `git revert <openai_capacity_failover_commit>`.

@@ -97,6 +97,7 @@ Codex can report a plan/model incompatibility as either an HTTP 400 response or
 an HTTP 200 `response.failed` event. The message
 `model is not supported when using Codex with a ChatGPT account` is treated as
 a deterministic request error: the current account receives the error and the
-same request is not fanned out across the OAuth pool. Capacity and transient
-processing errors remain eligible for their existing bounded retry/failover
-policy.
+same request is not fanned out across the OAuth pool. A `Selected model is at
+capacity` error immediately fails over to another eligible account without
+retrying the same account. Other transient processing errors retain their
+existing bounded same-account retry and failover policy.

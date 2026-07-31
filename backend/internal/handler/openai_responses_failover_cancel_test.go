@@ -28,6 +28,28 @@ type openAIResponsesFailoverCancelUpstream struct {
 	onFirstDo  func()
 }
 
+type openAIResponsesCapacityFailoverUpstream struct {
+	openAIResponsesFailoverCancelUpstream
+}
+
+func (u *openAIResponsesCapacityFailoverUpstream) Do(_ *http.Request, _ string, accountID int64, _ int) (*http.Response, error) {
+	u.mu.Lock()
+	u.accountIDs = append(u.accountIDs, accountID)
+	u.mu.Unlock()
+	if accountID == 1 {
+		return &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(bytes.NewBufferString(`{"error":{"message":"Selected model is at capacity. Please try a different model.","type":"invalid_request_error"}}`)),
+		}, nil
+	}
+	return &http.Response{
+		StatusCode: 520,
+		Header:     http.Header{"Content-Type": []string{"text/html"}},
+		Body:       io.NopCloser(bytes.NewBufferString("<html>520: unknown error</html>")),
+	}, nil
+}
+
 func (u *openAIResponsesFailoverCancelUpstream) Do(_ *http.Request, _ string, accountID int64, _ int) (*http.Response, error) {
 	u.mu.Lock()
 	u.accountIDs = append(u.accountIDs, accountID)
@@ -75,6 +97,11 @@ func newOpenAIResponsesFailoverTestHandler(t *testing.T, upstream service.HTTPUp
 			Credentials: map[string]any{"access_token": "token-2"},
 		},
 	}
+	return newOpenAIResponsesFailoverTestHandlerWithAccounts(t, upstream, accounts)
+}
+
+func newOpenAIResponsesFailoverTestHandlerWithAccounts(t *testing.T, upstream service.HTTPUpstream, accounts []service.Account) *OpenAIGatewayHandler {
+	t.Helper()
 	accountRepo := openAIImagesFailoverAccountRepo{accounts: accounts}
 	cfg := &config.Config{RunMode: config.RunModeSimple}
 	gatewayService := service.NewOpenAIGatewayService(
@@ -191,4 +218,39 @@ func TestOpenAIGatewayHandlerResponses_FailoverContinuesForConnectedClient(t *te
 	require.Equal(t, []int64{1, 2}, upstream.calls(), "在线客户端应正常切换账号")
 	require.Equal(t, http.StatusBadGateway, rec.Code)
 	require.Equal(t, "upstream_error", gjson.GetBytes(rec.Body.Bytes(), "error.type").String())
+}
+
+func TestOpenAIGatewayHandlerResponses_ModelCapacityImmediatelySwitchesAccount(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	accounts := []service.Account{
+		{
+			ID:          1,
+			Name:        "capacity-account-1",
+			Platform:    service.PlatformOpenAI,
+			Type:        service.AccountTypeAPIKey,
+			Status:      service.StatusActive,
+			Schedulable: true,
+			Priority:    0,
+			Credentials: map[string]any{"api_key": "sk-1", "pool_mode": true, "pool_mode_retry_count": 1},
+		},
+		{
+			ID:          2,
+			Name:        "capacity-account-2",
+			Platform:    service.PlatformOpenAI,
+			Type:        service.AccountTypeAPIKey,
+			Status:      service.StatusActive,
+			Schedulable: true,
+			Priority:    1,
+			Credentials: map[string]any{"api_key": "sk-2", "pool_mode": true, "pool_mode_retry_count": 1},
+		},
+	}
+	upstream := &openAIResponsesCapacityFailoverUpstream{}
+	handler := newOpenAIResponsesFailoverTestHandlerWithAccounts(t, upstream, accounts)
+	c, rec := newOpenAIResponsesFailoverTestContext(t, nil)
+
+	handler.Responses(c)
+
+	require.Equal(t, []int64{1, 2}, upstream.calls(), "capacity failure must exclude the first account before replay")
+	require.Equal(t, http.StatusBadGateway, rec.Code)
 }
