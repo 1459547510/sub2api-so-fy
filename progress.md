@@ -4652,3 +4652,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/OPENAI_CODEX_FINGERPRINT.md`: documents installation mapping and the failover boundary.
 - `progress.md`: records the completed verification evidence and rollback point.
 - Before commit, roll back with `git restore -- backend/internal/service/openai_codex_identity.go backend/internal/service/openai_codex_identity_test.go backend/internal/service/openai_gateway_passthrough.go docs/OPENAI_CODEX_FINGERPRINT.md progress.md` and remove `backend/internal/service/openai_codex_failover_policy_test.go`; after commit, use `git revert <codex_identity_failover_commit>`.
+
+## 2026-07-31 - Task: Release Codex installation isolation and failover policy
+
+### What was done
+- Published commit `004b9fa3f` on `codex/leo-video-channel` and created annotated tag `v0.1.168-fy.7`.
+- Confirmed the GitHub Release page and Linux amd64 asset were generated for `v0.1.168-fy.7`.
+- Kept `.superpowers/` temporary files outside the commit, tag, and Release package.
+
+### Testing
+- Clean-candidate targeted Codex identity and failover tests passed in `5.986s`.
+- Clean-candidate `go test -p 2 -tags=unit -timeout 10m ./... -count=1` passed across the complete backend unit suite.
+- Release package `sub2api_0.1.168-fy.7_linux_amd64.tar.gz` is `36,067,125` bytes with SHA256 `fc2ad9f65644b5a7261ee544816a36f40bd3245ac1696d48f6f66165a1343c07`, exactly matching `checksums.txt`.
+- `tar -tzf` listed only the expected `sub2api` executable.
+
+### Notes
+- `progress.md`: records the release commit, package verification, excluded temporary files, and rollback point.
+- The published tag remains on feature commit `004b9fa3f`; the later release-record commit is branch-only.
+- Rollback point: run `git revert 004b9fa3f`, publish the resulting rollback release, or redeploy `v0.1.168-fy.6` if an immediate binary rollback is required.
