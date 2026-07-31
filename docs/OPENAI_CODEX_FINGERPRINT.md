@@ -26,10 +26,15 @@ Proxy addresses, proxy credentials, access tokens, and refresh tokens are never 
 For OpenAI OAuth accounts, the outbound installation identity is resolved in this order:
 
 1. `accounts.extra.openai_device_id`: an operator-managed installation ID.
-2. An official inbound `X-Codex-Installation-ID` or body `client_metadata.x-codex-installation-id`.
+2. An inbound `X-Codex-Installation-ID` or body `client_metadata.x-codex-installation-id`.
 3. A deterministic installation ID derived from the upstream ChatGPT account identity.
 
-An official inbound identity is preserved together with its window ID. Managed and synthetic identities map window IDs into the selected upstream-account namespace.
+In `v1`, an inbound identity is deterministically mapped with the selected
+upstream ChatGPT account identity before it is sent upstream. This keeps one
+downstream installation stable for that account while preventing the same raw
+installation value from being presented to multiple upstream accounts. Its
+window ID is mapped into the same account namespace. In `legacy`, inbound
+installation and window IDs retain the previous pass-through behavior.
 
 Set `accounts.extra.openai_device_profile_id` to a new stable value when an intentional device rotation is required. Changing this value rotates derived installation, window, session, conversation, and prompt-cache namespaces as one generation.
 
@@ -50,8 +55,8 @@ Example account `extra` values:
 
 | Identifier | Lifetime and scope |
 | --- | --- |
-| Installation ID | Stable for the account/device profile; preserved for official inbound clients |
-| Window ID | Preserved for official inbound clients; otherwise stable for the downstream window within the account/device profile |
+| Installation ID | Stable for the account/device profile; `v1` maps inbound values per upstream account, while `legacy` preserves pass-through |
+| Window ID | `v1` maps the downstream window per upstream account and API key; `legacy` preserves pass-through |
 | Session and conversation ID | Stable for the conversation and isolated by upstream account plus downstream API key |
 | Prompt cache key | Uses the same account and downstream-tenant namespace as the session |
 | Turn and request IDs | Retain their request/turn lifecycle; they are not converted into long-lived device identifiers |
@@ -85,3 +90,13 @@ After changing device settings, verify:
 3. Different upstream accounts or downstream API keys do not share session/cache identifiers.
 4. HTTP and WebSocket requests expose the same installation/window namespace.
 5. Changing `openai_device_profile_id` rotates the complete managed namespace once.
+
+## Account failover boundary
+
+Codex can report a plan/model incompatibility as either an HTTP 400 response or
+an HTTP 200 `response.failed` event. The message
+`model is not supported when using Codex with a ChatGPT account` is treated as
+a deterministic request error: the current account receives the error and the
+same request is not fanned out across the OAuth pool. Capacity and transient
+processing errors remain eligible for their existing bounded retry/failover
+policy.

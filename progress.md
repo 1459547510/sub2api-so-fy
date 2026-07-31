@@ -4631,3 +4631,24 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - The published tag remains on feature commit `49f845e6b`; the later release-record commit is branch-only.
 - `.superpowers/` remains untracked and excluded from the commit, tag, and Release package.
 - Rollback point: run `git revert 49f845e6b`, publish the resulting rollback release, or redeploy `v0.1.168-fy.5` if an immediate binary rollback is required.
+
+## 2026-07-31 - Task: Verify Codex installation isolation and failover policy
+
+### What was done
+- Completed the release gate for account-scoped inbound Codex installation IDs and deterministic plan/model failure handling.
+- Verified that v1 mode isolates the same inbound installation across upstream accounts, legacy mode preserves existing identifiers, and plan-gated model failures do not fan out across the OAuth pool.
+
+### Testing
+- `gofmt -l` reported no formatting issues across the four changed Go files.
+- Targeted Codex identity and failover tests passed with `go test ./internal/service -run 'Test(EnsureCodexIdentityHeaders|EnforceCodexIdentityHeaders|OpenAICodex|ApplyOpenAICodex|OpenAIStreamFailed)' -count=1` (`5.986s`).
+- `go test -p 2 -tags=unit -timeout 10m ./... -count=1` passed across the complete backend unit suite; the service package completed in `172.726s`.
+- `git diff --cached --check` passed before the verification candidate was created.
+
+### Notes
+- `backend/internal/service/openai_codex_identity.go`: scopes inbound installation IDs to the selected upstream OAuth account in v1 mode.
+- `backend/internal/service/openai_codex_identity_test.go`: verifies account isolation, legacy preservation, and header/body alignment.
+- `backend/internal/service/openai_gateway_passthrough.go`: prevents deterministic Codex plan/model failures from triggering pool-wide failover.
+- `backend/internal/service/openai_codex_failover_policy_test.go`: covers deterministic and transient stream/HTTP failure classification.
+- `docs/OPENAI_CODEX_FINGERPRINT.md`: documents installation mapping and the failover boundary.
+- `progress.md`: records the completed verification evidence and rollback point.
+- Before commit, roll back with `git restore -- backend/internal/service/openai_codex_identity.go backend/internal/service/openai_codex_identity_test.go backend/internal/service/openai_gateway_passthrough.go docs/OPENAI_CODEX_FINGERPRINT.md progress.md` and remove `backend/internal/service/openai_codex_failover_policy_test.go`; after commit, use `git revert <codex_identity_failover_commit>`.

@@ -124,7 +124,13 @@ func resolveOpenAICodexDeviceFingerprint(account *Account, inboundDeviceID strin
 		return openAICodexDeviceFingerprint{deviceID: configured, managed: true}
 	}
 	if inbound := strings.TrimSpace(inboundDeviceID); inbound != "" {
-		return openAICodexDeviceFingerprint{deviceID: inbound}
+		if !openAICodexFingerprintUsesV1(account) {
+			return openAICodexDeviceFingerprint{deviceID: inbound}
+		}
+		return openAICodexDeviceFingerprint{
+			deviceID: mapOpenAICodexInstallationID(account, inbound),
+			managed:  true,
+		}
 	}
 	accountKey := openAICodexFingerprintAccountKey(account)
 	if accountKey == "" {
@@ -144,9 +150,22 @@ func mapOpenAICodexFingerprintIdentifier(account *Account, apiKeyID int64, kind,
 	return uuid.NewSHA1(openAICodexFingerprintNamespace, []byte(name)).String()
 }
 
+// mapOpenAICodexInstallationID keeps an inbound client installation stable
+// for one upstream OAuth account while preventing the same downstream value
+// from being presented to multiple upstream accounts.
+func mapOpenAICodexInstallationID(account *Account, raw string) string {
+	raw = strings.TrimSpace(raw)
+	accountKey := openAICodexFingerprintAccountKey(account)
+	if raw == "" || accountKey == "" {
+		return raw
+	}
+	name := fmt.Sprintf("installation:account:%s:value:%s", accountKey, raw)
+	return uuid.NewSHA1(openAICodexFingerprintNamespace, []byte(name)).String()
+}
+
 // applyOpenAICodexFingerprintHeaders aligns installation/window headers at the
-// final outbound boundary. Official inbound device identities are preserved;
-// managed or synthetic identities are scoped to the selected upstream account.
+// final outbound boundary. Inbound identities are scoped to the selected
+// upstream account; legacy mode returns before applying this mapping.
 func applyOpenAICodexFingerprintHeaders(h http.Header, account *Account, apiKeyID int64, fallbackWindowSeed string, resolved openAICodexDeviceFingerprint) {
 	if h == nil || !openAICodexFingerprintUsesV1(account) {
 		return

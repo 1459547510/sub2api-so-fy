@@ -876,6 +876,14 @@ func openAIStreamFailedEventShouldFailover(payload []byte, message string) bool 
 	if isOpenAIContextWindowError(message, payload) {
 		return false
 	}
+	// Codex returns plan/model incompatibility as an HTTP 200
+	// `response.failed` event on some paths. It is deterministic for the
+	// selected OAuth account and must not fan out the same request to every
+	// account in the pool.
+	if isOpenAICodexPlanGatedModelError(http.StatusBadRequest, payload) ||
+		strings.Contains(strings.ToLower(message), openAICodexPlanGatedModelPhrase) {
+		return false
+	}
 	if isOpenAITransientProcessingError(http.StatusBadRequest, message, payload) {
 		return true
 	}

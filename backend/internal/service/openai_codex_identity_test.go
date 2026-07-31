@@ -190,16 +190,49 @@ func TestOpenAICodexDeviceFingerprintLifecycle(t *testing.T) {
 	require.NotEqual(t, first.deviceID, resolveOpenAICodexDeviceFingerprint(account, "").deviceID)
 }
 
-func TestApplyOpenAICodexFingerprintHeadersPreservesOfficialInboundDevice(t *testing.T) {
-	account := &Account{ID: 51, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1}}
+func TestApplyOpenAICodexFingerprintHeadersScopesInboundDeviceToAccount(t *testing.T) {
+	account := &Account{
+		ID:       51,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+		Credentials: map[string]any{
+			"chatgpt_account_id": "acct-51",
+		},
+		Extra: map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1},
+	}
 	h := make(http.Header)
 	h.Set("X-Codex-Installation-ID", "official-installation")
 	h.Set("X-Codex-Window-ID", "official-window")
 
 	applyOpenAICodexFingerprintHeaders(h, account, 9, "fallback-window", openAICodexDeviceFingerprint{})
 
-	require.Equal(t, "official-installation", h.Get("X-Codex-Installation-ID"))
-	require.Equal(t, "official-window", h.Get("X-Codex-Window-ID"))
+	require.Equal(t, mapOpenAICodexInstallationID(account, "official-installation"), h.Get("X-Codex-Installation-ID"))
+	require.Equal(t, mapOpenAICodexFingerprintIdentifier(account, 9, "window", "official-window"), h.Get("X-Codex-Window-ID"))
+	require.NotEqual(t, "official-installation", h.Get("X-Codex-Installation-ID"))
+
+	other := &Account{
+		ID:          52,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Credentials: map[string]any{"chatgpt_account_id": "acct-52"},
+		Extra:       map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1},
+	}
+	require.NotEqual(t,
+		mapOpenAICodexInstallationID(account, "official-installation"),
+		mapOpenAICodexInstallationID(other, "official-installation"),
+	)
+}
+
+func TestApplyOpenAICodexFingerprintHeadersPreservesLegacyInboundDevice(t *testing.T) {
+	account := &Account{ID: 53, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeLegacy}}
+	h := make(http.Header)
+	h.Set("X-Codex-Installation-ID", "legacy-installation")
+	h.Set("X-Codex-Window-ID", "legacy-window")
+
+	applyOpenAICodexFingerprintHeaders(h, account, 9, "fallback-window", openAICodexDeviceFingerprint{})
+
+	require.Equal(t, "legacy-installation", h.Get("X-Codex-Installation-ID"))
+	require.Equal(t, "legacy-window", h.Get("X-Codex-Window-ID"))
 }
 
 func TestApplyOpenAICodexFingerprintHeadersUsesManagedAccountDevice(t *testing.T) {
@@ -233,6 +266,26 @@ func TestApplyOpenAICodexFingerprintBodyAlignsSessionAndDevice(t *testing.T) {
 	mappedAgain, fingerprintAgain := applyOpenAICodexFingerprintBody(body, account, 17, "", true)
 	require.Equal(t, string(mapped), string(mappedAgain))
 	require.Equal(t, fingerprint, fingerprintAgain)
+}
+
+func TestApplyOpenAICodexFingerprintBodyUsesSameInboundInstallationMapping(t *testing.T) {
+	account := &Account{
+		ID:          62,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Credentials: map[string]any{"chatgpt_account_id": "acct-62"},
+		Extra:       map[string]any{openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1},
+	}
+	body := []byte(`{"client_metadata":{"x-codex-installation-id":"inbound-installation"}}`)
+	mapped, fingerprint := applyOpenAICodexFingerprintBody(body, account, 17, "", true)
+	require.True(t, fingerprint.managed)
+	require.Equal(t, mapOpenAICodexInstallationID(account, "inbound-installation"), fingerprint.deviceID)
+	require.Equal(t, fingerprint.deviceID, gjson.GetBytes(mapped, "client_metadata.x-codex-installation-id").String())
+
+	header := make(http.Header)
+	header.Set("X-Codex-Installation-ID", "inbound-installation")
+	applyOpenAICodexFingerprintHeaders(header, account, 17, "", fingerprint)
+	require.Equal(t, fingerprint.deviceID, header.Get("X-Codex-Installation-ID"))
 }
 
 func TestOpenAICodexLegacyFingerprintRemainsUnchanged(t *testing.T) {
