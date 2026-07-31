@@ -4594,3 +4594,40 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_CHANNEL.md`: documents native pricing tiers and removes the stale three-tier editor instruction.
 - `progress.md`: records this implementation, verification, release attempt, and production blocker.
 - Rollback point: source rollback is `git revert 26c82af5b`; release rollback is to remove/recreate `v0.1.168-fy.5` only if necessary and keep production at `0.1.168-fy.3` until a verified Release asset is available. The untracked temporary reproduction directory is `C:\Users\feiyu\AppData\Local\Temp\sub2api-fy5-release-repro` and contains only generated build files.
+
+## 2026-07-30 - Task: Isolate inbound Codex installation IDs and stop deterministic model failover
+
+### What was done
+- `v1` now maps inbound `X-Codex-Installation-ID` and body `client_metadata.x-codex-installation-id` with the selected upstream ChatGPT account identity. The mapping is stable for one account, differs across accounts, and is aligned between headers and body.
+- `legacy` mode keeps the previous pass-through behavior for compatibility.
+- Codex `response.failed` events containing `model is not supported when using Codex with a ChatGPT account` are now treated as deterministic account/model errors and do not fan out across the OAuth pool. Capacity and transient processing errors retain bounded failover behavior.
+- Updated `docs/OPENAI_CODEX_FINGERPRINT.md` with the mapping and failover boundary.
+
+### Testing
+- `gofmt` passed for the changed Go files.
+- Targeted identity, session-isolation, stream-failure, transient-failover, and Codex plan-gating tests passed.
+- Full `go test ./internal/service -count=1` is the remaining verification step for this change.
+
+### Notes
+- Changed files: `backend/internal/service/openai_codex_identity.go`, `backend/internal/service/openai_codex_identity_test.go`, `backend/internal/service/openai_gateway_passthrough.go`, `backend/internal/service/openai_codex_failover_policy_test.go`, and `docs/OPENAI_CODEX_FINGERPRINT.md`.
+- Rollback before commit: `git restore -- <the five paths above> progress.md`; after a dedicated commit, use `git revert <codex_identity_failover_commit>`.
+
+## 2026-07-31 - Task: Release staged OpenAI Codex fingerprint modes
+
+### What was done
+- Published commit `49f845e6b` on `codex/leo-video-channel` and created annotated tag `v0.1.168-fy.6`.
+- Included the staged OpenAI Codex fingerprint compatibility changes, account creation defaults, runtime legacy marking, related tests, and documentation; excluded `.superpowers/` temporary files.
+- Confirmed the GitHub Release page and Linux amd64 asset were generated for `v0.1.168-fy.6`.
+
+### Testing
+- On a clean candidate worktree containing only the staged patch, `gofmt` passed for 23 Go files and `go test ./internal/service -count=1` passed in `103.497s`.
+- On the same candidate, `pnpm.cmd test:run`, `pnpm.cmd typecheck`, `pnpm.cmd lint:check`, and `pnpm.cmd run build` all passed; the production build completed in `28.99s`.
+- `git diff --cached --check` passed before commit.
+- Release package `sub2api_0.1.168-fy.6_linux_amd64.tar.gz` is `36,069,030` bytes with SHA256 `71fddf825aefe80311788b09f2bcd1841446a2d84f9e995a3eeec147d1ce6119`, exactly matching `checksums.txt`.
+- `tar -tzf` listed only the expected `sub2api` executable.
+
+### Notes
+- `progress.md`: records the release commit, isolated verification, package checksum, and rollback point.
+- The published tag remains on feature commit `49f845e6b`; the later release-record commit is branch-only.
+- `.superpowers/` remains untracked and excluded from the commit, tag, and Release package.
+- Rollback point: run `git revert 49f845e6b`, publish the resulting rollback release, or redeploy `v0.1.168-fy.5` if an immediate binary rollback is required.
