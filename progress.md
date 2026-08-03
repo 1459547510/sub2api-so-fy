@@ -4771,3 +4771,33 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Source verification covered the public user views, public DTO response boundaries, and generated frontend bundle.
 - `progress.md`: records the final build verification and unchanged temporary files.
 - Rollback point: use the rollback procedure in the preceding task entry; after commit, use `git revert <commit>`.
+
+## 2026-08-03 - Task: Merge upstream v0.1.170 and prepare fork release
+
+### What was done
+- Fetched `upstream/main` at `27e8f69a9` and merged the upstream v0.1.170 code into `codex/leo-video-channel`.
+- Preserved the fork-only Leo video and token incentive modules, public `video` platform alias, custom Telemetry homepage, and current user-facing二开内容 while accepting upstream security, routing, billing, authentication, and admin improvements.
+- Resolved conflicts in generated Ent hooks, gateway route guards, OpenAI slot acquisition, Codex probe identity tests, stream failover classification, public channel tests, and `HomeView.vue`.
+- Adapted the Leo video slot caller to the upstream three-state slot result and retained upstream Responses subpath validation alongside the Leo feature gate.
+
+### Testing
+- `go test ./...` passed for all backend packages.
+- `frontend/node_modules/.bin/eslint.cmd . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts` passed.
+- `frontend/node_modules/.bin/vue-tsc.cmd --noEmit` passed.
+- Frontend homepage regression tests passed: 3 files, 17 tests.
+- `frontend/node_modules/.bin/vite.cmd build` passed with 997 modules transformed and generated `backend/internal/web/dist` output.
+- `git diff --cached --check` passed and no unresolved merge paths or conflict markers remain.
+
+### Notes
+- `backend/ent/client.go`: retained `VideoJob` hook and interceptor registrations while merging upstream generated Ent changes.
+- `backend/internal/handler/openai_gateway_handler.go`: combined fork release timing compatibility with upstream profit-control slot result handling.
+- `backend/internal/server/routes/gateway.go`: combined Leo platform rejection with upstream Responses path guard.
+- `backend/internal/handler/leo_video.go`: adapted the Leo caller to the upstream slot acquisition result type.
+- `backend/internal/service/account_usage_service.go`: retained Codex fingerprint probe headers and upstream load-shed identity normalization.
+- `backend/internal/service/openai_codex_identity_test.go`: preserved fork UUID coverage and upstream config coverage.
+- `backend/internal/service/openai_gateway_passthrough.go`: preserved non-retryable Codex plan gating and upstream rate-limit failover handling.
+- `frontend/src/views/HomeView.vue`: retained Telemetry/custom-menu default homepage and added upstream compact homepage support with theme/i18n state.
+- `frontend/src/views/__tests__/HomeView.compact.spec.ts`: aligned the default-home assertion with the retained Telemetry homepage.
+- All other staged files are the upstream v0.1.170 merge result, including migrations 192/193 and release workflow updates.
+- `.superpowers/` remains untracked and excluded from the merge commit and release package.
+- Rollback point: after the merge commit is created, run `git revert <merge_commit>`; the pre-merge fork point is `905d63216`.

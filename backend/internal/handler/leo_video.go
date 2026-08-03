@@ -181,8 +181,12 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 		)
 		account := selection.Account
 		setOpsSelectedAccount(c, account.ID, account.Platform)
-		accountReleaseFunc, accountAcquired := h.acquireResponsesAccountSlot(c, apiKey.GroupID, sessionHash, selection, false, &streamStarted, reqLog, false)
-		if !accountAcquired {
+		accountReleaseFunc, slotResult := h.acquireResponsesAccountSlot(c, apiKey.GroupID, sessionHash, selection, false, &streamStarted, reqLog, false)
+		if slotResult == openAISlotAcquireProfitVetoed {
+			failedAccountIDs[account.ID] = struct{}{}
+			continue
+		}
+		if slotResult != openAISlotAcquireOK {
 			return
 		}
 
