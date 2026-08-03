@@ -123,4 +123,15 @@ func TestToModelPlazaOfficialPricing_NilPassthrough(t *testing.T) {
 	require.Nil(t, toModelPlazaOfficialPricing(nil))
 }
 
+func TestToModelPlazaGroupDTO_HidesVideoProvider(t *testing.T) {
+	g := service.PlazaGroup{
+		Platform: service.PlatformLeo,
+		Models:   []service.PlazaModel{{Name: "video-model", Platform: service.PlatformLeo}},
+	}
+
+	dto := toModelPlazaGroupDTO(&g, nil)
+	require.Equal(t, service.PublicVideoPlatform, dto.Platform)
+	require.Equal(t, service.PublicVideoPlatform, dto.Models[0].Platform)
+}
+
 func testPtr(v float64) *float64 { return &v }

@@ -84,10 +84,8 @@ func TestLeoAsyncVideoErrorsAreTypedAndDoNotExposeSecret(t *testing.T) {
 }
 
 func TestSanitizeVideoProviderMessageHidesUpstreamNames(t *testing.T) {
-	message := SanitizeVideoProviderMessage("Leonardo request failed; Leonardo AI, Leonardo.ai, LeoStudio and Leo Studio rejected it")
+	message := SanitizeVideoProviderMessage("Leonardo request failed; Leonardo AI, Leonardo.ai, LeoStudio, Leo Studio and leo rejected it")
 
-	require.Equal(t, "Video service request failed; Video service, Video service, Video service and Video service rejected it", message)
-	for _, name := range []string{"Leonardo", "Leonardo AI", "Leonardo.ai", "LeoStudio", "Leo Studio"} {
-		require.NotContains(t, message, name)
-	}
+	require.Equal(t, "Video service request failed; Video service, Video service, Video service, Video service and Video service rejected it", message)
+	require.NotContains(t, strings.ToLower(message), "leo")
 }

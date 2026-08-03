@@ -281,3 +281,9 @@ Uploaded media is placed in `guidances.video_reference_base` or
 be paired with an image reference or a video reference. Invalid extensions,
 containers, WAV encoding, size, and audio duration are rejected before job
 creation.
+
+## Public exposure boundary
+
+The internal platform identifier remains `leo` for account selection, billing, routing, and admin operations. Public user responses use the neutral platform identifier `video`, and user-facing labels use `Video`. This applies to API key/group, subscription, payment, quota, dashboard, available-channel, and model-plaza responses. Admin responses retain the internal identifier for operational clarity.
+
+Public video errors replace `leo`, `LeoStudio`, and `Leonardo` variants with `video service`; upstream credentials and provider task identifiers remain private.

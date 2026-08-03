@@ -208,13 +208,17 @@ func TestPublicVideoErrorMessageHidesProviderNames(t *testing.T) {
 		"leonardo.ai is unavailable",
 		"LeoStudio request failed",
 		"Leo Studio response was invalid",
+		"no leo account is available",
 	} {
 		public := PublicVideoErrorMessage(message)
-		require.NotContains(t, strings.ToLower(public), "leonardo")
-		require.NotContains(t, strings.ToLower(public), "leostudio")
-		require.NotContains(t, strings.ToLower(public), "leo studio")
+		require.NotContains(t, strings.ToLower(public), "leo")
 		require.Contains(t, public, "video service")
 	}
+}
+
+func TestPublicPlatformIDHidesInternalVideoProvider(t *testing.T) {
+	require.Equal(t, PublicVideoPlatform, PublicPlatformID(PlatformLeo))
+	require.Equal(t, PlatformOpenAI, PublicPlatformID(PlatformOpenAI))
 }
 
 func TestForwardLeoVideoFailsOverBeforeResponseCommit(t *testing.T) {

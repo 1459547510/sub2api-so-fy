@@ -119,7 +119,7 @@ func respondWithTokenPair(c *gin.Context, authService *service.AuthService, user
 		response.Success(c, AuthResponse{
 			AccessToken: token,
 			TokenType:   "Bearer",
-			User:        dto.UserFromService(user),
+			User:        dto.UserFromServicePublic(user),
 		})
 		return
 	}
@@ -128,7 +128,7 @@ func respondWithTokenPair(c *gin.Context, authService *service.AuthService, user
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    tokenPair.ExpiresIn,
 		TokenType:    "Bearer",
-		User:         dto.UserFromService(user),
+		User:         dto.UserFromServicePublic(user),
 	})
 }
 

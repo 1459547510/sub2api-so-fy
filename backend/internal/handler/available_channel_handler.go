@@ -199,12 +199,21 @@ func buildPlatformSections(
 	for _, platform := range platforms {
 		platformSet := map[string]struct{}{platform: {}}
 		sections = append(sections, userChannelPlatformSection{
-			Platform:        platform,
-			Groups:          groupsByPlatform[platform],
+			Platform:        service.PublicPlatformID(platform),
+			Groups:          publicAvailableGroups(groupsByPlatform[platform]),
 			SupportedModels: toUserSupportedModels(ch.SupportedModels, platformSet),
 		})
 	}
 	return sections
+}
+
+func publicAvailableGroups(groups []userAvailableGroup) []userAvailableGroup {
+	out := make([]userAvailableGroup, len(groups))
+	copy(out, groups)
+	for i := range out {
+		out[i].Platform = service.PublicPlatformID(out[i].Platform)
+	}
+	return out
 }
 
 // filterUserVisibleGroups 仅保留用户可访问的分组。
@@ -250,7 +259,7 @@ func toUserSupportedModels(
 		}
 		out = append(out, userSupportedModel{
 			Name:     m.Name,
-			Platform: m.Platform,
+			Platform: service.PublicPlatformID(m.Platform),
 			Pricing:  toUserPricing(m.Pricing),
 		})
 	}

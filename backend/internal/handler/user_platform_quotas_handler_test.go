@@ -16,6 +16,7 @@ import (
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 )
 
 // fakeQuotaRepoForUserHandler 实现 service.UserPlatformQuotaRepository 最小子集
@@ -88,6 +89,24 @@ func TestGetMyPlatformQuotas_D14_LazyZeroForExpiredWindow(t *testing.T) {
 	if !strings.Contains(body, `"daily_window_resets_at":null`) {
 		t.Errorf("expected daily_window_resets_at:null in body, got: %s", body)
 	}
+}
+
+func TestGetMyPlatformQuotas_HidesVideoProvider(t *testing.T) {
+	repo := &fakeQuotaRepoForUserHandler{records: []service.UserPlatformQuotaRecord{{
+		UserID:   42,
+		Platform: service.PlatformLeo,
+	}}}
+	h := &UserHandler{userPlatformQuotaRepo: repo}
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/user/platform-quotas", nil)
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 42})
+	h.GetMyPlatformQuotas(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), `"platform":"video"`)
+	require.NotContains(t, w.Body.String(), `"platform":"leo"`)
 }
 
 func TestGetMyPlatformQuotas_NilRepo_Returns200Empty(t *testing.T) {

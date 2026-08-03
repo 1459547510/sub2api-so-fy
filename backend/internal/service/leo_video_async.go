@@ -40,7 +40,7 @@ type LeoAsyncUpstreamError struct {
 	Ambiguous  bool
 }
 
-var videoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio)\b`)
+var videoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio|leo)\b`)
 
 func SanitizeVideoProviderMessage(message string) string {
 	return videoProviderNamePattern.ReplaceAllString(message, "Video service")

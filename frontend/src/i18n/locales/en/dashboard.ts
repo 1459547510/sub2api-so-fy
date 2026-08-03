@@ -1159,7 +1159,7 @@ export default {
     previewError: 'The video could not be loaded.',
     retryPreview: 'Retry',
     noJobs: 'No video jobs yet',
-    noJobsHint: 'Submit a prompt to start your first Leo video.',
+    noJobsHint: 'Submit a prompt to start your first video.',
     download: 'Download',
     open: 'Open video',
     cancel: 'Cancel job',

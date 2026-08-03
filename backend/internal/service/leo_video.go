@@ -25,7 +25,16 @@ type LeoVideoRequestInfo struct {
 	Audio           bool
 }
 
-var publicVideoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio)\b`)
+const PublicVideoPlatform = "video"
+
+var publicVideoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio|leo)\b`)
+
+func PublicPlatformID(platform string) string {
+	if platform == PlatformLeo {
+		return PublicVideoPlatform
+	}
+	return platform
+}
 
 func PublicVideoErrorMessage(message string) string {
 	return strings.TrimSpace(publicVideoProviderNamePattern.ReplaceAllString(message, "video service"))

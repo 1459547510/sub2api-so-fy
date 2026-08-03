@@ -155,3 +155,16 @@ func TestBuildPlatformSections_GroupsByPlatform(t *testing.T) {
 	require.Len(t, sections[0].SupportedModels, 1)
 	require.Equal(t, "claude-sonnet-4-6", sections[0].SupportedModels[0].Name)
 }
+
+func TestBuildPlatformSections_HidesVideoProvider(t *testing.T) {
+	ch := service.AvailableChannel{
+		SupportedModels: []service.SupportedModel{{Name: "video-model", Platform: service.PlatformLeo}},
+	}
+	visible := []userAvailableGroup{{ID: 1, Name: "video", Platform: service.PlatformLeo}}
+
+	sections := buildPlatformSections(ch, visible)
+	require.Len(t, sections, 1)
+	require.Equal(t, service.PublicVideoPlatform, sections[0].Platform)
+	require.Equal(t, service.PublicVideoPlatform, sections[0].Groups[0].Platform)
+	require.Equal(t, service.PublicVideoPlatform, sections[0].SupportedModels[0].Platform)
+}

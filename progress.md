@@ -4709,3 +4709,65 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the release commit, package verification, excluded temporary files, and rollback point.
 - The published tag remains on feature commit `2c3c50c05`; the later release-record commit is branch-only.
 - Rollback point: run `git revert 2c3c50c05`, publish the resulting rollback release, or redeploy `v0.1.168-fy.7` if an immediate binary rollback is required.
+
+## 2026-08-03 - Task: Hide Leo provider identity from public clients
+
+### What was done
+- Added a public `video` platform alias at HTTP response boundaries while retaining the internal `leo` identifier for scheduling, billing, routing, and admin operations.
+- Replaced public video UI labels and empty-state copy with neutral `Video` wording, while keeping compatibility with legacy `leo` values in browser state.
+- Expanded synchronous and asynchronous video error sanitization to cover bare `leo` as well as provider-branded variants.
+- Documented the public/internal platform boundary and added regression coverage for public DTOs, channels, model plaza, quota output, and provider error sanitization.
+
+### Testing
+- `go test ./internal/service -run 'Test(PublicVideoErrorMessageHidesProviderNames|PublicPlatformIDHidesInternalVideoProvider|SanitizeVideoProviderMessageHidesUpstreamNames)$' -count=1` passed.
+- `go test -tags=unit ./internal/handler ./internal/handler/dto -run 'Test(PublicPlatformMappers|BuildPlatformSections|ToModelPlazaGroupDTO|GetMyPlatformQuotas_HidesVideoProvider|GetMyPlatformQuotas_D14)' -count=1` passed.
+- `go test -tags=unit ./internal/service ./internal/handler ./internal/handler/dto -count=1` passed: service `162.970s`, handler `29.849s`, dto `0.173s`.
+- `frontend/node_modules/.bin/vue-tsc --noEmit` passed.
+- `frontend/node_modules/.bin/vitest run src/views/user/__tests__/VideoGenerationView.spec.ts src/components/admin/user/__tests__/UserPlatformQuotaModal.spec.ts` passed: 2 files, 37 tests.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/leo_video.go`: defines the public `video` platform alias and sanitizes synchronous provider errors including bare `leo`.
+- `backend/internal/service/leo_video_async.go`: sanitizes asynchronous provider errors including bare `leo`.
+- `backend/internal/service/leo_video_test.go`: verifies public platform alias and synchronous error redaction.
+- `backend/internal/service/leo_video_async_test.go`: verifies asynchronous provider-name redaction.
+- `backend/internal/handler/dto/mappers.go`: adds public API key, group, user, and subscription platform mappers while preserving admin mappers.
+- `backend/internal/handler/dto/public_platform_mapper_test.go`: verifies public DTO aliasing and admin-value preservation.
+- `backend/internal/handler/api_key_handler.go`: applies the public alias to user API key and available-group responses.
+- `backend/internal/handler/auth_handler.go`: applies the public alias to login user payloads.
+- `backend/internal/handler/user_handler.go`: applies the public alias to user profile and quota responses.
+- `backend/internal/handler/subscription_handler.go`: applies the public alias to user subscription responses.
+- `backend/internal/handler/usage_handler.go`: applies the public alias to user dashboard platform statistics.
+- `backend/internal/handler/payment_handler.go`: applies the public alias to public plan and checkout responses.
+- `backend/internal/handler/available_channel_handler.go`: applies the public alias to available-channel sections, groups, and models.
+- `backend/internal/handler/available_channel_handler_test.go`: covers public channel aliasing.
+- `backend/internal/handler/model_plaza_handler.go`: applies the public alias to model-plaza groups and models.
+- `backend/internal/handler/model_plaza_handler_test.go`: covers public model-plaza aliasing.
+- `backend/internal/handler/user_platform_quotas_handler_test.go`: covers public quota aliasing.
+- `frontend/src/i18n/locales/en/dashboard.ts`: removes the user-facing `Leo` empty-state label.
+- `frontend/src/types/index.ts`: accepts the public `video` group platform value.
+- `frontend/src/api/admin/users.ts`: accepts the public `video` quota value during mixed-version rollout.
+- `frontend/src/utils/platformColors.ts`: adds neutral `Video` labeling and styling for public platform values.
+- `frontend/src/components/common/PlatformIcon.vue`: renders the public video alias with the video icon.
+- `frontend/src/components/common/GroupBadge.vue`: styles both legacy and public video platform values.
+- `frontend/src/components/user/dashboard/UserDashboardStats.vue`: displays public and legacy video platform values as `Video`.
+- `frontend/src/views/user/VideoGenerationView.vue`: accepts both `video` and legacy `leo` API key group values.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the public/internal platform boundary.
+- `progress.md`: records this implementation, verification evidence, and rollback point.
+- Rollback before commit: run `git restore --` on the listed tracked files and separately remove the untracked `backend/internal/handler/dto/public_platform_mapper_test.go`; after commit, use `git revert <commit>`.
+
+## 2026-08-03 - Task: Final public platform verification
+
+### What was done
+- Completed the final static audit and production frontend build for the public `video` platform alias.
+- Confirmed the pre-existing untracked `.superpowers/` directory remains untouched and build output remains outside the tracked diff.
+
+### Testing
+- `frontend/node_modules/.bin/vite build` passed with 994 modules transformed.
+- `git diff --check` passed; only existing LF/CRLF conversion warnings for `docs/LEO_VIDEO_CHANNEL.md` and `progress.md` remain.
+- Public user source and generated frontend output contain no user-facing `Leo`, `LeoStudio`, `Leonardo`, or old Leo empty-state text outside tests and internal compatibility identifiers.
+
+### Notes
+- Source verification covered the public user views, public DTO response boundaries, and generated frontend bundle.
+- `progress.md`: records the final build verification and unchanged temporary files.
+- Rollback point: use the rollback procedure in the preceding task entry; after commit, use `git revert <commit>`.

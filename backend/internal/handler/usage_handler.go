@@ -449,6 +449,9 @@ func (h *UsageHandler) DashboardStats(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
+	for i := range stats.ByPlatform {
+		stats.ByPlatform[i].Platform = service.PublicPlatformID(stats.ByPlatform[i].Platform)
+	}
 
 	response.Success(c, stats)
 }

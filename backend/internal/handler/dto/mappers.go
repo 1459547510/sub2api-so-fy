@@ -57,6 +57,20 @@ func UserFromService(u *service.User) *User {
 	return out
 }
 
+func UserFromServicePublic(u *service.User) *User {
+	out := UserFromService(u)
+	if out == nil {
+		return nil
+	}
+	for i := range out.APIKeys {
+		publicizeAPIKeyPlatform(&out.APIKeys[i])
+	}
+	for i := range out.Subscriptions {
+		publicizeSubscriptionPlatform(&out.Subscriptions[i])
+	}
+	return out
+}
+
 // UserFromServiceAdmin converts a service User to DTO for admin users.
 // It includes notes - user-facing endpoints must not use this.
 func UserFromServiceAdmin(u *service.User) *AdminUser {
@@ -123,6 +137,12 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 	return out
 }
 
+func APIKeyFromServicePublic(k *service.APIKey) *APIKey {
+	out := APIKeyFromService(k)
+	publicizeAPIKeyPlatform(out)
+	return out
+}
+
 func GroupFromServiceShallow(g *service.Group) *Group {
 	if g == nil {
 		return nil
@@ -136,6 +156,30 @@ func GroupFromService(g *service.Group) *Group {
 		return nil
 	}
 	return GroupFromServiceShallow(g)
+}
+
+func GroupFromServicePublic(g *service.Group) *Group {
+	out := GroupFromServiceShallow(g)
+	publicizeGroupPlatform(out)
+	return out
+}
+
+func publicizeGroupPlatform(group *Group) {
+	if group != nil {
+		group.Platform = service.PublicPlatformID(group.Platform)
+	}
+}
+
+func publicizeAPIKeyPlatform(apiKey *APIKey) {
+	if apiKey != nil {
+		publicizeGroupPlatform(apiKey.Group)
+	}
+}
+
+func publicizeSubscriptionPlatform(subscription *UserSubscription) {
+	if subscription != nil {
+		publicizeGroupPlatform(subscription.Group)
+	}
 }
 
 // GroupFromServiceAdmin converts a service Group to DTO for admin users.
@@ -561,6 +605,7 @@ func RedeemCodeFromService(rc *service.RedeemCode) *RedeemCode {
 		return nil
 	}
 	out := redeemCodeFromServiceBase(rc)
+	publicizeGroupPlatform(out.Group)
 	return &out
 }
 
@@ -688,6 +733,9 @@ func UsageLogFromService(l *service.UsageLog) *UsageLog {
 		return nil
 	}
 	u := usageLogFromServiceUser(l)
+	publicizeAPIKeyPlatform(u.APIKey)
+	publicizeGroupPlatform(u.Group)
+	publicizeSubscriptionPlatform(u.Subscription)
 	return &u
 }
 
@@ -769,6 +817,12 @@ func UserSubscriptionFromService(sub *service.UserSubscription) *UserSubscriptio
 	}
 	out := userSubscriptionFromServiceBase(sub)
 	return &out
+}
+
+func UserSubscriptionFromServicePublic(sub *service.UserSubscription) *UserSubscription {
+	out := UserSubscriptionFromService(sub)
+	publicizeSubscriptionPlatform(out)
+	return out
 }
 
 // UserSubscriptionFromServiceAdmin converts a service UserSubscription to DTO for admin users.
