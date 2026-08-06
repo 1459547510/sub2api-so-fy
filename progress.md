@@ -4864,3 +4864,37 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - No additional source files changed in this verification pass.
 - Rollback point is unchanged from the original implementation entry.
+
+## 2026-08-06 - Task: Merge upstream v0.1.171 and prepare fork release
+
+### What was done
+- Merged `upstream/main` at `c123caddd` (upstream release `v0.1.171`) into `codex/leo-video-channel` after committing the configurable `cyber_policy` group-revocation feature at `7716a380e`.
+- Preserved the fork-only Leo video workflow, Token incentive plan, public `video` platform alias, Telemetry homepage, custom update/release behavior, and the new risk-control revocation setting.
+- Accepted upstream captcha gates, Codex version synchronization, billing quantization, subscription renewal locking, OpenAI account recovery, scheduler cancellation, model-plaza pricing, authentication, payment, and sponsor updates.
+- Resolved 12 content conflicts by combining fork behavior with upstream v0.1.171 behavior; no database migration conflicts or new migration files were introduced.
+
+### Testing
+- `go test ./...` passed for all backend packages.
+- `frontend/node_modules/.bin/vue-tsc.cmd --noEmit` passed.
+- `frontend/node_modules/.bin/eslint.cmd . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts` passed.
+- Focused frontend regression suite passed: 11 files, 116 tests covering the Telemetry/default homepage, compact homepage, video generation, usage/Token incentive page, admin settings, captcha gates, model plaza, and risk-control locales.
+- `frontend/node_modules/.bin/vite.cmd build` passed with 1005 modules transformed.
+- `git diff --cached --check` passed before the progress-log update; the final staged check is repeated before commit.
+
+### Notes
+- `backend/cmd/server/wire_gen.go`: registers both the fork video-job runtime and the upstream Codex-version synchronization service in cleanup wiring.
+- `backend/internal/config/config.go`: combines video `blob:` media support with upstream Aliyun and Tencent captcha CSP domains.
+- `backend/internal/handler/model_plaza_handler.go`: preserves the public `video` alias while exposing upstream independent image-rate fields.
+- `backend/internal/server/middleware/security_headers_test.go`: verifies both media blob support and Tencent captcha CSP support.
+- `backend/internal/service/account_test_service.go`: preserves account-scoped Codex fingerprint headers and applies upstream account-UA identity normalization.
+- `backend/internal/service/account_usage_service.go`: preserves usage-probe fingerprint isolation and applies upstream account-UA identity normalization.
+- `backend/internal/service/openai_alpha_search.go`: preserves fingerprint isolation and adopts upstream unified Codex identity/version handling.
+- `backend/internal/service/openai_codex_identity_test.go`: preserves fork fingerprint lifecycle tests and adds upstream client-version normalization tests.
+- `backend/internal/service/openai_gateway_forward.go`: combines device fingerprint mapping with upstream unified OAuth identity enforcement.
+- `backend/internal/service/openai_gateway_passthrough.go`: combines passthrough fingerprint mapping with upstream unified OAuth identity enforcement.
+- `backend/internal/service/openai_ws_forwarder_payload.go`: combines WebSocket fingerprint mapping with upstream unified OAuth identity enforcement.
+- `deploy/config.example.yaml`: documents the combined captcha and video-media CSP policy.
+- `.github/workflows/release.yml`: remains the fork Linux amd64 Release workflow and was verified to support the planned `v0.1.171-fy.1` tag and checksum asset.
+- All remaining staged files are the direct upstream v0.1.171 merge result; `progress.md` records the merge decisions, verification evidence, and rollback point.
+- `.superpowers/` remains untracked and excluded from the merge commit and release package.
+- Rollback point: after the merge commit is created, run `git revert <merge_commit>`; the pre-merge fork point is `7716a380e`.
