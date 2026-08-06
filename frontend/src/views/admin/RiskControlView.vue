@@ -896,6 +896,11 @@
                 </div>
                 <Toggle v-model="configForm.cyber_policy_exclude_from_ban_count" />
               </div>
+              <div class="lg:col-span-2">
+                <label class="input-label">{{ t('admin.riskControl.cyberPolicyRevokeGroup') }}</label>
+                <Select v-model="configForm.cyber_policy_revoke_group_id" :options="cyberPolicyRevokeGroupOptions" />
+                <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('admin.riskControl.cyberPolicyRevokeGroupHint') }}</p>
+              </div>
               <div>
                 <label class="input-label">{{ t('admin.riskControl.banThreshold') }}</label>
                 <input v-model.number="configForm.ban_threshold" type="number" min="1" max="1000" class="input" />
@@ -1250,6 +1255,7 @@ const configForm = reactive({
   email_on_hit: true,
   auto_ban_enabled: true,
   cyber_policy_exclude_from_ban_count: false,
+  cyber_policy_revoke_group_id: 0,
   ban_threshold: 10,
   violation_window_hours: 720,
   hit_retention_days: 180,
@@ -1408,6 +1414,16 @@ const groupFilterOptions = computed<SelectOption[]>(() => [
     value: group.id,
     label: `${group.name} (${group.platform})`,
   })),
+])
+
+const cyberPolicyRevokeGroupOptions = computed<SelectOption[]>(() => [
+  { value: 0, label: t('admin.riskControl.cyberPolicyRevokeGroupDisabled') },
+  ...groups.value
+    .filter((group) => group.status === 'active' && group.platform === 'openai' && group.is_exclusive)
+    .map((group) => ({
+      value: group.id,
+      label: `${group.name} (${group.platform})`,
+    })),
 ])
 
 const selectedGroupCount = computed(() => String(configForm.group_ids.length))
@@ -1728,6 +1744,7 @@ function applyConfig(config: ContentModerationConfig) {
   configForm.email_on_hit = config.email_on_hit ?? true
   configForm.auto_ban_enabled = config.auto_ban_enabled ?? true
   configForm.cyber_policy_exclude_from_ban_count = config.cyber_policy_exclude_from_ban_count ?? false
+  configForm.cyber_policy_revoke_group_id = config.cyber_policy_revoke_group_id || 0
   configForm.ban_threshold = config.ban_threshold || 10
   configForm.violation_window_hours = config.violation_window_hours || 720
   configForm.hit_retention_days = config.hit_retention_days || 180
@@ -1814,6 +1831,7 @@ async function saveConfig() {
       email_on_hit: configForm.email_on_hit,
       auto_ban_enabled: configForm.auto_ban_enabled,
       cyber_policy_exclude_from_ban_count: configForm.cyber_policy_exclude_from_ban_count,
+      cyber_policy_revoke_group_id: Number(configForm.cyber_policy_revoke_group_id) || 0,
       ban_threshold: Number(configForm.ban_threshold) || 10,
       violation_window_hours: Number(configForm.violation_window_hours) || 720,
       hit_retention_days: Number(configForm.hit_retention_days) || 180,

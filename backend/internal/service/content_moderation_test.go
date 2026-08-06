@@ -162,6 +162,7 @@ type contentModerationTestHashCache struct {
 type contentModerationTestUserRepo struct {
 	user    *User
 	updated []User
+	removed []struct{ userID, groupID int64 }
 }
 
 func (r *contentModerationTestUserRepo) Create(ctx context.Context, user *User) error {
@@ -282,7 +283,17 @@ func (r *contentModerationTestUserRepo) AddGroupToAllowedGroups(ctx context.Cont
 }
 
 func (r *contentModerationTestUserRepo) RemoveGroupFromUserAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
-	panic("unexpected RemoveGroupFromUserAllowedGroups call")
+	r.removed = append(r.removed, struct{ userID, groupID int64 }{userID: userID, groupID: groupID})
+	if r.user != nil {
+		allowed := r.user.AllowedGroups[:0]
+		for _, id := range r.user.AllowedGroups {
+			if id != groupID {
+				allowed = append(allowed, id)
+			}
+		}
+		r.user.AllowedGroups = allowed
+	}
+	return nil
 }
 
 func (r *contentModerationTestUserRepo) ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error) {

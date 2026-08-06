@@ -13,3 +13,7 @@ The action runs after the triggering Ops error is persisted. It therefore requir
 After a user is disabled, the rule synchronously appends an audit entry with action `security.cyber_policy_revocation_ban` to the existing `audit_logs` store. The entry records the revoked account, credential account, plan type, attributed user, hit count, latest matching Ops error ID, request IDs, API key ID and masked prefix, client IP, user agent, model, request path, revocation request IDs, and timestamps.
 
 When the matching content-moderation record is available, its already-redacted input excerpt is copied into the audit entry's redacted request body. Full raw prompts and credentials are not added. Administrators can review the rule event and the retained request summary from **Security Audit > Audit Logs**.
+
+## Configurable Group Revocation
+
+The risk-control page exposes **Remove Exclusive Group on Hit**. Select an active OpenAI exclusive group, or leave it disabled. After an upstream `cyber_policy` event is recorded, the backend loads the trusted user role and removes only that selected group from a regular user's `user_allowed_groups` relation, then invalidates the user's auth cache. Administrators are always exempt. The rule never disables the user, changes API keys, removes other groups, or touches the account pool. The setting is stored as `cyber_policy_revoke_group_id`; `0` means disabled, and the backend validates that a selected group is active, OpenAI, and exclusive.

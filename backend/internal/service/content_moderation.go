@@ -172,7 +172,8 @@ type ContentModerationConfig struct {
 	// CyberPolicyExcludeFromBanCount 为 true 时，cyber_policy 命中不参与自动封号计数：
 	// 当次不判定封号，且历史 cyber 行在 CountFlaggedByUserSince 中被排除。
 	// 默认 false（计入，与历史行为一致；旧配置 JSON 无此字段时反序列化为 false）。
-	CyberPolicyExcludeFromBanCount bool `json:"cyber_policy_exclude_from_ban_count"`
+	CyberPolicyExcludeFromBanCount bool  `json:"cyber_policy_exclude_from_ban_count"`
+	CyberPolicyRevokeGroupID       int64 `json:"cyber_policy_revoke_group_id"`
 }
 
 type ContentModerationConfigView struct {
@@ -208,6 +209,7 @@ type ContentModerationConfigView struct {
 	KeywordBlockingMode            string                          `json:"keyword_blocking_mode"`
 	ModelFilter                    ContentModerationModelFilter    `json:"model_filter"`
 	CyberPolicyExcludeFromBanCount bool                            `json:"cyber_policy_exclude_from_ban_count"`
+	CyberPolicyRevokeGroupID       int64                           `json:"cyber_policy_revoke_group_id"`
 }
 
 type ContentModerationAPIKeyStatus struct {
@@ -300,6 +302,7 @@ type UpdateContentModerationConfigInput struct {
 	KeywordBlockingMode            *string                       `json:"keyword_blocking_mode"`
 	ModelFilter                    *ContentModerationModelFilter `json:"model_filter"`
 	CyberPolicyExcludeFromBanCount *bool                         `json:"cyber_policy_exclude_from_ban_count"`
+	CyberPolicyRevokeGroupID       *int64                        `json:"cyber_policy_revoke_group_id"`
 }
 
 type ContentModerationModelFilter struct {
@@ -699,6 +702,9 @@ func (s *ContentModerationService) UpdateConfig(ctx context.Context, input Updat
 	}
 	if input.CyberPolicyExcludeFromBanCount != nil {
 		cfg.CyberPolicyExcludeFromBanCount = *input.CyberPolicyExcludeFromBanCount
+	}
+	if input.CyberPolicyRevokeGroupID != nil {
+		cfg.CyberPolicyRevokeGroupID = *input.CyberPolicyRevokeGroupID
 	}
 	if input.Thresholds != nil {
 		cfg.Thresholds = mergeContentModerationThresholds(ContentModerationDefaultThresholds(), *input.Thresholds)
@@ -1673,6 +1679,18 @@ func (s *ContentModerationService) validateConfig(ctx context.Context, cfg *Cont
 	if cfg.ModelFilter.Type != ContentModerationModelFilterAll && len(cfg.ModelFilter.Models) == 0 {
 		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_MODEL_FILTER", "指定或排除模型时至少需要配置 1 个模型")
 	}
+	if cfg.CyberPolicyRevokeGroupID < 0 {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_CYBER_REVOKE_GROUP", "cyber_policy 撤权分组无效")
+	}
+	if cfg.CyberPolicyRevokeGroupID > 0 {
+		if s.groupRepo == nil {
+			return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_CYBER_REVOKE_GROUP", "cyber_policy 撤权分组不可用")
+		}
+		group, err := s.groupRepo.GetByIDLite(ctx, cfg.CyberPolicyRevokeGroupID)
+		if err != nil || group == nil || !group.IsActive() || group.Platform != PlatformOpenAI || !group.IsExclusive {
+			return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_CYBER_REVOKE_GROUP", "cyber_policy 撤权分组必须是启用中的 OpenAI 专属分组")
+		}
+	}
 	if !cfg.AllGroups && len(cfg.GroupIDs) > 0 && s.groupRepo != nil {
 		for _, groupID := range cfg.GroupIDs {
 			if _, err := s.groupRepo.GetByIDLite(ctx, groupID); err != nil {
@@ -2108,6 +2126,7 @@ func defaultContentModerationConfig() *ContentModerationConfig {
 			Models: []string{},
 		},
 		CyberPolicyExcludeFromBanCount: false,
+		CyberPolicyRevokeGroupID:       0,
 	}
 }
 
@@ -2440,6 +2459,7 @@ func (s *ContentModerationService) configView(cfg *ContentModerationConfig) *Con
 		KeywordBlockingMode:            cfg.KeywordBlockingMode,
 		ModelFilter:                    cloneContentModerationModelFilter(cfg.ModelFilter),
 		CyberPolicyExcludeFromBanCount: cfg.CyberPolicyExcludeFromBanCount,
+		CyberPolicyRevokeGroupID:       cfg.CyberPolicyRevokeGroupID,
 	}
 }
 
@@ -3002,6 +3022,7 @@ func (s *ContentModerationService) RecordCyberPolicyEvent(ctx context.Context, i
 		slog.Warn("content_moderation.cyber_load_config_failed", "error", err)
 		cfg = &ContentModerationConfig{}
 	}
+	s.revokeCyberPolicyGroup(ctx, cfg, in.UserID)
 	var userID *int64
 	if in.UserID > 0 {
 		userID = &in.UserID
@@ -3069,6 +3090,34 @@ func (s *ContentModerationService) RecordCyberPolicyEvent(ctx context.Context, i
 		if err := s.repo.UpdateLogEmailSent(ctx, log.ID, true); err != nil {
 			slog.Warn("content_moderation.cyber_update_email_sent_failed", "log_id", log.ID, "error", err)
 		}
+	}
+}
+
+func (s *ContentModerationService) revokeCyberPolicyGroup(ctx context.Context, cfg *ContentModerationConfig, userID int64) {
+	if s == nil || cfg == nil || cfg.CyberPolicyRevokeGroupID <= 0 || userID <= 0 || s.userRepo == nil {
+		return
+	}
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		slog.Warn("content_moderation.cyber_revoke_user_load_failed", "user_id", userID, "group_id", cfg.CyberPolicyRevokeGroupID, "error", err)
+		return
+	}
+	if user == nil || user.IsAdmin() {
+		return
+	}
+	for _, allowedGroupID := range user.AllowedGroups {
+		if allowedGroupID != cfg.CyberPolicyRevokeGroupID {
+			continue
+		}
+		if err := s.userRepo.RemoveGroupFromUserAllowedGroups(ctx, userID, cfg.CyberPolicyRevokeGroupID); err != nil {
+			slog.Warn("content_moderation.cyber_revoke_group_failed", "user_id", userID, "group_id", cfg.CyberPolicyRevokeGroupID, "error", err)
+			return
+		}
+		if s.authCacheInvalidator != nil {
+			s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, userID)
+		}
+		slog.Info("content_moderation.cyber_revoke_group_succeeded", "user_id", userID, "group_id", cfg.CyberPolicyRevokeGroupID)
+		return
 	}
 }
 

@@ -4801,3 +4801,66 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - All other staged files are the upstream v0.1.170 merge result, including migrations 192/193 and release workflow updates.
 - `.superpowers/` remains untracked and excluded from the merge commit and release package.
 - Rollback point: after the merge commit is created, run `git revert <merge_commit>`; the pre-merge fork point is `905d63216`.
+
+## 2026-08-06 - Task: Configurable cyber_policy exclusive-group revocation
+
+### What was done
+- Added a disabled-by-default `cyber_policy_revoke_group_id` setting with backend validation restricted to active OpenAI exclusive groups.
+- Added server-side revocation after upstream `cyber_policy` logging for regular users, with administrator exemption and per-user auth-cache invalidation. The rule removes only the selected `user_allowed_groups` relation and does not disable users or alter other groups, API keys, account status, or account pools.
+- Added the risk-control Web selector and bilingual labels, plus operational documentation.
+
+### Testing
+- `go test ./internal/service -run 'TestRecordCyberPolicyEvent|TestContentModerationConfig' -count=1` passed.
+- `go test ./internal/service ./internal/handler/admin -count=1` passed.
+- `frontend/node_modules/.bin/vue-tsc.cmd --noEmit` passed.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/content_moderation.go`: stores, validates, exposes, and applies the configured group revocation with administrator exemption.
+- `backend/internal/service/content_moderation_test.go`: records test user group removals for assertions.
+- `backend/internal/service/content_moderation_cyber_revoke_test.go`: covers regular-user revocation and administrator exemption.
+- `backend/internal/handler/admin/content_moderation_handler.go`: forwards the new admin configuration field.
+- `frontend/src/api/admin/riskControl.ts`: adds the configuration field to read/write types.
+- `frontend/src/views/admin/RiskControlView.vue`: adds the OpenAI exclusive-group selector and payload binding.
+- `frontend/src/i18n/locales/zh/admin/channels.ts`: adds Chinese selector labels and guidance.
+- `frontend/src/i18n/locales/en/admin/channels.ts`: adds English selector labels and guidance.
+- `docs/CYBER_POLICY_REVOCATION_BAN.md`: documents the configurable revocation rule.
+- `docs/CONTENT_MODERATION.md`: documents the administrator exemption and group-only effect.
+- Rollback: run `git restore -- backend/internal/service/content_moderation.go backend/internal/service/content_moderation_test.go backend/internal/handler/admin/content_moderation_handler.go frontend/src/api/admin/riskControl.ts frontend/src/views/admin/RiskControlView.vue frontend/src/i18n/locales/zh/admin/channels.ts frontend/src/i18n/locales/en/admin/channels.ts docs/CYBER_POLICY_REVOCATION_BAN.md docs/CONTENT_MODERATION.md` and remove `backend/internal/service/content_moderation_cyber_revoke_test.go`.
+
+## 2026-08-06 - Task: cyber_policy revocation frontend verification
+
+### What was done
+- Completed the focused locale regression check for the risk-control page after adding the group selector.
+
+### Testing
+- `frontend/node_modules/.bin/vitest.cmd run src/i18n/__tests__/riskControlLocales.spec.ts` passed: 1 file, 3 tests.
+
+### Notes
+- No additional source files changed in this verification pass.
+- Rollback point is unchanged from the preceding task entry.
+
+## 2026-08-06 - Task: cyber_policy revocation config regression coverage
+
+### What was done
+- Added direct regression coverage for the default-disabled setting and save/reload behavior with a valid active OpenAI exclusive group.
+
+### Testing
+- `go test ./internal/service -run 'TestContentModerationConfig_(CyberPolicyRevokeGroupDefaultsDisabled|SavesValidCyberPolicyRevokeGroup)|TestRecordCyberPolicyEvent_(RemovesConfiguredExclusiveGroupForRegularUser|AdministratorsKeepConfiguredExclusiveGroup)' -count=1` passed.
+
+### Notes
+- `backend/internal/service/content_moderation_cyber_revoke_test.go`: adds configuration persistence coverage alongside revocation behavior coverage.
+- Rollback point is unchanged from the original implementation entry.
+
+## 2026-08-06 - Task: cyber_policy revocation final lint verification
+
+### What was done
+- Completed the focused frontend lint pass after the configuration and locale updates.
+
+### Testing
+- `frontend/node_modules/.bin/eslint.cmd src/views/admin/RiskControlView.vue src/api/admin/riskControl.ts src/i18n/locales/en/admin/channels.ts src/i18n/locales/zh/admin/channels.ts` passed.
+- Final `git diff --check` passed.
+
+### Notes
+- No additional source files changed in this verification pass.
+- Rollback point is unchanged from the original implementation entry.
