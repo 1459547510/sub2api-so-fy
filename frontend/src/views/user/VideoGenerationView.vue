@@ -106,7 +106,7 @@
                 <span class="block text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('video.audio') }}</span>
                 <span class="block text-xs text-gray-500 dark:text-dark-400">{{ t('video.audioHint') }}</span>
               </span>
-              <input v-model="audio" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" :disabled="submitting || uploading" data-testid="video-audio" />
+              <input v-model="audio" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" :disabled="submitting || uploading || currentModelCapability?.supportsAudio === false" data-testid="video-audio" />
             </label>
 
             <label v-if="currentModelCapability?.supportsPromptEnhance" class="block">
@@ -223,14 +223,14 @@
                 <span class="input-label">{{ t('video.audioReference') }}</span>
                 <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('video.audioReferenceHint') }}</p>
               </div>
-              <label class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300" :class="referenceAudioFile ? 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'">
+              <label class="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-600 transition-colors dark:border-dark-600 dark:text-dark-300" :class="referenceAudioFiles.length >= (currentModelCapability?.maxAudioRefs || 0) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500 dark:hover:text-primary-300'">
                 <Icon name="upload" size="sm" />
-                <span>{{ referenceAudioFile ? t('video.replaceAudioReference') : t('video.chooseAudioReference') }}</span>
-                <input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" class="sr-only" :disabled="currentModelCapability?.maxAudioRefs === 0 || submitting || uploading" data-testid="audio-reference-file" @change="onReferenceAudioChange" />
+                <span>{{ referenceAudioFiles.length ? t('video.replaceAudioReference') : t('video.chooseAudioReference') }}</span>
+                <input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" multiple class="sr-only" :disabled="referenceAudioFiles.length >= (currentModelCapability?.maxAudioRefs || 0) || submitting || uploading" data-testid="audio-reference-file" @change="onReferenceAudioChange" />
               </label>
-              <div v-if="referenceAudioPreviewUrl" class="flex items-center gap-2 rounded-lg border border-gray-200 p-2 dark:border-dark-700">
-                <audio :src="referenceAudioPreviewUrl" controls class="min-w-0 flex-1" data-testid="audio-reference-preview"></audio>
-                <button type="button" class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-red-600 dark:text-dark-300 dark:hover:bg-dark-800 dark:hover:text-red-300" :title="t('video.removeAudioReference')" @click="removeReferenceAudio">
+              <div v-for="(preview, index) in referenceAudioPreviewUrls" :key="preview" class="flex items-center gap-2 rounded-lg border border-gray-200 p-2 dark:border-dark-700">
+                <audio :src="preview" controls class="min-w-0 flex-1" data-testid="audio-reference-preview"></audio>
+                <button type="button" class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-red-600 dark:text-dark-300 dark:hover:bg-dark-800 dark:hover:text-red-300" :title="t('video.removeAudioReference')" @click="removeReferenceAudio(index)">
                   <Icon name="x" size="sm" />
                 </button>
               </div>
@@ -358,8 +358,9 @@ const startFrameUrlText = ref('')
 const endFrameUrlText = ref('')
 const referenceVideoFiles = ref<File[]>([])
 const referenceVideoPreviewUrls = ref<string[]>([])
-const referenceAudioFile = ref<File | null>(null)
-const referenceAudioPreviewUrl = ref('')
+const referenceAudioFiles = ref<File[]>([])
+const referenceAudioPreviewUrls = ref<string[]>([])
+const referenceAudioDurations = ref<number[]>([])
 const loadingKeys = ref(false)
 const loadingJobs = ref(false)
 const submitting = ref(false)
@@ -371,8 +372,8 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let videoOutputRequest = 0
 let jobsRequest = 0
 
-type VideoResolution = '400p' | '480p' | '544p' | '720p' | '960p' | '1080p' | '1440p' | '2160p'
-type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '21:9' | '9:21'
+type VideoResolution = 'auto' | '400p' | '480p' | '544p' | '720p' | '960p' | '1080p' | '1440p' | '2160p'
+type VideoAspectRatio = 'auto' | '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '21:9' | '9:21'
 
 interface VideoModelCapability {
   resolutions: readonly VideoResolution[]
@@ -388,7 +389,15 @@ interface VideoModelCapability {
   maxImageRefs: number
   maxVideoRefs: number
   maxAudioRefs: number
+  maxAudioRefSeconds?: number
+  maxImageRefsWithVideo?: number
+  maxDurationWithVideo?: number
+  videoReferenceTypes?: readonly string[]
   requiresStartFrame?: boolean
+  endFrameRequiresStart?: boolean
+  framesExcludeOtherRef?: boolean
+  audioRefRequiresMedia?: boolean
+  supportsAudio?: boolean
   supportsPromptEnhance?: boolean
   rejectsPromptEnhanceOnStartFrame?: boolean
 }
@@ -421,6 +430,9 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxImageRefs: 4,
     maxVideoRefs: 3,
     maxAudioRefs: 1,
+    audioRefRequiresMedia: true,
+    supportsAudio: true,
+    framesExcludeOtherRef: true,
   },
   'seedance-2.0-fast': {
     resolutions: ['480p', '720p'],
@@ -438,6 +450,9 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxImageRefs: 4,
     maxVideoRefs: 3,
     maxAudioRefs: 1,
+    audioRefRequiresMedia: true,
+    supportsAudio: true,
+    framesExcludeOtherRef: true,
   },
   'seedance-2.0-mini': {
     resolutions: ['480p', '720p'],
@@ -455,6 +470,9 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxImageRefs: 4,
     maxVideoRefs: 3,
     maxAudioRefs: 1,
+    audioRefRequiresMedia: true,
+    supportsAudio: true,
+    framesExcludeOtherRef: true,
   },
   'happy-horse-1.1': {
     resolutions: ['720p', '1080p'],
@@ -472,14 +490,17 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxImageRefs: 9,
     maxVideoRefs: 0,
     maxAudioRefs: 0,
+    supportsAudio: true,
+    framesExcludeOtherRef: true,
     supportsPromptEnhance: true,
   },
   'grok-imagine-1.5': {
-    resolutions: ['400p', '544p', '720p', '960p'],
+    resolutions: ['auto', '400p', '544p', '720p', '960p'],
     defaultResolution: '720p',
     durations: shortVideoDurationOptions,
     defaultDuration: 6,
     aspectsByResolution: {
+      auto: ['auto'],
       '400p': ['16:9', '9:16'],
       '544p': ['1:1'],
       '720p': ['16:9', '9:16'],
@@ -493,6 +514,8 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxVideoRefs: 0,
     maxAudioRefs: 0,
     requiresStartFrame: true,
+    supportsAudio: true,
+    framesExcludeOtherRef: true,
   },
   'ltx-2.3-pro': {
     resolutions: ['1080p', '1440p', '2160p'],
@@ -511,6 +534,7 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxImageRefs: 0,
     maxVideoRefs: 0,
     maxAudioRefs: 0,
+    supportsAudio: true,
     supportsPromptEnhance: true,
   },
   'ltx-2.3-fast': {
@@ -530,7 +554,256 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     maxImageRefs: 0,
     maxVideoRefs: 0,
     maxAudioRefs: 0,
+    supportsAudio: true,
     supportsPromptEnhance: true,
+  },
+  'hailuo-03': {
+    resolutions: ['1440p'],
+    defaultResolution: '1440p',
+    durations: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    defaultDuration: 5,
+    aspectsByResolution: { '1440p': ['16:9', '1:1', '9:16'] },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2000,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 5,
+    maxVideoRefs: 0,
+    maxAudioRefs: 3,
+    maxAudioRefSeconds: 15,
+    endFrameRequiresStart: true,
+    framesExcludeOtherRef: true,
+    audioRefRequiresMedia: true,
+    supportsAudio: true,
+  },
+  'gemini-omni-flash': {
+    resolutions: ['720p'],
+    defaultResolution: '720p',
+    durations: [3, 4, 5, 6, 7, 8, 9, 10],
+    defaultDuration: 5,
+    aspectsByResolution: { '720p': ['16:9', '9:16'] },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 0,
+    maxEndFrames: 0,
+    maxImageRefs: 5,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    supportsAudio: false,
+  },
+  'kling-2.1': {
+    resolutions: ['1080p'],
+    defaultResolution: '1080p',
+    durations: [5, 10],
+    defaultDuration: 5,
+    aspectsByResolution: { '1080p': ['16:9', '1:1', '9:16'] },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    requiresStartFrame: true,
+    endFrameRequiresStart: true,
+    supportsAudio: false,
+    supportsPromptEnhance: true,
+  },
+  'kling-2.5': {
+    resolutions: ['720p', '1080p'],
+    defaultResolution: '1080p',
+    durations: [5, 10],
+    defaultDuration: 5,
+    aspectsByResolution: {
+      '720p': ['16:9', '1:1', '9:16'],
+      '1080p': ['16:9', '1:1', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    endFrameRequiresStart: true,
+    supportsAudio: false,
+    supportsPromptEnhance: true,
+  },
+  'kling-2.5-turbo-standard': {
+    resolutions: ['720p'],
+    defaultResolution: '720p',
+    durations: [5, 10],
+    defaultDuration: 5,
+    aspectsByResolution: { '720p': ['16:9', '1:1', '9:16'] },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 0,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    requiresStartFrame: true,
+    supportsAudio: false,
+    supportsPromptEnhance: true,
+  },
+  'kling-2.6': {
+    resolutions: ['auto', '1080p'],
+    defaultResolution: '1080p',
+    durations: [5, 10],
+    defaultDuration: 5,
+    aspectsByResolution: {
+      auto: ['auto'],
+      '1080p': ['16:9', '1:1', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 0,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    supportsAudio: true,
+  },
+  'kling-video-o-1': {
+    resolutions: ['1080p'],
+    defaultResolution: '1080p',
+    durations: [3, 4, 5, 6, 7, 8, 9, 10],
+    defaultDuration: 5,
+    aspectsByResolution: { '1080p': ['16:9', '1:1', '9:16'] },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 5,
+    maxVideoRefs: 1,
+    maxAudioRefs: 0,
+    videoReferenceTypes: ['GENERATED'],
+    endFrameRequiresStart: true,
+    framesExcludeOtherRef: true,
+    supportsAudio: false,
+  },
+  'kling-3.0': {
+    resolutions: ['auto', '720p', '1080p', '2160p'],
+    defaultResolution: '1080p',
+    durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    defaultDuration: 5,
+    aspectsByResolution: {
+      auto: ['auto'],
+      '720p': ['16:9', '1:1', '9:16'],
+      '1080p': ['16:9', '1:1', '9:16'],
+      '2160p': ['16:9', '1:1', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    endFrameRequiresStart: true,
+    supportsAudio: true,
+  },
+  'kling-3.0-turbo': {
+    resolutions: ['auto', '720p', '1080p'],
+    defaultResolution: '1080p',
+    durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    defaultDuration: 5,
+    aspectsByResolution: {
+      auto: ['auto'],
+      '720p': ['16:9', '1:1', '9:16'],
+      '1080p': ['16:9', '1:1', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 0,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    supportsAudio: true,
+  },
+  'kling-video-o-3': {
+    resolutions: ['720p', '1080p', '2160p'],
+    defaultResolution: '1080p',
+    durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    defaultDuration: 5,
+    aspectsByResolution: {
+      '720p': ['16:9', '1:1', '9:16'],
+      '1080p': ['16:9', '1:1', '9:16'],
+      '2160p': ['16:9', '1:1', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 2500,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 7,
+    maxVideoRefs: 1,
+    maxAudioRefs: 0,
+    maxImageRefsWithVideo: 4,
+    maxDurationWithVideo: 10,
+    videoReferenceTypes: ['GENERATED'],
+    endFrameRequiresStart: true,
+    framesExcludeOtherRef: true,
+    supportsAudio: true,
+  },
+  'veo-3.1-generate-001': {
+    resolutions: ['720p', '1080p', '2160p'],
+    defaultResolution: '720p',
+    durations: [4, 6, 8],
+    defaultDuration: 8,
+    aspectsByResolution: {
+      '720p': ['16:9', '9:16'],
+      '1080p': ['16:9', '9:16'],
+      '2160p': ['16:9', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 9999,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 3,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    endFrameRequiresStart: true,
+    supportsAudio: true,
+  },
+  'veo-3.1-fast-generate-001': {
+    resolutions: ['720p', '1080p', '2160p'],
+    defaultResolution: '720p',
+    durations: [4, 6, 8],
+    defaultDuration: 8,
+    aspectsByResolution: {
+      '720p': ['16:9', '9:16'],
+      '1080p': ['16:9', '9:16'],
+      '2160p': ['16:9', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 9999,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    endFrameRequiresStart: true,
+    supportsAudio: true,
+  },
+  'veo-3.1-lite': {
+    resolutions: ['720p', '1080p'],
+    defaultResolution: '720p',
+    durations: [4, 6, 8],
+    defaultDuration: 8,
+    aspectsByResolution: {
+      '720p': ['16:9', '9:16'],
+      '1080p': ['16:9', '9:16'],
+    },
+    defaultAspectRatio: '16:9',
+    maxPromptLength: 9999,
+    maxStartFrames: 1,
+    maxEndFrames: 1,
+    maxImageRefs: 0,
+    maxVideoRefs: 0,
+    maxAudioRefs: 0,
+    endFrameRequiresStart: true,
+    supportsAudio: true,
   },
 }
 const modelOptions = Object.keys(videoModelCapabilities)
@@ -571,14 +844,22 @@ const hasUnsupportedModelGuidances = computed(() => {
   const startCount = Number(Boolean(startFrameFile.value || remoteStartFrameUrl.value))
   const endCount = Number(Boolean(endFrameFile.value || remoteEndFrameUrl.value))
   const imageCount = imageMode.value === 'local' ? localFiles.value.length : imageMode.value === 'url' ? remoteImageUrls.value.length : 0
+  const imageLimit = referenceVideoFiles.value.length > 0 && capability.maxImageRefsWithVideo ? capability.maxImageRefsWithVideo : capability.maxImageRefs
   return startCount > capability.maxStartFrames ||
     endCount > capability.maxEndFrames ||
-    imageCount > capability.maxImageRefs ||
+    imageCount > imageLimit ||
     referenceVideoFiles.value.length > capability.maxVideoRefs ||
-    Number(Boolean(referenceAudioFile.value)) > capability.maxAudioRefs ||
+    referenceAudioFiles.value.length > capability.maxAudioRefs ||
+    Boolean(capability.maxAudioRefSeconds && referenceAudioFiles.value.length > 0 && referenceAudioDurations.value.some((value) => value > 0) && referenceAudioDurations.value.reduce((total, value) => total + value, 0) > capability.maxAudioRefSeconds) ||
+    (capability.maxDurationWithVideo ? referenceVideoFiles.value.length > 0 && duration.value > capability.maxDurationWithVideo : false) ||
+    (capability.endFrameRequiresStart && endCount > 0 && startCount === 0) ||
+    (capability.framesExcludeOtherRef && (startCount > 0 || endCount > 0) && (imageCount > 0 || referenceVideoFiles.value.length > 0)) ||
     (Boolean(promptEnhance.value) && !capability.supportsPromptEnhance) ||
     (capability.rejectsPromptEnhanceOnStartFrame && promptEnhance.value === 'ON' && startCount > 0) ||
-    Boolean(capability.requiresStartFrame && !startCount)
+    Boolean(capability.requiresStartFrame && !startCount) ||
+    Boolean(capability.supportsAudio === false && audio.value) ||
+    Boolean(capability.audioRefRequiresMedia && referenceAudioFiles.value.length > 0 && !hasAudioVisualReference.value) ||
+    Boolean(capability.videoReferenceTypes?.length && !capability.videoReferenceTypes.includes('UPLOADED') && referenceVideoFiles.value.length > 0)
 })
 const currentVideoKey = computed(() => {
   const job = selectedJob.value
@@ -588,7 +869,7 @@ const hasValidModelParameters = computed(() => supportsModelParameters(model.val
 const canSubmit = computed(() => Boolean(
   effectiveApiKey.value && prompt.value.trim() && hasValidModelParameters.value &&
   !hasMixedImageInputs.value &&
-  (!referenceAudioFile.value || hasAudioVisualReference.value) &&
+  (!referenceAudioFiles.value.length || hasAudioVisualReference.value) &&
   (imageMode.value !== 'url' || (
     (remoteImageUrls.value.length > 0 || remoteStartFrameUrl.value || remoteEndFrameUrl.value) &&
     remoteImageUrls.value.length <= maxImageReferences.value &&
@@ -654,7 +935,7 @@ async function submitJob() {
     appStore.showError(t('video.modelGuidanceUnsupported'))
     return
   }
-  if (referenceAudioFile.value && !hasAudioVisualReference.value) {
+  if (referenceAudioFiles.value.length && !hasAudioVisualReference.value) {
     appStore.showError(t('video.audioNeedsVisualReference'))
     return
   }
@@ -665,7 +946,7 @@ async function submitJob() {
     let startFrameUrl = imageMode.value === 'url' ? remoteStartFrameUrl.value : ''
     let endFrameUrl = imageMode.value === 'url' ? remoteEndFrameUrl.value : ''
     let selectedVideoUrls: string[] = []
-    let selectedAudioUrl = ''
+    let selectedAudioUrls: string[] = []
     const referenceFiles = [...localFiles.value]
     const startFile = startFrameFile.value
     const endFile = endFrameFile.value
@@ -685,14 +966,14 @@ async function submitJob() {
     } else if (imageMode.value === 'url') {
       selectedImageUrls = remoteImageUrls.value
     }
-    if (referenceVideoFiles.value.length || referenceAudioFile.value) {
+    if (referenceVideoFiles.value.length || referenceAudioFiles.value.length) {
       uploading.value = true
       const [uploadedVideos, uploadedAudio] = await Promise.all([
         Promise.all(referenceVideoFiles.value.map((file) => uploadVideoInput(apiKey, file, 'video'))),
-        referenceAudioFile.value ? uploadVideoInput(apiKey, referenceAudioFile.value, 'audio') : Promise.resolve(null),
+        Promise.all(referenceAudioFiles.value.map((file) => uploadVideoInput(apiKey, file, 'audio'))),
       ])
       selectedVideoUrls = uploadedVideos.map(uploadedMediaUrl).filter(Boolean)
-      selectedAudioUrl = uploadedMediaUrl(uploadedAudio || undefined)
+      selectedAudioUrls = uploadedAudio.map(uploadedMediaUrl).filter(Boolean)
       uploading.value = false
     }
     const payload: VideoGenerationRequest = {
@@ -706,7 +987,7 @@ async function submitJob() {
     if (promptEnhance.value) payload.prompt_enhance = promptEnhance.value
     if (startFrameUrl) payload.start_frame_url = startFrameUrl
     if (endFrameUrl) payload.end_frame_url = endFrameUrl
-    if (selectedImageUrls.length === 1 && !startFrameUrl && !endFrameUrl && !selectedAudioUrl) {
+    if (selectedImageUrls.length === 1 && !startFrameUrl && !endFrameUrl && !selectedAudioUrls.length) {
       payload.image_url = selectedImageUrls[0]
     } else if (selectedImageUrls.length) {
       payload.guidances = {
@@ -723,10 +1004,10 @@ async function submitJob() {
         video_reference_base: selectedVideoUrls.map((url) => ({ video: { url, type: 'UPLOADED' } })),
       }
     }
-    if (selectedAudioUrl) {
+    if (selectedAudioUrls.length) {
       payload.guidances = {
         ...payload.guidances,
-        audio_reference: [{ audio: { url: selectedAudioUrl, type: 'UPLOADED' } }],
+        audio_reference: selectedAudioUrls.map((url) => ({ audio: { url, type: 'UPLOADED' } })),
       }
     }
     const accepted = await createVideoJob(apiKey, payload)
@@ -843,6 +1124,10 @@ async function onReferenceVideoChange(event: Event) {
     appStore.showError(t('video.modelGuidanceUnsupported'))
     return
   }
+  if (currentModelCapability.value?.videoReferenceTypes?.length && !currentModelCapability.value.videoReferenceTypes.includes('UPLOADED')) {
+    appStore.showError(t('video.modelGuidanceUnsupported'))
+    return
+  }
   const remaining = (currentModelCapability.value?.maxVideoRefs || 0) - referenceVideoFiles.value.length
   if (remaining <= 0) {
     appStore.showError(t('video.tooManyVideoReferences'))
@@ -865,34 +1150,42 @@ async function onReferenceVideoChange(event: Event) {
 
 async function onReferenceAudioChange(event: Event) {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
+  const files = Array.from(input.files || [])
   input.value = ''
-  if (!file) return
+  if (!files.length) return
   if (currentModelCapability.value?.maxAudioRefs === 0) {
     appStore.showError(t('video.modelGuidanceUnsupported'))
     return
   }
-  if (!isSupportedAudioFile(file)) {
-    appStore.showError(t('video.invalidAudio'))
+  const remaining = (currentModelCapability.value?.maxAudioRefs || 0) - referenceAudioFiles.value.length
+  if (remaining <= 0) {
+    appStore.showError(t('video.tooManyAudioReferences'))
     return
   }
-  if (file.size > audioReferenceMaxBytes) {
-    appStore.showError(t('video.audioTooLarge'))
-    return
+  for (const candidate of files.slice(0, remaining)) {
+    if (!isSupportedAudioFile(candidate)) {
+      appStore.showError(t('video.invalidAudio'))
+      continue
+    }
+    if (candidate.size > audioReferenceMaxBytes) {
+      appStore.showError(t('video.audioTooLarge'))
+      continue
+    }
+    if (candidate.name.toLowerCase().endsWith('.wav') && !await isSupportedPCMWave(candidate)) {
+      appStore.showError(t('video.invalidAudio'))
+      continue
+    }
+    const durationSeconds = await readAudioDuration(candidate)
+    if (durationSeconds !== null && (durationSeconds < 2 || durationSeconds > 30)) {
+      appStore.showError(t('video.audioDuration'))
+      continue
+    }
+    referenceAudioFiles.value = [...referenceAudioFiles.value, candidate]
+    referenceAudioPreviewUrls.value = [...referenceAudioPreviewUrls.value, URL.createObjectURL(candidate)]
+    referenceAudioDurations.value = [...referenceAudioDurations.value, durationSeconds || 0]
   }
-  if (file.name.toLowerCase().endsWith('.wav') && !await isSupportedPCMWave(file)) {
-    appStore.showError(t('video.invalidAudio'))
-    return
-  }
-  const durationSeconds = await readAudioDuration(file)
-  if (durationSeconds !== null && (durationSeconds < 2 || durationSeconds > 30)) {
-    appStore.showError(t('video.audioDuration'))
-    return
-  }
-  removeReferenceAudio()
-  referenceAudioFile.value = file
-  referenceAudioPreviewUrl.value = URL.createObjectURL(file)
-  if (!hasAudioVisualReference.value) appStore.showError(t('video.audioNeedsVisualReference'))
+  if (files.length > remaining) appStore.showError(t('video.tooManyAudioReferences'))
+  if (referenceAudioFiles.value.length && !hasAudioVisualReference.value) appStore.showError(t('video.audioNeedsVisualReference'))
 }
 
 function removeReferenceVideo(index: number) {
@@ -902,10 +1195,19 @@ function removeReferenceVideo(index: number) {
   referenceVideoFiles.value = referenceVideoFiles.value.filter((_, itemIndex) => itemIndex !== index)
 }
 
-function removeReferenceAudio() {
-  if (referenceAudioPreviewUrl.value) URL.revokeObjectURL(referenceAudioPreviewUrl.value)
-  referenceAudioPreviewUrl.value = ''
-  referenceAudioFile.value = null
+function removeReferenceAudio(index?: number) {
+  if (index === undefined) {
+    for (const preview of referenceAudioPreviewUrls.value) URL.revokeObjectURL(preview)
+    referenceAudioPreviewUrls.value = []
+    referenceAudioFiles.value = []
+    referenceAudioDurations.value = []
+    return
+  }
+  const preview = referenceAudioPreviewUrls.value[index]
+  if (preview) URL.revokeObjectURL(preview)
+  referenceAudioPreviewUrls.value = referenceAudioPreviewUrls.value.filter((_, itemIndex) => itemIndex !== index)
+  referenceAudioFiles.value = referenceAudioFiles.value.filter((_, itemIndex) => itemIndex !== index)
+  referenceAudioDurations.value = referenceAudioDurations.value.filter((_, itemIndex) => itemIndex !== index)
 }
 
 function clearMediaInputs() {

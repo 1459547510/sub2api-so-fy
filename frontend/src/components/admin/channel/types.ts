@@ -86,6 +86,14 @@ export function videoPricingResolutionsForModel(model?: string): readonly string
   if (normalizedModel === 'ltx-2.3-pro' || normalizedModel === 'ltx-2.3-fast') {
     return ['1080p', '1440p', '2160p']
   }
+  if (normalizedModel === 'hailuo-03') return ['1440p']
+  if (normalizedModel === 'gemini-omni-flash' || normalizedModel === 'kling-2.5-turbo-standard') return ['720p']
+  if (normalizedModel === 'kling-2.1' || normalizedModel === 'kling-2.6' || normalizedModel === 'kling-video-o-1') return ['1080p']
+  if (normalizedModel === 'kling-2.5') return ['720p', '1080p']
+  if (normalizedModel === 'kling-3.0-turbo' || normalizedModel === 'veo-3.1-lite') return ['720p', '1080p']
+  if (normalizedModel === 'kling-3.0' || normalizedModel === 'kling-video-o-3' || normalizedModel === 'veo-3.1-generate-001' || normalizedModel === 'veo-3.1-fast-generate-001') {
+    return ['720p', '1080p', '2160p']
+  }
   return VIDEO_PRICING_RESOLUTIONS
 }
 

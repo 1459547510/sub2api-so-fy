@@ -22,6 +22,19 @@ export const LEO_VIDEO_MODELS = [
   'grok-imagine-1.5',
   'ltx-2.3-pro',
   'ltx-2.3-fast',
+  'hailuo-03',
+  'gemini-omni-flash',
+  'kling-2.1',
+  'kling-2.5',
+  'kling-2.5-turbo-standard',
+  'kling-2.6',
+  'kling-video-o-1',
+  'kling-3.0',
+  'kling-3.0-turbo',
+  'kling-video-o-3',
+  'veo-3.1-generate-001',
+  'veo-3.1-fast-generate-001',
+  'veo-3.1-lite',
 ] as const
 export const VIDEO_PRICING_RESOLUTIONS = ['480p', '720p', '1080p'] as const
 

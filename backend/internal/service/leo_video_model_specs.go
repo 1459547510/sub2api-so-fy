@@ -29,23 +29,35 @@ type leoVideoModelSpec struct {
 	maxImageRefs                     int
 	maxVideoRefs                     int
 	maxAudioRefs                     int
+	maxImageRefsWithVideo            int
+	maxDurationWithVideo             int
+	maxAudioRefSeconds               float64
+	frameImageTypes                  []string
+	videoReferenceTypes              []string
 	requiresStartFrame               bool
+	endFrameRequiresStart            bool
+	framesExcludeOtherRef            bool
+	audioRefRequiresMedia            bool
+	supportsAudio                    bool
 	supportsPromptEnhance            bool
 	rejectsPromptEnhanceOnStartFrame bool
 	rejectsSeedAndMode               bool
 }
 
 var defaultLeoVideoModelSpec = leoVideoModelSpec{
-	defaultResolution: "720p",
-	minDuration:       4,
-	maxDuration:       15,
-	defaultDuration:   8,
-	maxPromptLength:   leoVideoMaxPromptLength,
-	maxStartFrames:    1,
-	maxEndFrames:      1,
-	maxImageRefs:      4,
-	maxVideoRefs:      3,
-	maxAudioRefs:      1,
+	defaultResolution:     "720p",
+	minDuration:           4,
+	maxDuration:           15,
+	defaultDuration:       8,
+	maxPromptLength:       leoVideoMaxPromptLength,
+	maxStartFrames:        1,
+	maxEndFrames:          1,
+	maxImageRefs:          4,
+	maxVideoRefs:          3,
+	maxAudioRefs:          1,
+	audioRefRequiresMedia: true,
+	supportsAudio:         true,
+	framesExcludeOtherRef: true,
 }
 
 var leoVideoModelSpecs = map[string]leoVideoModelSpec{
@@ -60,15 +72,18 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 			"720p":  {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9"},
 			"1080p": {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"},
 		},
-		minDuration:     4,
-		maxDuration:     15,
-		defaultDuration: 8,
-		maxPromptLength: 5000,
-		maxStartFrames:  1,
-		maxEndFrames:    1,
-		maxImageRefs:    4,
-		maxVideoRefs:    3,
-		maxAudioRefs:    1,
+		minDuration:           4,
+		maxDuration:           15,
+		defaultDuration:       8,
+		maxPromptLength:       5000,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          4,
+		maxVideoRefs:          3,
+		maxAudioRefs:          1,
+		audioRefRequiresMedia: true,
+		supportsAudio:         true,
+		framesExcludeOtherRef: true,
 	},
 	"seedance-2.0-fast": {
 		resolutions:       []string{"480p", "720p"},
@@ -77,15 +92,19 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 			"480p": {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"},
 			"720p": {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9"},
 		},
-		minDuration:     4,
-		maxDuration:     15,
-		defaultDuration: 8,
-		maxPromptLength: 5000,
-		maxStartFrames:  1,
-		maxEndFrames:    1,
-		maxImageRefs:    4,
-		maxVideoRefs:    3,
-		maxAudioRefs:    1,
+		minDuration:           4,
+		maxDuration:           15,
+		defaultDuration:       8,
+		maxPromptLength:       5000,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          4,
+		maxVideoRefs:          3,
+		maxAudioRefs:          1,
+		frameImageTypes:       []string{"UPLOADED", "GENERATED"},
+		audioRefRequiresMedia: true,
+		supportsAudio:         true,
+		framesExcludeOtherRef: true,
 	},
 	"seedance-2.0-mini": {
 		resolutions:       []string{"480p", "720p"},
@@ -94,15 +113,18 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 			"480p": {"16:9", "1:1", "9:16"},
 			"720p": {"16:9", "1:1", "9:16"},
 		},
-		minDuration:     4,
-		maxDuration:     15,
-		defaultDuration: 8,
-		maxPromptLength: 5000,
-		maxStartFrames:  1,
-		maxEndFrames:    1,
-		maxImageRefs:    4,
-		maxVideoRefs:    3,
-		maxAudioRefs:    1,
+		minDuration:           4,
+		maxDuration:           15,
+		defaultDuration:       8,
+		maxPromptLength:       5000,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          4,
+		maxVideoRefs:          3,
+		maxAudioRefs:          1,
+		audioRefRequiresMedia: true,
+		supportsAudio:         true,
+		framesExcludeOtherRef: true,
 	},
 	"happy-horse-1.1": {
 		resolutions:       []string{"720p", "1080p"},
@@ -117,24 +139,29 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		maxPromptLength:                  2500,
 		maxStartFrames:                   1,
 		maxImageRefs:                     9,
+		supportsAudio:                    true,
 		supportsPromptEnhance:            true,
 		rejectsPromptEnhanceOnStartFrame: true,
+		framesExcludeOtherRef:            true,
 	},
 	"grok-imagine-1.5": {
-		resolutions:       []string{"400p", "544p", "720p", "960p"},
+		resolutions:       []string{"auto", "400p", "544p", "720p", "960p"},
 		defaultResolution: "720p",
 		aspects: map[string][]string{
+			"auto": {"auto"},
 			"400p": {"16:9", "9:16"},
 			"544p": {"1:1"},
 			"720p": {"16:9", "9:16"},
 			"960p": {"1:1"},
 		},
-		minDuration:        3,
-		maxDuration:        15,
-		defaultDuration:    6,
-		maxPromptLength:    5000,
-		maxStartFrames:     1,
-		requiresStartFrame: true,
+		minDuration:           3,
+		maxDuration:           15,
+		defaultDuration:       6,
+		maxPromptLength:       5000,
+		maxStartFrames:        1,
+		requiresStartFrame:    true,
+		supportsAudio:         true,
+		framesExcludeOtherRef: true,
 	},
 	LeoLTX23ProModelID: {
 		resolutions:       []string{"1080p", "1440p", "2160p"},
@@ -154,6 +181,7 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		maxImageRefs:          0,
 		maxVideoRefs:          0,
 		maxAudioRefs:          0,
+		supportsAudio:         true,
 		supportsPromptEnhance: true,
 		rejectsSeedAndMode:    true,
 	},
@@ -175,8 +203,233 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		maxImageRefs:          0,
 		maxVideoRefs:          0,
 		maxAudioRefs:          0,
+		supportsAudio:         true,
 		supportsPromptEnhance: true,
 		rejectsSeedAndMode:    true,
+	},
+	"hailuo-03": {
+		resolutions:       []string{"1440p"},
+		defaultResolution: "1440p",
+		aspects: map[string][]string{
+			"1440p": {"16:9", "1:1", "9:16"},
+		},
+		minDuration:           5,
+		maxDuration:           15,
+		defaultDuration:       5,
+		maxPromptLength:       2000,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          5,
+		maxAudioRefs:          3,
+		maxAudioRefSeconds:    15,
+		endFrameRequiresStart: true,
+		framesExcludeOtherRef: true,
+		audioRefRequiresMedia: true,
+		supportsAudio:         true,
+	},
+	"gemini-omni-flash": {
+		resolutions:       []string{"720p"},
+		defaultResolution: "720p",
+		aspects: map[string][]string{
+			"720p": {"16:9", "9:16"},
+		},
+		minDuration:     3,
+		maxDuration:     10,
+		defaultDuration: 5,
+		maxPromptLength: 2500,
+		maxImageRefs:    5,
+	},
+	"kling-2.1": {
+		resolutions:       []string{"1080p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"1080p": {"16:9", "1:1", "9:16"},
+		},
+		allowedDurations:      []int{5, 10},
+		minDuration:           5,
+		maxDuration:           10,
+		defaultDuration:       5,
+		maxPromptLength:       2500,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		requiresStartFrame:    true,
+		endFrameRequiresStart: true,
+		supportsPromptEnhance: true,
+	},
+	"kling-2.5": {
+		resolutions:       []string{"720p", "1080p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"720p":  {"16:9", "1:1", "9:16"},
+			"1080p": {"16:9", "1:1", "9:16"},
+		},
+		allowedDurations:      []int{5, 10},
+		minDuration:           5,
+		maxDuration:           10,
+		defaultDuration:       5,
+		maxPromptLength:       2500,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		endFrameRequiresStart: true,
+		supportsPromptEnhance: true,
+	},
+	"kling-2.5-turbo-standard": {
+		resolutions:       []string{"720p"},
+		defaultResolution: "720p",
+		aspects: map[string][]string{
+			"720p": {"16:9", "1:1", "9:16"},
+		},
+		allowedDurations:      []int{5, 10},
+		minDuration:           5,
+		maxDuration:           10,
+		defaultDuration:       5,
+		maxPromptLength:       2500,
+		maxStartFrames:        1,
+		requiresStartFrame:    true,
+		supportsPromptEnhance: true,
+	},
+	"kling-2.6": {
+		resolutions:       []string{"auto", "1080p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"auto":  {"auto"},
+			"1080p": {"16:9", "1:1", "9:16"},
+		},
+		allowedDurations: []int{5, 10},
+		minDuration:      5,
+		maxDuration:      10,
+		defaultDuration:  5,
+		maxPromptLength:  2500,
+		maxStartFrames:   1,
+		supportsAudio:    true,
+	},
+	"kling-video-o-1": {
+		resolutions:       []string{"1080p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"1080p": {"16:9", "1:1", "9:16"},
+		},
+		minDuration:           3,
+		maxDuration:           10,
+		defaultDuration:       5,
+		maxPromptLength:       2500,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          5,
+		maxVideoRefs:          1,
+		videoReferenceTypes:   []string{"GENERATED"},
+		endFrameRequiresStart: true,
+		framesExcludeOtherRef: true,
+	},
+	"kling-3.0": {
+		resolutions:       []string{"auto", "720p", "1080p", "2160p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"auto":  {"auto"},
+			"720p":  {"16:9", "1:1", "9:16"},
+			"1080p": {"16:9", "1:1", "9:16"},
+			"2160p": {"16:9", "1:1", "9:16"},
+		},
+		minDuration:           3,
+		maxDuration:           15,
+		defaultDuration:       5,
+		maxPromptLength:       2500,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		endFrameRequiresStart: true,
+		supportsAudio:         true,
+	},
+	"kling-3.0-turbo": {
+		resolutions:       []string{"auto", "720p", "1080p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"auto":  {"auto"},
+			"720p":  {"16:9", "1:1", "9:16"},
+			"1080p": {"16:9", "1:1", "9:16"},
+		},
+		minDuration:     3,
+		maxDuration:     15,
+		defaultDuration: 5,
+		maxPromptLength: 2500,
+		maxStartFrames:  1,
+		supportsAudio:   true,
+	},
+	"kling-video-o-3": {
+		resolutions:       []string{"720p", "1080p", "2160p"},
+		defaultResolution: "1080p",
+		aspects: map[string][]string{
+			"720p":  {"16:9", "1:1", "9:16"},
+			"1080p": {"16:9", "1:1", "9:16"},
+			"2160p": {"16:9", "1:1", "9:16"},
+		},
+		minDuration:           3,
+		maxDuration:           15,
+		defaultDuration:       5,
+		maxPromptLength:       2500,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          7,
+		maxVideoRefs:          1,
+		maxImageRefsWithVideo: 4,
+		maxDurationWithVideo:  10,
+		videoReferenceTypes:   []string{"GENERATED"},
+		endFrameRequiresStart: true,
+		framesExcludeOtherRef: true,
+		supportsAudio:         true,
+	},
+	"veo-3.1-generate-001": {
+		resolutions:       []string{"720p", "1080p", "2160p"},
+		defaultResolution: "720p",
+		aspects: map[string][]string{
+			"720p":  {"16:9", "9:16"},
+			"1080p": {"16:9", "9:16"},
+			"2160p": {"16:9", "9:16"},
+		},
+		allowedDurations:      []int{4, 6, 8},
+		minDuration:           4,
+		maxDuration:           8,
+		defaultDuration:       8,
+		maxPromptLength:       9999,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		maxImageRefs:          3,
+		endFrameRequiresStart: true,
+		supportsAudio:         true,
+	},
+	"veo-3.1-fast-generate-001": {
+		resolutions:       []string{"720p", "1080p", "2160p"},
+		defaultResolution: "720p",
+		aspects: map[string][]string{
+			"720p":  {"16:9", "9:16"},
+			"1080p": {"16:9", "9:16"},
+			"2160p": {"16:9", "9:16"},
+		},
+		allowedDurations:      []int{4, 6, 8},
+		minDuration:           4,
+		maxDuration:           8,
+		defaultDuration:       8,
+		maxPromptLength:       9999,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		endFrameRequiresStart: true,
+		supportsAudio:         true,
+	},
+	"veo-3.1-lite": {
+		resolutions:       []string{"720p", "1080p"},
+		defaultResolution: "720p",
+		aspects: map[string][]string{
+			"720p":  {"16:9", "9:16"},
+			"1080p": {"16:9", "9:16"},
+		},
+		allowedDurations:      []int{4, 6, 8},
+		minDuration:           4,
+		maxDuration:           8,
+		defaultDuration:       8,
+		maxPromptLength:       9999,
+		maxStartFrames:        1,
+		maxEndFrames:          1,
+		endFrameRequiresStart: true,
+		supportsAudio:         true,
 	},
 }
 
@@ -206,6 +459,8 @@ func lookupLeoVideoModelSpec(model string) (leoVideoModelSpec, bool) {
 
 func normalizeLeoVideoResolution(resolution string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(resolution)) {
+	case "auto", "resolution_auto":
+		return "auto", true
 	case "480", "480p", "sd", "resolution_480":
 		return "480p", true
 	case "400", "400p", "resolution_400":
@@ -306,6 +561,9 @@ func validateLeoVideoRequest(body []byte, effectiveModel string) (LeoVideoReques
 		if !containsLeoVideoValue(spec.aspects[normalizedResolution], info.AspectRatio) {
 			return LeoVideoRequestInfo{}, newLeoVideoValidationError("aspect_ratio is not supported by the selected video model and resolution")
 		}
+		if audio := gjson.GetBytes(body, "audio"); audio.Exists() && audio.Bool() && !spec.supportsAudio {
+			return LeoVideoRequestInfo{}, newLeoVideoValidationError("audio is not supported by the selected video model")
+		}
 		if maxDuration, limited := spec.maxDurationByResolution[normalizedResolution]; limited && info.DurationSeconds > maxDuration {
 			return LeoVideoRequestInfo{}, newLeoVideoValidationError("duration must be a whole number from 4 through %d seconds for the selected video model and resolution", maxDuration)
 		}
@@ -326,7 +584,7 @@ func validateLeoVideoRequest(body []byte, effectiveModel string) (LeoVideoReques
 			return LeoVideoRequestInfo{}, newLeoVideoValidationError("seed and mode are not supported by the selected video model")
 		}
 		if spec.requiresStartFrame && leoVideoStartFrameCount(body) == 0 {
-			return LeoVideoRequestInfo{}, newLeoVideoValidationError("start frame is required by grok-imagine-1.5")
+			return LeoVideoRequestInfo{}, newLeoVideoValidationError("start frame is required by %s", normalizeLeoVideoModelID(modelForSpec))
 		}
 	}
 	if !knownModel && utf8.RuneCountInString(info.Prompt) > spec.maxPromptLength {
@@ -339,7 +597,7 @@ func validateLeoVideoRequest(body []byte, effectiveModel string) (LeoVideoReques
 	if err := validateLeoVideoGuidanceCounts(body, spec); err != nil {
 		return LeoVideoRequestInfo{}, err
 	}
-	if err := validateLeoVideoMediaGuidances(body); err != nil {
+	if err := validateLeoVideoMediaGuidances(body, spec); err != nil {
 		return LeoVideoRequestInfo{}, err
 	}
 	return info, nil
@@ -371,11 +629,17 @@ func validateLeoVideoGuidanceCounts(body []byte, spec leoVideoModelSpec) error {
 		}
 		imageReferences += length
 	}
-	if imageReferences > 0 && startFrames+endFrames > 0 {
+	if spec.framesExcludeOtherRef && imageReferences > 0 && startFrames+endFrames > 0 {
 		return newLeoVideoValidationError("reference images cannot be combined with start or end frames")
 	}
 	if startFrames > spec.maxStartFrames {
 		return newLeoVideoValidationError("start frame must be supplied only once")
+	}
+	if endFrames > 0 && endFrames > spec.maxEndFrames {
+		return newLeoVideoValidationError("guidances.end_frame supports at most %d item(s)", spec.maxEndFrames)
+	}
+	if spec.endFrameRequiresStart && endFrames > 0 && startFrames == 0 {
+		return newLeoVideoValidationError("end frame requires a start frame for the selected video model")
 	}
 
 	limits := []struct {
@@ -404,7 +668,21 @@ func validateLeoVideoGuidanceCounts(body []byte, spec leoVideoModelSpec) error {
 			return newLeoVideoValidationError("%s supports at most %d item(s)", limit.name, limit.max)
 		}
 	}
+	if spec.maxImageRefsWithVideo > 0 && videoReferenceCount(body) > 0 && imageReferences > spec.maxImageRefsWithVideo {
+		return newLeoVideoValidationError("guidances.image_reference supports at most %d item(s) with video_reference_base", spec.maxImageRefsWithVideo)
+	}
+	if spec.maxDurationWithVideo > 0 && videoReferenceCount(body) > 0 {
+		duration := gjson.GetBytes(body, "duration")
+		if duration.Exists() && duration.Type == gjson.Number && int(duration.Int()) > spec.maxDurationWithVideo {
+			return newLeoVideoValidationError("duration supports at most %d seconds with video_reference_base", spec.maxDurationWithVideo)
+		}
+	}
 	return nil
+}
+
+func videoReferenceCount(body []byte) int {
+	value, _ := leoVideoArrayLength(body, "guidances.video_reference_base")
+	return value
 }
 
 func leoVideoStartFrameCount(body []byte) int {
@@ -441,11 +719,39 @@ func durationValidationMessage(spec leoVideoModelSpec) string {
 	return fmt.Sprintf("duration must be a whole number from %d through %d seconds", spec.minDuration, spec.maxDuration)
 }
 
-func validateLeoVideoMediaGuidances(body []byte) error {
+func validateLeoVideoMediaGuidances(body []byte, spec leoVideoModelSpec) error {
+	for _, path := range []string{"image_url", "start_frame_url", "end_frame_url"} {
+		if rawURL := strings.TrimSpace(gjson.GetBytes(body, path).String()); rawURL != "" {
+			if !isAbsoluteHTTPURL(rawURL) {
+				return newLeoVideoValidationError("%s must be an absolute HTTP(S) URL", path)
+			}
+		}
+	}
+	for _, path := range []string{"guidances.start_frame", "guidances.end_frame"} {
+		frames := gjson.GetBytes(body, path)
+		for index, item := range frames.Array() {
+			asset := item.Get("image")
+			if err := validateLeoVideoImageAsset(asset, "image", spec.frameImageTypes); err != nil {
+				return newLeoVideoValidationError("%s[%d] %s", path, index, err.Error())
+			}
+		}
+	}
+	for index, item := range gjson.GetBytes(body, "image_urls").Array() {
+		if !isAbsoluteHTTPURL(strings.TrimSpace(item.String())) {
+			return newLeoVideoValidationError("image_urls[%d] must be an absolute HTTP(S) URL", index)
+		}
+	}
+	for index, item := range gjson.GetBytes(body, "guidances.image_reference").Array() {
+		asset := item.Get("image")
+		if err := validateLeoVideoImageAsset(asset, "image", nil); err != nil {
+			return newLeoVideoValidationError("guidances.image_reference[%d] %s", index, err.Error())
+		}
+	}
+
 	videoReferences := gjson.GetBytes(body, "guidances.video_reference_base")
 	for index, item := range videoReferences.Array() {
 		asset := item.Get("video")
-		if err := validateLeoVideoMediaAsset(asset, "video"); err != nil {
+		if err := validateLeoVideoMediaAsset(asset, "video", spec.videoReferenceTypes); err != nil {
 			return newLeoVideoValidationError("guidances.video_reference_base[%d] %s", index, err.Error())
 		}
 	}
@@ -460,14 +766,29 @@ func validateLeoVideoMediaGuidances(body []byte) error {
 	if len(audioReferences.Array()) > 0 {
 		imageReferences := len(gjson.GetBytes(body, "image_urls").Array()) + len(gjson.GetBytes(body, "guidances.image_reference").Array())
 		videoReferenceCount := len(videoReferences.Array())
-		if imageReferences == 0 && videoReferenceCount == 0 {
+		if spec.audioRefRequiresMedia && imageReferences == 0 && videoReferenceCount == 0 {
 			return newLeoVideoValidationError("guidances.audio_reference requires an image_reference or video_reference_base")
+		}
+		if spec.maxAudioRefSeconds > 0 {
+			totalDuration := 0.0
+			for index, item := range audioReferences.Array() {
+				audio := item.Get("audio")
+				if audio.Get("id").String() != "" && !audio.Get("duration").Exists() {
+					return newLeoVideoValidationError("guidances.audio_reference[%d] audio.duration is required with audio.id", index)
+				}
+				if duration := audio.Get("duration"); duration.Exists() && duration.Type == gjson.Number {
+					totalDuration += duration.Float()
+				}
+			}
+			if totalDuration > spec.maxAudioRefSeconds {
+				return newLeoVideoValidationError("guidances.audio_reference supports at most %.0f seconds total", spec.maxAudioRefSeconds)
+			}
 		}
 	}
 	return nil
 }
 
-func validateLeoVideoMediaAsset(value gjson.Result, kind string) error {
+func validateLeoVideoMediaAsset(value gjson.Result, kind string, allowedTypes []string) error {
 	if !value.Exists() || !value.IsObject() {
 		return fmt.Errorf("requires %s.id or %s.url", kind, kind)
 	}
@@ -490,7 +811,7 @@ func validateLeoVideoMediaAsset(value gjson.Result, kind string) error {
 		if typeName == "" {
 			typeName = "UPLOADED"
 		}
-		if typeName != "UPLOADED" && typeName != "GENERATED" {
+		if !leoVideoTypeAllowed(typeName, allowedTypes) {
 			return fmt.Errorf("%s.type is invalid", kind)
 		}
 		return nil
@@ -498,13 +819,58 @@ func validateLeoVideoMediaAsset(value gjson.Result, kind string) error {
 	if typeName == "" {
 		typeName = "UPLOADED"
 	}
-	if typeName != "UPLOADED" {
+	if typeName != "UPLOADED" || (len(allowedTypes) > 0 && !leoVideoTypeAllowed("UPLOADED", allowedTypes)) {
 		return fmt.Errorf("%s.url requires type UPLOADED", kind)
 	}
 	if !isAbsoluteHTTPURL(rawURL) {
 		return fmt.Errorf("%s.url must be an absolute HTTP(S) URL", kind)
 	}
 	return nil
+}
+
+func validateLeoVideoImageAsset(value gjson.Result, kind string, allowedTypes []string) error {
+	if !value.Exists() || !value.IsObject() {
+		return fmt.Errorf("requires %s.id or %s.url", kind, kind)
+	}
+	id := strings.TrimSpace(value.Get("id").String())
+	rawURL := strings.TrimSpace(value.Get("url").String())
+	if id == "" && rawURL == "" {
+		return fmt.Errorf("requires %s.id or %s.url", kind, kind)
+	}
+	if id != "" && rawURL != "" {
+		return fmt.Errorf("%s.id and %s.url cannot both be set", kind, kind)
+	}
+	typeName := strings.ToUpper(strings.TrimSpace(value.Get("type").String()))
+	if typeName == "" {
+		typeName = "UPLOADED"
+	}
+	if id != "" && !leoVideoAssetIDPattern.MatchString(id) {
+		return fmt.Errorf("%s.id must be a UUID", kind)
+	}
+	if !leoVideoTypeAllowed(typeName, allowedTypes) {
+		return fmt.Errorf("%s.type is invalid", kind)
+	}
+	if rawURL != "" {
+		if typeName != "UPLOADED" || (len(allowedTypes) > 0 && !leoVideoTypeAllowed("UPLOADED", allowedTypes)) {
+			return fmt.Errorf("%s.url requires type UPLOADED", kind)
+		}
+		if !isAbsoluteHTTPURL(rawURL) {
+			return fmt.Errorf("%s.url must be an absolute HTTP(S) URL", kind)
+		}
+	}
+	return nil
+}
+
+func leoVideoTypeAllowed(typeName string, allowedTypes []string) bool {
+	if len(allowedTypes) == 0 {
+		return typeName == "UPLOADED" || typeName == "GENERATED"
+	}
+	for _, allowed := range allowedTypes {
+		if typeName == strings.ToUpper(strings.TrimSpace(allowed)) {
+			return true
+		}
+	}
+	return false
 }
 
 func validateLeoVideoAudioAsset(value gjson.Result) error {

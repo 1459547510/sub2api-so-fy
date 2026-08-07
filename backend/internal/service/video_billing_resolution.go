@@ -45,6 +45,20 @@ func LeoVideoPricingResolutions(model string) []string {
 			VideoBillingResolution2160P,
 		}
 	}
+	switch model {
+	case "hailuo-03":
+		return []string{VideoBillingResolution1440P}
+	case "gemini-omni-flash", "kling-2.5-turbo-standard":
+		return []string{VideoBillingResolution720P}
+	case "kling-2.1", "kling-2.6", "kling-video-o-1":
+		return []string{VideoBillingResolution1080P}
+	case "kling-2.5", "kling-3.0-turbo":
+		return []string{VideoBillingResolution720P, VideoBillingResolution1080P}
+	case "kling-3.0", "kling-video-o-3", "veo-3.1-generate-001", "veo-3.1-fast-generate-001":
+		return []string{VideoBillingResolution720P, VideoBillingResolution1080P, VideoBillingResolution2160P}
+	case "veo-3.1-lite":
+		return []string{VideoBillingResolution720P, VideoBillingResolution1080P}
+	}
 	return append([]string(nil), leoVideoPricingResolutions...)
 }
 
@@ -117,6 +131,26 @@ func NormalizeLeoVideoBillingResolutionOrDefault(model, resolution string) strin
 	model = normalizeLeoVideoModelID(model)
 	resolution = strings.ToLower(strings.TrimSpace(resolution))
 	switch model {
+	case "hailuo-03":
+		return VideoBillingResolution1440P
+	case "gemini-omni-flash", "kling-2.5-turbo-standard":
+		return VideoBillingResolution720P
+	case "kling-2.1", "kling-2.6", "kling-video-o-1":
+		return VideoBillingResolution1080P
+	case "kling-2.5", "kling-3.0-turbo", "veo-3.1-lite":
+		if strings.HasPrefix(resolution, "720") {
+			return VideoBillingResolution720P
+		}
+		return VideoBillingResolution1080P
+	case "kling-3.0", "kling-video-o-3", "veo-3.1-generate-001", "veo-3.1-fast-generate-001":
+		switch resolution {
+		case "720", "720p", "hd", "resolution_720":
+			return VideoBillingResolution720P
+		case "2160", "2160p", "4k", "uhd", "resolution_2160":
+			return VideoBillingResolution2160P
+		default:
+			return VideoBillingResolution1080P
+		}
 	case "happy-horse-1.1":
 		switch resolution {
 		case "720", "720p", "hd", "resolution_720":

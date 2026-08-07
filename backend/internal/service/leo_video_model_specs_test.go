@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -296,4 +297,66 @@ func TestValidateLeoVideoRequestUsesMappedModelSpec(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "1080p", info.Resolution)
 	require.Equal(t, 6, info.DurationSeconds)
+}
+
+func TestValidateLeoVideoRequestSupportsLeoStudioNewModels(t *testing.T) {
+	tests := []struct {
+		model      string
+		resolution string
+		duration   int
+		aspect     string
+	}{
+		{"hailuo-03", "1440p", 5, "16:9"},
+		{"gemini-omni-flash", "720p", 3, "9:16"},
+		{"kling-2.1", "1080p", 5, "16:9"},
+		{"kling-2.5", "720p", 10, "1:1"},
+		{"kling-2.5-turbo-standard", "720p", 5, "9:16"},
+		{"kling-2.6", "auto", 5, "auto"},
+		{"kling-video-o-1", "1080p", 3, "16:9"},
+		{"kling-3.0", "2160p", 15, "9:16"},
+		{"kling-3.0-turbo", "auto", 3, "auto"},
+		{"kling-video-o-3", "1080p", 15, "1:1"},
+		{"veo-3.1-generate-001", "2160p", 8, "9:16"},
+		{"veo-3.1-fast-generate-001", "1080p", 6, "16:9"},
+		{"veo-3.1-lite", "720p", 4, "16:9"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.model, func(t *testing.T) {
+			startFrame := ""
+			if tt.model == "kling-2.1" || tt.model == "kling-2.5-turbo-standard" {
+				startFrame = `,"start_frame_url":"https://example.com/start.png"`
+			}
+			body := fmt.Sprintf(`{"model":%q,"prompt":"waves","resolution":%q,"duration":%d,"aspect_ratio":%q%s}`, tt.model, tt.resolution, tt.duration, tt.aspect, startFrame)
+			_, err := ValidateLeoVideoRequest([]byte(body))
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestValidateLeoVideoRequestSupportsSeedanceMiniAudio(t *testing.T) {
+	_, err := ValidateLeoVideoRequest([]byte(`{"model":"seedance-2.0-mini","prompt":"waves","audio":true,"guidances":{"image_reference":[{"image":{"url":"https://example.com/reference.png","type":"UPLOADED"}}],"audio_reference":[{"audio":{"url":"https://example.com/reference.mp3","type":"UPLOADED"}}]}}`))
+	require.NoError(t, err)
+}
+
+func TestValidateLeoVideoRequestEnforcesNewGuidanceConstraints(t *testing.T) {
+	_, err := ValidateLeoVideoRequest([]byte(`{"model":"hailuo-03","prompt":"waves","end_frame_url":"https://example.com/end.png"}`))
+	require.ErrorContains(t, err, "end frame requires a start frame")
+
+	_, err = ValidateLeoVideoRequest([]byte(`{"model":"hailuo-03","prompt":"waves","start_frame_url":"https://example.com/start.png","end_frame_url":"https://example.com/end.png","image_urls":["https://example.com/reference.png"]}`))
+	require.ErrorContains(t, err, "reference images cannot be combined")
+
+	_, err = ValidateLeoVideoRequest([]byte(`{"model":"hailuo-03","prompt":"waves","image_urls":["https://example.com/reference.png"],"guidances":{"audio_reference":[{"audio":{"url":"https://example.com/a.mp3","type":"UPLOADED"}},{"audio":{"url":"https://example.com/b.mp3","type":"UPLOADED"}},{"audio":{"url":"https://example.com/c.mp3","type":"UPLOADED"}}]}}`))
+	require.NoError(t, err)
+
+	_, err = ValidateLeoVideoRequest([]byte(`{"model":"hailuo-03","prompt":"waves","image_urls":["https://example.com/reference.png"],"guidances":{"audio_reference":[{"audio":{"id":"33333333-3333-3333-3333-333333333333","duration":10}},{"audio":{"id":"44444444-4444-4444-4444-444444444444","duration":6}}]}}`))
+	require.ErrorContains(t, err, "at most 15 seconds total")
+
+	_, err = ValidateLeoVideoRequest([]byte(`{"model":"kling-video-o-3","prompt":"waves","guidances":{"video_reference_base":[{"video":{"url":"https://example.com/reference.mp4","type":"UPLOADED"}}]}}`))
+	require.ErrorContains(t, err, "video.url requires type UPLOADED")
+
+	_, err = ValidateLeoVideoRequest([]byte(`{"model":"kling-video-o-3","prompt":"waves","duration":11,"guidances":{"video_reference_base":[{"video":{"id":"33333333-3333-3333-3333-333333333333","type":"GENERATED"}}]}}`))
+	require.ErrorContains(t, err, "at most 10 seconds")
+
+	_, err = ValidateLeoVideoRequest([]byte(`{"model":"gemini-omni-flash","prompt":"waves","audio":true}`))
+	require.ErrorContains(t, err, "audio is not supported")
 }

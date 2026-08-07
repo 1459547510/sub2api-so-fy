@@ -127,11 +127,91 @@ describe('VideoGenerationView', () => {
     expect(wrapper.get('[data-testid="audio-reference-file"]').attributes('disabled')).toBeDefined()
 
     await wrapper.get('[data-testid="video-model"]').setValue('grok-imagine-1.5')
-    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['400p', '544p', '720p', '960p'])
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['auto', '400p', '544p', '720p', '960p'])
     await wrapper.get('[data-testid="video-resolution"]').setValue('544p')
     expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['1:1'])
     expect(wrapper.get('[data-testid="video-start-frame-file"]').attributes('disabled')).toBeUndefined()
     expect(wrapper.get('[data-testid="video-image-file"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('filters the new Leo model parameters and disables unsupported generated audio', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="video-model"]').setValue('hailuo-03')
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['1440p'])
+    expect(wrapper.get('[data-testid="video-duration"]').findAll('option').map((option) => Number(option.attributes('value')))[0]).toBe(5)
+    expect(wrapper.get('[data-testid="video-duration"]').findAll('option').map((option) => Number(option.attributes('value'))).at(-1)).toBe(15)
+
+    await wrapper.get('[data-testid="video-model"]').setValue('kling-2.6')
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['auto', '1080p'])
+    await wrapper.get('[data-testid="video-resolution"]').setValue('auto')
+    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['auto'])
+
+    await wrapper.get('[data-testid="video-model"]').setValue('gemini-omni-flash')
+    expect(wrapper.get('[data-testid="video-audio"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="video-reference-file"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('rejects local video upload for generated-only Kling video references', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="video-model"]').setValue('kling-video-o-3')
+
+    const input = wrapper.get('[data-testid="video-reference-file"]')
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [new File(['mp4'], 'reference.mp4', { type: 'video/mp4' })] })
+    await input.trigger('change')
+
+    expect(appStoreMocks.showError).toHaveBeenCalledWith('video.modelGuidanceUnsupported')
+    expect(wrapper.findAll('[data-testid="audio-reference-preview"]')).toHaveLength(0)
+    expect(uploadVideoInput).not.toHaveBeenCalled()
+  })
+
+  it('uploads multiple Hailuo audio references and keeps the public URL shape', async () => {
+    class MockAudio {
+      duration = 5
+      onloadedmetadata: (() => void) | null = null
+      onerror: (() => void) | null = null
+      set src(_value: string) {
+        queueMicrotask(() => this.onloadedmetadata?.())
+      }
+    }
+    vi.stubGlobal('Audio', MockAudio)
+    vi.mocked(uploadVideoInput).mockImplementation(async (_key, file, kind = 'image') => ({
+      upload_id: file.name,
+      media_url: `http://127.0.0.1/internal/video-inputs/${file.name}`,
+      media_type: kind,
+      content_type: file.type,
+      size: file.size,
+    }))
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-hailuo-audio', status: 'pending', status_url: '/v1/videos/jobs/vidjob-hailuo-audio',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="video-model"]').setValue('hailuo-03')
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+
+    const imageInput = wrapper.get('[data-testid="video-image-file"]')
+    Object.defineProperty(imageInput.element, 'files', { configurable: true, value: [new File(['png'], 'reference.png', { type: 'image/png' })] })
+    await imageInput.trigger('change')
+    const audioFiles = [
+      new File(['one'], 'reference-1.mp3', { type: 'audio/mpeg' }),
+      new File(['two'], 'reference-2.mp3', { type: 'audio/mpeg' }),
+      new File(['three'], 'reference-3.mp3', { type: 'audio/mpeg' }),
+    ]
+    const audioInput = wrapper.get('[data-testid="audio-reference-file"]')
+    Object.defineProperty(audioInput.element, 'files', { configurable: true, value: audioFiles })
+    await audioInput.trigger('change')
+    await flushPromises()
+    await wrapper.get('[data-testid="video-prompt"]').setValue('Match the reference audio')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    const payload = vi.mocked(createVideoJob).mock.calls[0][1]
+    expect(payload.guidances?.audio_reference).toEqual(audioFiles.map((file) => ({ audio: { url: `http://127.0.0.1/internal/video-inputs/${file.name}`, type: 'UPLOADED' } })))
+    expect(JSON.stringify(payload)).not.toMatch(/"id"\s*:/)
   })
 
   it('exposes exact LTX 2.3 parameters and allows prompt enhancement with a start frame', async () => {

@@ -4898,3 +4898,37 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - All remaining staged files are the direct upstream v0.1.171 merge result; `progress.md` records the merge decisions, verification evidence, and rollback point.
 - `.superpowers/` remains untracked and excluded from the merge commit and release package.
 - Rollback point: after the merge commit is created, run `git revert <merge_commit>`; the pre-merge fork point is `7716a380e`.
+
+## 2026-08-07 - Task: Sync LeoStudio latest video models
+
+### What was done
+- Synchronized the LeoStudio model registry across server validation, account defaults, channel pricing, the video workbench, and the public API documentation for Hailuo 03, Gemini Omni Flash, Kling 2.x/3.x and O-series, and Veo 3.1 variants.
+- Enforced model-specific resolution, duration, aspect-ratio, generated-audio, frame, image, video, and audio-reference rules, including `auto` pairing, Hailuo audio limits, and GENERATED-only Kling O-series video references.
+- Completed multi-audio upload handling in the workbench, kept uploaded media payloads to public `media_url`/`UPLOADED` fields, and kept local video upload disabled for models that cannot accept `UPLOADED` video.
+- Updated the English/Chinese API documentation page, model matrix/examples, formal Leo specifications/channel docs, native pricing tiers, and regression tests without exposing upstream credentials, UUIDs, or internal task identifiers to customers.
+
+### Testing
+- Backend: `go test ./...` passed for all packages after updating the Leo default-model list assertion.
+- Frontend: full Vitest run passed; focused video/API-docs/pricing suite passed 47 tests.
+- Frontend: `vue-tsc --noEmit`, targeted ESLint, and `vite build` passed; build transformed 1005 modules with only existing chunk-size/dynamic-import warnings.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/leo_account.go`: exposes the latest public Leo model defaults.
+- `backend/internal/service/leo_account_test.go`: updates default-model regression coverage.
+- `backend/internal/service/leo_video_model_specs.go`: adds latest model capabilities and media validation, including Seedance Mini audio support.
+- `backend/internal/service/leo_video_model_specs_test.go`: covers new model parameters and guidance constraints.
+- `backend/internal/service/video_billing_resolution.go`: maps native model resolutions to billing tiers.
+- `frontend/src/views/user/VideoGenerationView.vue`: filters model parameters, supports multiple audio references, validates media constraints, and blocks unsupported uploads.
+- `frontend/src/views/user/VideoApiDocsView.vue`: documents all current models and customer-visible request examples.
+- `frontend/src/constants/channel.ts`: adds the latest Leo model catalog.
+- `frontend/src/components/admin/channel/types.ts`: adds native pricing-tier mappings.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updates English model and media guidance.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updates Chinese model and media guidance.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: adds workbench model/media regression tests.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies all model examples and public exposure boundaries.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: verifies native pricing tiers.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: records the complete public model and media contract.
+- `docs/LEO_VIDEO_CHANNEL.md`: records channel mapping, pricing, workbench, and upload operations.
+- `progress.md`: records this implementation and verification round.
+- Rollback: `git restore -- backend/internal/service/leo_account.go backend/internal/service/leo_account_test.go backend/internal/service/leo_video_model_specs.go backend/internal/service/leo_video_model_specs_test.go backend/internal/service/video_billing_resolution.go frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/VideoApiDocsView.vue frontend/src/constants/channel.ts frontend/src/components/admin/channel/types.ts frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/__tests__/VideoGenerationView.spec.ts frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts frontend/src/components/admin/channel/__tests__/types.spec.ts docs/LEO_VIDEO_MODEL_SPECS.md docs/LEO_VIDEO_CHANNEL.md progress.md`

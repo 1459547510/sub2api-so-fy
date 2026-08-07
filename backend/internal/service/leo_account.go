@@ -22,6 +22,19 @@ var LeoDefaultVideoModelIDs = []string{
 	"grok-imagine-1.5",
 	LeoLTX23ProModelID,
 	LeoLTX23FastModelID,
+	"hailuo-03",
+	"gemini-omni-flash",
+	"kling-2.1",
+	"kling-2.5",
+	"kling-2.5-turbo-standard",
+	"kling-2.6",
+	"kling-video-o-1",
+	"kling-3.0",
+	"kling-3.0-turbo",
+	"kling-video-o-3",
+	"veo-3.1-generate-001",
+	"veo-3.1-fast-generate-001",
+	"veo-3.1-lite",
 }
 
 func normalizeLeoVideoModelID(model string) string {

@@ -39,9 +39,9 @@ Sub2API 的连接测试会请求去掉 `/v1` 后的 `/health`；视频生成会�
 
 1. 在管理端创建平台为 `Leo` 的分组。
 2. 开启“允许当前分组生成视频”。
-3. 在分组中填写 480p、720p、1080p 三档 USD/秒回退价格。Leo 分组三档都必填，`0` 表示免费。
+3. 在分组中填写 480p、720p、1080p 三档 USD/秒回退价格。Leo 分组三档都必填，`0` 表示免费；模型原生的 1440p、2160p 或 400p/544p/960p 应在渠道模型定价中单独配置。
 4. 在“渠道管理”中创建或编辑关联该分组的渠道，并进入 `Leo` 平台的模型定价。
-5. 为已经配置计费的模型分别添加“视频（按秒）”定价。定价编辑器会按模型显示实际支持的分辨率：`happy-horse-1.1` 仅显示 720p、1080p，`grok-imagine-1.5` 仅显示 400p、544p、720p、960p，LTX 2.3 仅显示 1080p、1440p、2160p，Seedance 显示各自支持的档位。每条只能绑定一个精确模型，不能使用通配符；不要配置在账号统计定价规则中。
+5. 为已经配置计费的模型分别添加“视频（按秒）”定价。定价编辑器会按模型显示实际支持的分辨率：`happy-horse-1.1` 显示 720p、1080p，`grok-imagine-1.5` 显示 400p、544p、720p、960p，`hailuo-03` 显示 1440p，Gemini 显示 720p，Kling/Veo 显示各自的 720p、1080p、2160p 子集，LTX 2.3 显示 1080p、1440p、2160p，Seedance 显示各自支持的档位。`auto` 不是独立价格档位，应按上游实际分辨率结算。每条只能绑定一个精确模型，不能使用通配符；不要配置在账号统计定价规则中。
 6. 创建平台为 `Leo`、类型为 `API Key` 的账号。
 7. 填写 LeoStudio `/v1` Base URL、Bearer API Key、代理和并发。
 8. 保留或调整默认模型映射：
@@ -54,6 +54,19 @@ happy-horse-1.1   -> happy-horse-1.1
 grok-imagine-1.5  -> grok-imagine-1.5
 ltx-2.3-pro       -> ltxv-2.3-pro
 ltx-2.3-fast      -> ltxv-2.3-fast
+hailuo-03        -> hailuo-03
+gemini-omni-flash -> gemini-omni-flash
+kling-2.1        -> kling-2.1
+kling-2.5        -> kling-2.5
+kling-2.5-turbo-standard -> kling-2.5-turbo-standard
+kling-2.6        -> kling-2.6
+kling-video-o-1  -> kling-video-o-1
+kling-3.0        -> kling-3.0
+kling-3.0-turbo  -> kling-3.0-turbo
+kling-video-o-3  -> kling-video-o-3
+veo-3.1-generate-001 -> veo-3.1-generate-001
+veo-3.1-fast-generate-001 -> veo-3.1-fast-generate-001
+veo-3.1-lite     -> veo-3.1-lite
 ```
 
 9. 执行账号连接测试，确认 `/health` 返回成功。
@@ -123,6 +136,7 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 - 按当前模型显示对应数量的远程 `http`/`https` 参考图片 URL；
 - PNG、JPEG、WebP 本地参考图片，Seedance 最多 4 张、Happy Horse 最多 9 张，每张最大 10 MiB；
 - 独立首帧和尾帧图片，可同时选择并并行上传，分别写入 `start_frame_url` 和 `end_frame_url`；首尾帧模式与参考图模式互斥；
+- 本地 MP4/MOV 参考视频和 MP3/PCM WAV 参考音频上传；视频和音频入口会按当前模型限制数量、格式和可用性，Hailuo 音频会校验单文件 2–30 秒及总计 15 秒；Kling O-1/O-3 的 `GENERATED` 视频参考不能用本地上传替代；
 - `pending`、`running`、`settling`、`completed`、`failed`、`canceled` 状态查询；
 - 只有 `pending` 任务可取消，`running` 和终态任务不能取消；
 - 完成任务的本地视频预览和下载。
@@ -142,6 +156,19 @@ curl -X POST "$SUB2_BASE_URL/v1/videos/generations" \
 | `grok-imagine-1.5` | `400p`、`544p`、`720p`、`960p` | 3–15 秒，必须提供一张首帧；不支持其他参考 guidance。 |
 | `ltx-2.3-pro` | `1080p`、`1440p`、`2160p` | 固定 `16:9`；仅 6、8、10 秒；支持首尾帧、生成音频和提示词增强。 |
 | `ltx-2.3-fast` | `1080p`、`1440p`、`2160p` | 固定 `16:9`；支持 6–20 秒偶数值；支持首尾帧、生成音频和提示词增强。 |
+| `hailuo-03` | `1440p` | 5–15 秒；最多 5 张图或 3 个参考音频（总计 15 秒）；尾帧需首帧，首尾帧不能和参考图混用。 |
+| `gemini-omni-flash` | `720p` | 3–10 秒；最多 5 张参考图；不支持生成音频、首尾帧、参考视频和参考音频。 |
+| `kling-2.1` | `1080p` | 5/10 秒；首帧必填，尾帧可选；支持提示词增强。 |
+| `kling-2.5` | `720p`、`1080p` | 5/10 秒；支持首尾帧和提示词增强。 |
+| `kling-2.5-turbo-standard` | `720p` | 5/10 秒；首帧必填，不支持尾帧；支持提示词增强。 |
+| `kling-2.6` | `auto`、`1080p` | 5/10 秒；`auto` 必须配 `aspect_ratio: auto`；支持生成音频。 |
+| `kling-video-o-1` | `1080p` | 3–10 秒；支持首尾帧或参考图；视频参考只接受已有 `GENERATED` 媒体。 |
+| `kling-3.0` | `auto`、`720p`、`1080p`、`2160p` | 3–15 秒；`auto` 必须配 `aspect_ratio: auto`；支持首尾帧和生成音频。 |
+| `kling-3.0-turbo` | `auto`、`720p`、`1080p` | 3–15 秒；`auto` 必须配 `aspect_ratio: auto`；支持首帧和生成音频。 |
+| `kling-video-o-3` | `720p`、`1080p`、`2160p` | 3–15 秒；最多 7 张图或 1 个 `GENERATED` 视频；视频参考时最多 4 张图、10 秒；首尾帧互斥。 |
+| `veo-3.1-generate-001` | `720p`、`1080p`、`2160p` | 4/6/8 秒；支持首尾帧、最多 3 张图和生成音频。 |
+| `veo-3.1-fast-generate-001` | `720p`、`1080p`、`2160p` | 4/6/8 秒；支持首尾帧和生成音频，不支持参考图。 |
+| `veo-3.1-lite` | `720p`、`1080p` | 4/6/8 秒；支持首尾帧和生成音频。 |
 
 工作台会为每个模型设置一个可用的默认分辨率和时长；页面提交前会再次校验模型、分辨率、时长、画面比例和 guidance 组合，非法组合不会上传媒体或创建任务。直接调用公共 API 的客户端也会得到同样的服务端校验。
 
@@ -230,6 +257,16 @@ reject image, video, and audio references. Existing Leo accounts must add both
 exact model mappings before these models can be scheduled; newly created
 accounts include them by default.
 
+The current LeoStudio model registry also exposes `hailuo-03`,
+`gemini-omni-flash`, Kling 2.x/3.x and O-series models, and Veo 3.1
+Generate/Fast/Lite. Their exact resolution, duration, aspect-ratio and guidance
+rules are listed in the model matrix above and are enforced before dispatch.
+Models using `auto` resolution require `aspect_ratio: "auto"`; `auto` is not a
+separate billing tier. Hailuo supports image or audio references with a 15
+second combined audio limit. Kling O-1/O-3 video references are
+`GENERATED`-asset-only, so the customer upload page intentionally rejects local
+video for those models. Veo durations are limited to 4, 6, or 8 seconds.
+
 Channel model pricing entries use each model's native resolution tiers:
 
 - Happy Horse: `720p = 0.15` and `1080p = 0.19` USD/s.
@@ -271,10 +308,15 @@ handle upstream identifiers.
 
 - Images: PNG, JPEG, or WebP, up to 10 MiB.
 - Videos: the filename must end in MP4 or MOV, the bytes must be a readable ISO
-  Base Media container with an `ftyp` header, the file is limited to 100 MiB,
-  and a generation may contain at most three video references.
-- Audio: MP3 with readable frames or RIFF/WAVE PCM 16/24-bit WAV, up to 15 MiB,
-  between 2 and 30 seconds, with at most one audio reference.
+  Base Media container with an `ftyp` header, and the file is limited to 100
+  MiB. Counts are model-specific; uploaded video is accepted only where the
+  model allows `UPLOADED` video. Kling O-1/O-3 require an existing `GENERATED`
+  video asset instead.
+- Audio: MP3 with readable frames or RIFF/WAVE PCM 16/24-bit WAV, up to 15 MiB
+  and between 2 and 30 seconds. Seedance accepts one reference audio; Hailuo
+  accepts up to three with a combined duration limit of 15 seconds. The audio
+  reference must be paired with an image or video reference when required by
+  the model.
 
 Uploaded media is placed in `guidances.video_reference_base` or
 `guidances.audio_reference` with `type: "UPLOADED"`. An audio reference must

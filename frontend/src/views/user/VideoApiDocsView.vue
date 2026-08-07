@@ -290,6 +290,110 @@ const modelMatrixRows = [
     promptLimit: 'video.apiDocs.matrix.ltx23Fast.promptLimit',
     references: 'video.apiDocs.matrix.ltx23Fast.references',
   },
+  {
+    model: 'hailuo-03',
+    resolution: 'video.apiDocs.matrix.hailuo03.resolution',
+    duration: 'video.apiDocs.matrix.hailuo03.duration',
+    aspectRatio: 'video.apiDocs.matrix.hailuo03.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.hailuo03.promptLimit',
+    references: 'video.apiDocs.matrix.hailuo03.references',
+  },
+  {
+    model: 'gemini-omni-flash',
+    resolution: 'video.apiDocs.matrix.geminiOmniFlash.resolution',
+    duration: 'video.apiDocs.matrix.geminiOmniFlash.duration',
+    aspectRatio: 'video.apiDocs.matrix.geminiOmniFlash.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.geminiOmniFlash.promptLimit',
+    references: 'video.apiDocs.matrix.geminiOmniFlash.references',
+  },
+  {
+    model: 'kling-2.1',
+    resolution: 'video.apiDocs.matrix.kling21.resolution',
+    duration: 'video.apiDocs.matrix.kling21.duration',
+    aspectRatio: 'video.apiDocs.matrix.kling21.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.kling21.promptLimit',
+    references: 'video.apiDocs.matrix.kling21.references',
+  },
+  {
+    model: 'kling-2.5',
+    resolution: 'video.apiDocs.matrix.kling25.resolution',
+    duration: 'video.apiDocs.matrix.kling25.duration',
+    aspectRatio: 'video.apiDocs.matrix.kling25.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.kling25.promptLimit',
+    references: 'video.apiDocs.matrix.kling25.references',
+  },
+  {
+    model: 'kling-2.5-turbo-standard',
+    resolution: 'video.apiDocs.matrix.kling25TurboStandard.resolution',
+    duration: 'video.apiDocs.matrix.kling25TurboStandard.duration',
+    aspectRatio: 'video.apiDocs.matrix.kling25TurboStandard.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.kling25TurboStandard.promptLimit',
+    references: 'video.apiDocs.matrix.kling25TurboStandard.references',
+  },
+  {
+    model: 'kling-2.6',
+    resolution: 'video.apiDocs.matrix.kling26.resolution',
+    duration: 'video.apiDocs.matrix.kling26.duration',
+    aspectRatio: 'video.apiDocs.matrix.kling26.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.kling26.promptLimit',
+    references: 'video.apiDocs.matrix.kling26.references',
+  },
+  {
+    model: 'kling-video-o-1',
+    resolution: 'video.apiDocs.matrix.klingVideoO1.resolution',
+    duration: 'video.apiDocs.matrix.klingVideoO1.duration',
+    aspectRatio: 'video.apiDocs.matrix.klingVideoO1.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.klingVideoO1.promptLimit',
+    references: 'video.apiDocs.matrix.klingVideoO1.references',
+  },
+  {
+    model: 'kling-3.0',
+    resolution: 'video.apiDocs.matrix.kling30.resolution',
+    duration: 'video.apiDocs.matrix.kling30.duration',
+    aspectRatio: 'video.apiDocs.matrix.kling30.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.kling30.promptLimit',
+    references: 'video.apiDocs.matrix.kling30.references',
+  },
+  {
+    model: 'kling-3.0-turbo',
+    resolution: 'video.apiDocs.matrix.kling30Turbo.resolution',
+    duration: 'video.apiDocs.matrix.kling30Turbo.duration',
+    aspectRatio: 'video.apiDocs.matrix.kling30Turbo.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.kling30Turbo.promptLimit',
+    references: 'video.apiDocs.matrix.kling30Turbo.references',
+  },
+  {
+    model: 'kling-video-o-3',
+    resolution: 'video.apiDocs.matrix.klingVideoO3.resolution',
+    duration: 'video.apiDocs.matrix.klingVideoO3.duration',
+    aspectRatio: 'video.apiDocs.matrix.klingVideoO3.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.klingVideoO3.promptLimit',
+    references: 'video.apiDocs.matrix.klingVideoO3.references',
+  },
+  {
+    model: 'veo-3.1-generate-001',
+    resolution: 'video.apiDocs.matrix.veo31Generate.resolution',
+    duration: 'video.apiDocs.matrix.veo31Generate.duration',
+    aspectRatio: 'video.apiDocs.matrix.veo31Generate.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.veo31Generate.promptLimit',
+    references: 'video.apiDocs.matrix.veo31Generate.references',
+  },
+  {
+    model: 'veo-3.1-fast-generate-001',
+    resolution: 'video.apiDocs.matrix.veo31Fast.resolution',
+    duration: 'video.apiDocs.matrix.veo31Fast.duration',
+    aspectRatio: 'video.apiDocs.matrix.veo31Fast.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.veo31Fast.promptLimit',
+    references: 'video.apiDocs.matrix.veo31Fast.references',
+  },
+  {
+    model: 'veo-3.1-lite',
+    resolution: 'video.apiDocs.matrix.veo31Lite.resolution',
+    duration: 'video.apiDocs.matrix.veo31Lite.duration',
+    aspectRatio: 'video.apiDocs.matrix.veo31Lite.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.veo31Lite.promptLimit',
+    references: 'video.apiDocs.matrix.veo31Lite.references',
+  },
 ]
 
 const jobEndpoints = [
@@ -551,6 +655,359 @@ const modelExamples = [
   "aspect_ratio": "16:9",
   "audio": true,
   "prompt_enhance": "AUTO"
+}`),
+  },
+  {
+    model: 'hailuo-03',
+    description: 'video.apiDocs.models.hailuo03',
+    code: modelRequestExample(`{
+  "model": "hailuo-03",
+  "prompt": "A paper lantern floats above a quiet river at night",
+  "resolution": "1440p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "guidances": {
+    "image_reference": [{
+      "image": { "url": "https://media.example/lantern.png", "type": "UPLOADED" },
+      "strength": "MID"
+    }],
+    "audio_reference": [{
+      "audio": { "url": "https://media.example/river.mp3", "type": "UPLOADED" }
+    }]
+  }
+}`),
+  },
+  {
+    model: 'gemini-omni-flash',
+    description: 'video.apiDocs.models.geminiOmniFlash',
+    code: modelRequestExample(`{
+  "model": "gemini-omni-flash",
+  "prompt": "A watercolor train crosses a mountain bridge",
+  "resolution": "720p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "audio": false,
+  "image_url": "https://media.example/train.png"
+}`),
+  },
+  {
+    model: 'kling-2.1',
+    description: 'video.apiDocs.models.kling21',
+    code: modelRequestExample(`{
+  "model": "kling-2.1",
+  "prompt": "The camera slowly circles the dancer",
+  "resolution": "1080p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "audio": false,
+  "start_frame_url": "https://media.example/dancer.png",
+  "prompt_enhance": "ON"
+}`),
+  },
+  {
+    model: 'kling-2.5',
+    description: 'video.apiDocs.models.kling25',
+    code: modelRequestExample(`{
+  "model": "kling-2.5",
+  "prompt": "Transition from a city street into a star field",
+  "resolution": "1080p",
+  "duration": 10,
+  "aspect_ratio": "16:9",
+  "audio": false,
+  "start_frame_url": "https://media.example/city.png",
+  "end_frame_url": "https://media.example/stars.png"
+}`),
+  },
+  {
+    model: 'kling-2.5-turbo-standard',
+    description: 'video.apiDocs.models.kling25TurboStandard',
+    code: modelRequestExample(`{
+  "model": "kling-2.5-turbo-standard",
+  "prompt": "A close-up of a flower opening in morning light",
+  "resolution": "720p",
+  "duration": 5,
+  "aspect_ratio": "9:16",
+  "audio": false,
+  "start_frame_url": "https://media.example/flower.png"
+}`),
+  },
+  {
+    model: 'kling-2.6',
+    description: 'video.apiDocs.models.kling26',
+    code: modelRequestExample(`{
+  "model": "kling-2.6",
+  "prompt": "A chef plates a colorful dish in one continuous shot",
+  "resolution": "auto",
+  "duration": 5,
+  "aspect_ratio": "auto",
+  "audio": true,
+  "start_frame_url": "https://media.example/chef.png"
+}`),
+  },
+  {
+    model: 'kling-video-o-1',
+    description: 'video.apiDocs.models.klingVideoO1',
+    code: modelRequestExample(`{
+  "model": "kling-video-o-1",
+  "prompt": "A robot turns toward the camera",
+  "resolution": "1080p",
+  "duration": 6,
+  "aspect_ratio": "16:9",
+  "audio": false,
+  "start_frame_url": "https://media.example/robot.png"
+}`),
+  },
+  {
+    model: 'kling-3.0',
+    description: 'video.apiDocs.models.kling30',
+    code: modelRequestExample(`{
+  "model": "kling-3.0",
+  "prompt": "A sailboat leaves the harbor at golden hour",
+  "resolution": "1080p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "start_frame_url": "https://media.example/harbor.png",
+  "end_frame_url": "https://media.example/open-water.png"
+}`),
+  },
+  {
+    model: 'kling-3.0-turbo',
+    description: 'video.apiDocs.models.kling30Turbo',
+    code: modelRequestExample(`{
+  "model": "kling-3.0-turbo",
+  "prompt": "A cyclist rides through a forest trail",
+  "resolution": "auto",
+  "duration": 8,
+  "aspect_ratio": "auto",
+  "audio": true,
+  "start_frame_url": "https://media.example/cyclist.png"
+}`),
+  },
+  {
+    model: 'kling-video-o-3',
+    description: 'video.apiDocs.models.klingVideoO3',
+    code: modelRequestExample(`{
+  "model": "kling-video-o-3",
+  "prompt": "A glass sculpture catches moving sunlight",
+  "resolution": "2160p",
+  "duration": 8,
+  "aspect_ratio": "1:1",
+  "audio": true,
+  "start_frame_url": "https://media.example/sculpture.png",
+  "end_frame_url": "https://media.example/sculpture-end.png"
+}`),
+  },
+  {
+    model: 'veo-3.1-generate-001',
+    description: 'video.apiDocs.models.veo31Generate',
+    code: modelRequestExample(`{
+  "model": "veo-3.1-generate-001",
+  "prompt": "A cinematic drone shot over snowy peaks",
+  "resolution": "2160p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "image_url": "https://media.example/peaks.png"
+}`),
+  },
+  {
+    model: 'veo-3.1-fast-generate-001',
+    description: 'video.apiDocs.models.veo31Fast',
+    code: modelRequestExample(`{
+  "model": "veo-3.1-fast-generate-001",
+  "prompt": "Rain falls on a quiet city street",
+  "resolution": "1080p",
+  "duration": 6,
+  "aspect_ratio": "9:16",
+  "audio": true,
+  "start_frame_url": "https://media.example/street.png",
+  "end_frame_url": "https://media.example/street-end.png"
+}`),
+  },
+  {
+    model: 'veo-3.1-lite',
+    description: 'video.apiDocs.models.veo31Lite',
+    code: modelRequestExample(`{
+  "model": "veo-3.1-lite",
+  "prompt": "A warm breeze moves through a field of wheat",
+  "resolution": "720p",
+  "duration": 4,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "start_frame_url": "https://media.example/wheat.png"
+}`),
+  },
+  {
+    model: 'hailuo-03',
+    description: 'video.apiDocs.models.hailuo03',
+    code: modelRequestExample(`{
+  "model": "hailuo-03",
+  "prompt": "A product reveal on a clean studio table",
+  "resolution": "1440p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "guidances": {
+    "image_reference": [
+      { "image": { "url": "https://media.example/product.png", "type": "UPLOADED" } }
+    ],
+    "audio_reference": [
+      { "audio": { "url": "https://media.example/ambience.mp3", "type": "UPLOADED" } }
+    ]
+  }
+}`),
+  },
+  {
+    model: 'gemini-omni-flash',
+    description: 'video.apiDocs.models.geminiOmniFlash',
+    code: modelRequestExample(`{
+  "model": "gemini-omni-flash",
+  "prompt": "A paper boat drifting across a calm lake",
+  "resolution": "720p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "image_url": "https://media.example/boat.png"
+}`),
+  },
+  {
+    model: 'kling-2.1',
+    description: 'video.apiDocs.models.kling21',
+    code: modelRequestExample(`{
+  "model": "kling-2.1",
+  "prompt": "A close-up portrait with a gentle breeze",
+  "resolution": "1080p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "start_frame_url": "https://media.example/portrait.png"
+}`),
+  },
+  {
+    model: 'kling-2.5',
+    description: 'video.apiDocs.models.kling25',
+    code: modelRequestExample(`{
+  "model": "kling-2.5",
+  "prompt": "A smooth transition from day to night over the city",
+  "resolution": "1080p",
+  "duration": 10,
+  "aspect_ratio": "16:9",
+  "start_frame_url": "https://media.example/day.png",
+  "end_frame_url": "https://media.example/night.png"
+}`),
+  },
+  {
+    model: 'kling-2.5-turbo-standard',
+    description: 'video.apiDocs.models.kling25TurboStandard',
+    code: modelRequestExample(`{
+  "model": "kling-2.5-turbo-standard",
+  "prompt": "A runner starts moving through a sunlit park",
+  "resolution": "720p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "start_frame_url": "https://media.example/runner.png"
+}`),
+  },
+  {
+    model: 'kling-2.6',
+    description: 'video.apiDocs.models.kling26',
+    code: modelRequestExample(`{
+  "model": "kling-2.6",
+  "prompt": "A cinematic walk through a rainy market",
+  "resolution": "auto",
+  "duration": 5,
+  "aspect_ratio": "auto",
+  "audio": true
+}`),
+  },
+  {
+    model: 'kling-video-o-1',
+    description: 'video.apiDocs.models.klingVideoO1',
+    code: modelRequestExample(`{
+  "model": "kling-video-o-1",
+  "prompt": "A character turns toward the camera",
+  "resolution": "1080p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "start_frame_url": "https://media.example/character.png"
+}`),
+  },
+  {
+    model: 'kling-3.0',
+    description: 'video.apiDocs.models.kling30',
+    code: modelRequestExample(`{
+  "model": "kling-3.0",
+  "prompt": "A sweeping aerial shot over a mountain valley",
+  "resolution": "2160p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": true
+}`),
+  },
+  {
+    model: 'kling-3.0-turbo',
+    description: 'video.apiDocs.models.kling30Turbo',
+    code: modelRequestExample(`{
+  "model": "kling-3.0-turbo",
+  "prompt": "A fast dolly shot through a neon street",
+  "resolution": "1080p",
+  "duration": 5,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "start_frame_url": "https://media.example/street.png"
+}`),
+  },
+  {
+    model: 'kling-video-o-3',
+    description: 'video.apiDocs.models.klingVideoO3',
+    code: modelRequestExample(`{
+  "model": "kling-video-o-3",
+  "prompt": "The camera follows a cyclist along the coast",
+  "resolution": "1080p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "start_frame_url": "https://media.example/coast-start.png",
+  "end_frame_url": "https://media.example/coast-end.png"
+}`),
+  },
+  {
+    model: 'veo-3.1-generate-001',
+    description: 'video.apiDocs.models.veo31Generate',
+    code: modelRequestExample(`{
+  "model": "veo-3.1-generate-001",
+  "prompt": "A warm handheld shot of a family dinner",
+  "resolution": "1080p",
+  "duration": 8,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "start_frame_url": "https://media.example/dinner-start.png",
+  "end_frame_url": "https://media.example/dinner-end.png"
+}`),
+  },
+  {
+    model: 'veo-3.1-fast-generate-001',
+    description: 'video.apiDocs.models.veo31Fast',
+    code: modelRequestExample(`{
+  "model": "veo-3.1-fast-generate-001",
+  "prompt": "Clouds rolling over a dramatic desert landscape",
+  "resolution": "720p",
+  "duration": 6,
+  "aspect_ratio": "16:9",
+  "audio": true
+}`),
+  },
+  {
+    model: 'veo-3.1-lite',
+    description: 'video.apiDocs.models.veo31Lite',
+    code: modelRequestExample(`{
+  "model": "veo-3.1-lite",
+  "prompt": "A calm lake at sunrise with gentle ripples",
+  "resolution": "720p",
+  "duration": 4,
+  "aspect_ratio": "16:9",
+  "audio": true,
+  "start_frame_url": "https://media.example/lake.png"
 }`),
   },
 ]

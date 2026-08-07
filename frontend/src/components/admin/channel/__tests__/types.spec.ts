@@ -167,6 +167,27 @@ describe('video pricing', () => {
     }
   })
 
+  it('creates native pricing tiers for the latest Leo models', () => {
+    const expected: Record<string, string[]> = {
+      'hailuo-03': ['1440p'],
+      'gemini-omni-flash': ['720p'],
+      'kling-2.1': ['1080p'],
+      'kling-2.5': ['720p', '1080p'],
+      'kling-2.5-turbo-standard': ['720p'],
+      'kling-2.6': ['1080p'],
+      'kling-video-o-1': ['1080p'],
+      'kling-3.0': ['720p', '1080p', '2160p'],
+      'kling-3.0-turbo': ['720p', '1080p'],
+      'kling-video-o-3': ['720p', '1080p', '2160p'],
+      'veo-3.1-generate-001': ['720p', '1080p', '2160p'],
+      'veo-3.1-fast-generate-001': ['720p', '1080p', '2160p'],
+      'veo-3.1-lite': ['720p', '1080p'],
+    }
+    for (const [model, resolutions] of Object.entries(expected)) {
+      expect(normalizeVideoIntervals([], model).map(iv => iv.tier_label)).toEqual(resolutions)
+    }
+  })
+
   it('splits synchronized Leo models into independent video entries', () => {
     const entries = createSyncedPricingEntries('leo', ['seedance-2.0', 'seedance-2.0-fast'])
 
