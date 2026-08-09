@@ -987,7 +987,7 @@ async function submitJob() {
     if (promptEnhance.value) payload.prompt_enhance = promptEnhance.value
     if (startFrameUrl) payload.start_frame_url = startFrameUrl
     if (endFrameUrl) payload.end_frame_url = endFrameUrl
-    if (selectedImageUrls.length === 1 && !startFrameUrl && !endFrameUrl && !selectedAudioUrls.length) {
+    if (selectedImageUrls.length === 1 && (currentModelCapability.value?.maxStartFrames || 0) > 0 && !startFrameUrl && !endFrameUrl && !selectedAudioUrls.length) {
       payload.image_url = selectedImageUrls[0]
     } else if (selectedImageUrls.length) {
       payload.guidances = {

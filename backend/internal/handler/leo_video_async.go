@@ -231,44 +231,5 @@ func publicLeoVideoJob(job *service.VideoJob) leoVideoJobResponse {
 }
 
 func publicLeoVideoResult(result json.RawMessage) json.RawMessage {
-	var payload any
-	if err := json.Unmarshal(result, &payload); err != nil {
-		return nil
-	}
-	publicResult, err := json.Marshal(stripPrivateLeoVideoValue(payload))
-	if err != nil {
-		return nil
-	}
-	return publicResult
-}
-
-func stripPrivateLeoVideoValue(value any) any {
-	switch typed := value.(type) {
-	case map[string]any:
-		public := make(map[string]any, len(typed))
-		for key, nested := range typed {
-			if privateLeoVideoResultKey(key) {
-				continue
-			}
-			public[key] = stripPrivateLeoVideoValue(nested)
-		}
-		return public
-	case []any:
-		public := make([]any, len(typed))
-		for index, nested := range typed {
-			public[index] = stripPrivateLeoVideoValue(nested)
-		}
-		return public
-	default:
-		return value
-	}
-}
-
-func privateLeoVideoResultKey(key string) bool {
-	switch strings.ToLower(strings.TrimSpace(key)) {
-	case "provider", "uuid", "source_url", "video_url", "generation_id", "upstream_job_id", "account_id", "api_key", "cookie":
-		return true
-	default:
-		return false
-	}
+	return service.PublicLeoVideoResult(result)
 }

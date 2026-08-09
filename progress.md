@@ -4932,3 +4932,36 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_VIDEO_CHANNEL.md`: records channel mapping, pricing, workbench, and upload operations.
 - `progress.md`: records this implementation and verification round.
 - Rollback: `git restore -- backend/internal/service/leo_account.go backend/internal/service/leo_account_test.go backend/internal/service/leo_video_model_specs.go backend/internal/service/leo_video_model_specs_test.go backend/internal/service/video_billing_resolution.go frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/VideoApiDocsView.vue frontend/src/constants/channel.ts frontend/src/components/admin/channel/types.ts frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts frontend/src/views/user/__tests__/VideoGenerationView.spec.ts frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts frontend/src/components/admin/channel/__tests__/types.spec.ts docs/LEO_VIDEO_MODEL_SPECS.md docs/LEO_VIDEO_CHANNEL.md progress.md`
+
+## 2026-08-09 - Task: Audit Leo video public boundary and latest model docs
+
+### What was done
+- Unified synchronous and asynchronous Leo video result redaction so customer-facing responses retain public media fields while removing provider names, UUIDs, generation identifiers, account identifiers, source URLs, and credential-like fields.
+- Corrected the single-image Gemini Omni Flash workbench payload to use `guidances.image_reference`, matching the model capability that rejects start frames.
+- Removed duplicate API documentation examples and aligned Grok's `auto` resolution/aspect-ratio pairing in the model matrix and localized guidance.
+- Updated regression coverage for public result redaction, Gemini image guidance, unique API examples, and the affected service response assertion.
+
+### Testing
+- `go test ./internal/handler ./internal/service -count=1` passed.
+- `frontend/node_modules/.bin/vitest.cmd run src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts --reporter=verbose` passed: 2 files, 31 tests.
+- `frontend/node_modules/.bin/vue-tsc.cmd --noEmit` passed.
+- `frontend/node_modules/.bin/eslint.cmd src/views/user/VideoGenerationView.vue src/views/user/VideoApiDocsView.vue src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts` passed.
+- `frontend/node_modules/.bin/vite.cmd build` passed with 1005 modules transformed; only existing chunk-size and dynamic-import warnings remain.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/leo_video.go`: centralizes public result metadata filtering for synchronous and asynchronous paths.
+- `backend/internal/service/leo_video_test.go`: updates the response assertion for the public redacted body.
+- `backend/internal/handler/leo_video_async.go`: reuses the service-level redaction helper.
+- `backend/internal/handler/leo_video_integration_test.go`: verifies synchronous responses hide provider metadata.
+- `docs/LEO_VIDEO_CHANNEL.md`: documents the public synchronous redaction boundary.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: documents Grok `auto` resolution support.
+- `frontend/src/views/user/VideoGenerationView.vue`: sends Gemini single-image inputs as image guidance when start frames are unsupported.
+- `frontend/src/views/user/VideoApiDocsView.vue`: fixes the Gemini example and removes duplicate model examples.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: covers Gemini single-image request construction.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: covers example uniqueness and public Gemini guidance.
+- `frontend/src/i18n/locales/en/dashboard.ts`: updates English Grok `auto` guidance.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: updates Chinese Grok `auto` guidance.
+- `progress.md`: records this audit, verification evidence, and rollback point.
+- `.superpowers/` remains an existing untracked directory and is excluded from the commit.
+- Rollback: `git restore -- backend/internal/service/leo_video.go backend/internal/service/leo_video_test.go backend/internal/handler/leo_video_async.go backend/internal/handler/leo_video_integration_test.go docs/LEO_VIDEO_CHANNEL.md docs/LEO_VIDEO_MODEL_SPECS.md frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/VideoApiDocsView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts progress.md`.

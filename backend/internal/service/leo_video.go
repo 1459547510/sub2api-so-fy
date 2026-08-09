@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -38,6 +39,52 @@ func PublicPlatformID(platform string) string {
 
 func PublicVideoErrorMessage(message string) string {
 	return strings.TrimSpace(publicVideoProviderNamePattern.ReplaceAllString(message, "video service"))
+}
+
+// PublicLeoVideoResult removes provider-owned metadata before a result crosses
+// the customer-facing API boundary. Billing and routing continue to consume
+// the original upstream response internally.
+func PublicLeoVideoResult(result json.RawMessage) json.RawMessage {
+	var payload any
+	if err := json.Unmarshal(result, &payload); err != nil {
+		return nil
+	}
+	publicResult, err := json.Marshal(stripPrivateLeoVideoValue(payload))
+	if err != nil {
+		return nil
+	}
+	return publicResult
+}
+
+func stripPrivateLeoVideoValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		public := make(map[string]any, len(typed))
+		for key, nested := range typed {
+			if privateLeoVideoResultKey(key) {
+				continue
+			}
+			public[key] = stripPrivateLeoVideoValue(nested)
+		}
+		return public
+	case []any:
+		public := make([]any, len(typed))
+		for index, nested := range typed {
+			public[index] = stripPrivateLeoVideoValue(nested)
+		}
+		return public
+	default:
+		return value
+	}
+}
+
+func privateLeoVideoResultKey(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(key)) {
+	case "provider", "uuid", "source_url", "video_url", "generation_id", "upstream_job_id", "account_id", "api_key", "cookie":
+		return true
+	default:
+		return false
+	}
 }
 
 func ParseLeoVideoRequest(body []byte) (LeoVideoRequestInfo, error) {
@@ -190,7 +237,11 @@ func (s *OpenAIGatewayService) ForwardLeoVideo(
 	if contentType == "" {
 		contentType = "application/json"
 	}
-	c.Data(resp.StatusCode, contentType, responseBody)
+	publicResponseBody := PublicLeoVideoResult(responseBody)
+	if len(publicResponseBody) == 0 {
+		publicResponseBody = responseBody
+	}
+	c.Data(resp.StatusCode, contentType, publicResponseBody)
 
 	resolution := strings.TrimSpace(gjson.GetBytes(responseBody, "provider.resolution").String())
 	if resolution == "" {

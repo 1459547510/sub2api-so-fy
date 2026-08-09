@@ -230,7 +230,8 @@ func TestLeoVideoGenerationIntegration(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 	require.Equal(t, "https://cdn.example/leo.mp4", gjson.GetBytes(response.Body.Bytes(), "data.0.mp4_url").String())
-	require.Equal(t, "leo_gen_123", gjson.GetBytes(response.Body.Bytes(), "provider.generation_id").String())
+	require.False(t, gjson.GetBytes(response.Body.Bytes(), "provider").Exists())
+	require.NotContains(t, response.Body.String(), "leo_gen_123")
 
 	require.NotEmpty(t, forwardedBody)
 	require.Equal(t, "seedance-2.0-fast", gjson.GetBytes(forwardedBody, "model").String())

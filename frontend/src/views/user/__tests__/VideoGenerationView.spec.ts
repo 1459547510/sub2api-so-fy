@@ -153,6 +153,36 @@ describe('VideoGenerationView', () => {
     expect(wrapper.get('[data-testid="video-reference-file"]').attributes('disabled')).toBeDefined()
   })
 
+  it('submits a single Gemini image as a reference image instead of a start frame', async () => {
+    vi.mocked(uploadVideoInput).mockResolvedValue({
+      upload_id: 'gemini-reference',
+      media_url: 'http://127.0.0.1/internal/video-inputs/gemini.png',
+      media_type: 'image',
+      content_type: 'image/png',
+      size: 3,
+    })
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-gemini-image', status: 'pending', status_url: '/v1/videos/jobs/vidjob-gemini-image',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="video-model"]').setValue('gemini-omni-flash')
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+    const input = wrapper.get('[data-testid="video-image-file"]')
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [new File(['png'], 'gemini.png', { type: 'image/png' })] })
+    await input.trigger('change')
+    await wrapper.get('[data-testid="video-prompt"]').setValue('Animate the reference image')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    const payload = vi.mocked(createVideoJob).mock.calls[0][1]
+    expect(payload.image_url).toBeUndefined()
+    expect(payload.guidances).toEqual({ image_reference: [
+      { image: { url: 'http://127.0.0.1/internal/video-inputs/gemini.png', type: 'UPLOADED' }, strength: 'MID', order: 0 },
+    ] })
+  })
+
   it('rejects local video upload for generated-only Kling video references', async () => {
     const wrapper = mountView()
     await flushPromises()

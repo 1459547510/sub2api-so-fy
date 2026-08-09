@@ -70,7 +70,9 @@ func TestForwardLeoVideoMapsModelAndAddsBearer(t *testing.T) {
 	require.Equal(t, "gen-1", result.ResponseID)
 	require.Equal(t, "seedance", result.Model)
 	require.Equal(t, "seedance-2.0", result.UpstreamModel)
-	require.JSONEq(t, responseBody, rec.Body.String())
+	require.Equal(t, "https://cdn.example/video.mp4", gjson.Get(rec.Body.String(), "data.0.mp4_url").String())
+	require.NotContains(t, rec.Body.String(), "provider")
+	require.NotContains(t, rec.Body.String(), "generation_id")
 }
 
 func TestForwardLeoVideoPreservesLTXFastTwentySecondDuration(t *testing.T) {

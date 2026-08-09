@@ -16,7 +16,7 @@ use a supported resolution/aspect-ratio pair from the same row.
 | `seedance-2.0-fast` | `480p`, `720p` | `4-15s`; default `8s` | `480p`: all seven Seedance ratios; `720p` excludes `9:21` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
 | `seedance-2.0-mini` | `480p`, `720p` | `4-15s`; default `8s` | Both resolutions: `16:9`, `1:1`, `9:16` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
 | `happy-horse-1.1` | `720p`, `1080p` | `3-15s`; default `5s` | Both resolutions: `16:9`, `4:3`, `1:1`, `3:4`, `9:16` | 2500 | 1 start frame or 9 images; no end frame/video/audio; `prompt_enhance` |
-| `grok-imagine-1.5` | `400p`, `544p`, `720p`, `960p` | `3-15s`; default `6s` | `400p`/`720p`: `16:9`, `9:16`; `544p`/`960p`: `1:1` | 5000 | exactly 1 start frame; no end frame/image/video/audio |
+| `grok-imagine-1.5` | `auto`, `400p`, `544p`, `720p`, `960p` | `3-15s`; default `6s` | `auto` with `auto`; `400p`/`720p`: `16:9`, `9:16`; `544p`/`960p`: `1:1` | 5000 | exactly 1 start frame; no end frame/image/video/audio |
 | `ltx-2.3-pro` | `1080p`, `1440p`, `2160p` | `6s`, `8s`, `10s`; default `6s` | `16:9` only | 5000 | 1 start frame, 1 end frame; no image/video/audio references; generated audio and `prompt_enhance` |
 | `ltx-2.3-fast` | `1080p`, `1440p`, `2160p` | even values from `6s` to `20s`; default `6s` | `16:9` only | 5000 | 1 start frame, 1 end frame; no image/video/audio references; generated audio and `prompt_enhance` |
 | `hailuo-03` | `1440p` | `5-15s`; default `5s` | `16:9`, `1:1`, `9:16` | 2000 | up to 5 images or 3 audio references totaling 15s; 1 start frame and 1 end frame; frames exclude image references; no video reference |
