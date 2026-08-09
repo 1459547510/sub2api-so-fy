@@ -5484,3 +5484,145 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this merge, verification evidence, complete changed-file inventory, and rollback point.
 - `.superpowers/`: remains an existing untracked directory and is excluded from the merge and release.
 - Rollback after publication with `git revert -m 1 v0.1.172-fy.1`, then push the revert commit and publish a follow-up fork tag.
+
+## 2026-08-09 - Task: Merge upstream v0.1.173 and publish fork release
+
+### What was done
+- Merged `upstream/main` at `48eb3766d` after upstream released `v0.1.173`.
+- Resolved five content conflicts by retaining both upstream behavior and the fork's token incentive, video generation, homepage telemetry, and concurrent image fan-out behavior.
+- Regenerated Wire dependency injection so channel-monitor v2 and the fork runtimes are initialized and stopped together.
+
+### Testing
+- `go test ./... -count=1` passed.
+- `go vet ./...` passed.
+- `node node_modules/vitest/vitest.mjs run --reporter=default --maxWorkers=2 --minWorkers=1` passed; the initial unconstrained Windows worker run ended with `EPIPE`, so the stable bounded-worker run is the release evidence.
+- `node node_modules/vue-tsc/bin/vue-tsc.js --noEmit` passed.
+- `pnpm.exe lint:check` passed after restoring dependencies with `pnpm.exe install --frozen-lockfile`.
+- `pnpm.exe build` passed; Vite transformed 1031 modules and generated the production frontend bundle.
+
+### Notes
+- `Makefile`: keeps the fork homepage critical tests and adds the upstream channel-monitor v2 critical tests.
+- `backend/cmd/server/VERSION`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/cmd/server/wire.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/cmd/server/wire_gen.go`: regenerates dependency injection with both the fork token/video services and upstream channel-monitor v2 services.
+- `backend/cmd/server/wire_gen_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/admin/setting_handler.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/admin/setting_handler_audit.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/admin/setting_handler_update.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/auth_oauth_pending_flow_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/channel_monitor_user_handler.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/channel_monitor_v2_handler.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/channel_monitor_v2_handler_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/dto/settings.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/handler.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/setting_handler.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/handler/wire.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/repository/channel_monitor_v2_aggregation.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/repository/channel_monitor_v2_repo.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/repository/channel_monitor_v2_repo_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/repository/migrations_runner.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/repository/user_repo.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/repository/user_repo_email_alias_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/repository/user_repo_integration_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/repository/wire.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/server/api_contract_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/server/routes/admin.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/server/routes/channel_monitor_feature_gate_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/server/routes/user.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/admin_service_delete_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/antigravity_gateway_gemini.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/antigravity_gateway_service_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/antigravity_gateway_streaming.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/auth_oauth_email_flow.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/auth_oauth_email_flow_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/auth_service.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/auth_service_register_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_const.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_probe_retirement_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_runner.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_service.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_v2.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_v2_aggregator.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_v2_aggregator_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_v2_error_taxonomy.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/channel_monitor_v2_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/domain_constants.go`: keeps token-incentive setting keys while adding the upstream email-domain quota and channel-monitor v2 keys.
+- `backend/internal/service/gemini_chat_completions_compat_service.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/gemini_error_policy_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/gemini_image_output_accounting.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/gemini_image_output_accounting_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/gemini_messages_compat_service.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/openai_gateway_service_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/openai_images.go`: keeps image `n` rewriting and adopts upstream client-disconnect detachment for billable image requests.
+- `backend/internal/service/openai_images_upstream_context_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/registration_email_policy.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/registration_email_policy_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/setting_features.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/setting_parse.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/setting_public.go`: exposes both fork video/token flags and upstream channel-monitor mode/privacy settings.
+- `backend/internal/service/setting_service.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/setting_service_public_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/setting_update.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/settings_view.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/upstream_response_model.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/upstream_response_model_bench_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/upstream_response_model_test.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/user_service.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/internal/service/wire.go`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/194_channel_monitor_v2.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/195_channel_monitor_mode.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/196_channel_monitor_v2_ignored_error_categories.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/197_channel_monitor_v2_seed_popular_models.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/198_channel_monitor_v2_health_thresholds.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/199_channel_monitor_v2_fixed_rollups.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/200_channel_monitor_v2_rollup_permissions.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/201_channel_monitor_v2_refresh_5m.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/202_channel_monitor_v2_full_table_permissions.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/203_channel_monitor_v2_default_ignore_and_cache.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/204_channel_monitor_hide_throughput.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/205_channel_monitor_v2_reset_factory_cache_thresholds.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `backend/migrations/206_channel_monitor_v2_privacy_defaults.sql`: merged the upstream v0.1.173 change into the fork release set.
+- `docs/channel-monitor-v2-safe-defaults.md`: adds the upstream operational safety notes for channel-monitor v2.
+- `frontend/src/api/__tests__/channelMonitorV2.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/api/admin/settings.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/api/channelMonitorV2.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/components/icons/Icon.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/FilterMultiSelect.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/MetricCell.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/MonitorRankBadge.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/MonitorSettingsPanel.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/MonitorTrendChart.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/RelayPulseMatrix.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/__tests__/MetricCell.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/__tests__/RelayPulseMatrix.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/__tests__/designSystem.structure.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/__tests__/monitorFormat.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/__tests__/monitorZoom.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/monitorFormat.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/features/channel-monitor-v2/monitorZoom.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/i18n/locales/en/admin/settings.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/i18n/locales/en/channelMonitorV2.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/i18n/locales/en/common.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/i18n/locales/en/index.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/i18n/locales/zh/admin/settings.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/i18n/locales/zh/channelMonitorV2.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/i18n/locales/zh/common.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/i18n/locales/zh/index.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/types/index.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/utils/featureFlags.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/admin/ChannelMonitorView.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/admin/SettingsView.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/admin/__tests__/ChannelMonitorView.duplicate.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/admin/__tests__/ChannelMonitorView.grok.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/admin/__tests__/SettingsView.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/auth/EmailVerifyView.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/auth/RegisterView.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/auth/__tests__/EmailVerifyView.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/auth/__tests__/RegisterView.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/user/ChannelStatusV1View.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/user/ChannelStatusV2View.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/user/ChannelStatusView.vue`: merged the upstream v0.1.173 change into the fork release set.
+- `frontend/src/views/user/__tests__/ChannelStatusView.mode.spec.ts`: merged the upstream v0.1.173 change into the fork release set.
+- `progress.md`: records this merge, verification evidence, changed-file inventory, and rollback point.
+- `.superpowers/`: remains an existing untracked directory and is excluded from the merge and release.
+- Rollback after publication with `git revert -m 1 v0.1.173-fy.1`, then push the revert commit and publish a follow-up fork tag.
