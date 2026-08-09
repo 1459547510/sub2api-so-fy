@@ -114,13 +114,32 @@ func normalizeVideoBillingDurationSecondsOrDefault(durationSeconds, maxDuration 
 	return durationSeconds
 }
 
-func NormalizeVideoBillingResolutionOrDefault(resolution string) string {
+// LookupVideoBillingResolution 归一化分辨率并报告是否为已知档位。
+// 配置解析路径必须用它而不是 OrDefault：把无法识别的档位（如 "4k"、拼错的
+// "1080i"）静默折算成 480p，会让管理员配的高分辨率单价被挂到低分辨率档上。
+func LookupVideoBillingResolution(resolution string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(resolution)) {
-	case "400", "400p", "resolution_400", "480", "480p", "sd", "resolution_480", "544", "544p", "resolution_544":
-		return VideoBillingResolution480P
+	case "480", "480p", "sd", "resolution_480":
+		return VideoBillingResolution480P, true
 	case "720", "720p", "hd", "resolution_720":
-		return VideoBillingResolution720P
-	case "960", "960p", "resolution_960", "1080", "1080p", "full_hd", "full-hd", "fhd", "resolution_1080", "1440", "1440p", "resolution_1440", "2160", "2160p", "4k", "uhd", "resolution_2160":
+		return VideoBillingResolution720P, true
+	case "1080", "1080p", "full_hd", "full-hd", "fhd", "resolution_1080":
+		return VideoBillingResolution1080P, true
+	default:
+		return "", false
+	}
+}
+
+// NormalizeVideoBillingResolutionOrDefault is the generic three-tier billing
+// normalization. Leo-specific model tiers are handled by the model-aware helper.
+func NormalizeVideoBillingResolutionOrDefault(resolution string) string {
+	if normalized, ok := LookupVideoBillingResolution(resolution); ok {
+		return normalized
+	}
+	switch strings.ToLower(strings.TrimSpace(resolution)) {
+	case "400", "400p", "resolution_400", "544", "544p", "resolution_544":
+		return VideoBillingResolution480P
+	case "960", "960p", "resolution_960", "1440", "1440p", "resolution_1440", "2160", "2160p":
 		return VideoBillingResolution1080P
 	default:
 		return VideoBillingResolution480P

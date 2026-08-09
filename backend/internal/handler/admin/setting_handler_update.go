@@ -60,6 +60,7 @@ type UpdateSettingsRequest struct {
 	TencentCaptchaAppSecretKey   string `json:"tencent_captcha_app_secret_key"`
 	TencentCaptchaCloudSecretID  string `json:"tencent_captcha_cloud_secret_id"`
 	TencentCaptchaCloudSecretKey string `json:"tencent_captcha_cloud_secret_key"`
+	TencentCaptchaRegion         string `json:"tencent_captcha_region"`
 
 	// 阿里云验证码 2.0 设置
 	AliyunCaptchaEnabled         bool   `json:"aliyun_captcha_enabled"`
@@ -329,6 +330,11 @@ type UpdateSettingsRequest struct {
 	ChannelMonitorEnabled                *bool `json:"channel_monitor_enabled"`
 	ChannelMonitorDefaultIntervalSeconds *int  `json:"channel_monitor_default_interval_seconds"`
 
+	// Grok model mapping policy
+	GrokDefaultTextModel           *string `json:"grok_default_text_model"`
+	GrokCrossClientModelMapEnabled *bool   `json:"grok_cross_client_model_map_enabled"`
+	GrokDefaultBaseURLMode         *string `json:"grok_default_base_url_mode"`
+
 	// Available Channels feature switch (user-facing)
 	AvailableChannelsEnabled *bool `json:"available_channels_enabled"`
 
@@ -358,6 +364,9 @@ type UpdateSettingsRequest struct {
 
 	// 系统全局 platform quota 默认值（整体替换语义：nil = 不修改，non-nil = 整体覆盖）。
 	DefaultPlatformQuotas map[string]*service.DefaultPlatformQuotaSetting `json:"default_platform_quotas"`
+
+	// 各平台账号自动停调阈值（整体替换语义：nil = 不修改，non-nil = 整体覆盖）。
+	AccountSchedulingThresholds map[string]int `json:"account_scheduling_thresholds"`
 
 	// auth-source 层 platform quota 覆盖（override 语义：nil = 不修改，non-nil = 整体覆盖该 source 的 quota 配置）。
 	AuthSourceEmailPlatformQuotas    map[string]*service.DefaultPlatformQuotaSetting `json:"auth_source_default_email_platform_quotas"`
@@ -649,6 +658,13 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	}
 	if req.AliyunCaptchaRegion != service.AliyunCaptchaRegionSGP {
 		req.AliyunCaptchaRegion = service.AliyunCaptchaRegionCN
+	}
+	// 天御站点 normalize：未发送保留已存值，非法值一律按中国站落库
+	if _, sent := sentFields["tencent_captcha_region"]; !sent {
+		req.TencentCaptchaRegion = previousSettings.TencentCaptchaRegion
+	}
+	if req.TencentCaptchaRegion != service.TencentCaptchaRegionINTL {
+		req.TencentCaptchaRegion = service.TencentCaptchaRegionCN
 	}
 
 	// Turnstile 参数验证
@@ -1474,7 +1490,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 
 	settings := &service.SystemSettings{
 		// 系统全局 platform quota 默认值（整体替换语义）
-		DefaultPlatformQuotas: req.DefaultPlatformQuotas,
+		DefaultPlatformQuotas:       req.DefaultPlatformQuotas,
+		AccountSchedulingThresholds: req.AccountSchedulingThresholds,
 
 		RegistrationEnabled:              req.RegistrationEnabled,
 		EmailVerifyEnabled:               req.EmailVerifyEnabled,
@@ -1507,6 +1524,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		TencentCaptchaAppSecretKey:       req.TencentCaptchaAppSecretKey,
 		TencentCaptchaCloudSecretID:      req.TencentCaptchaCloudSecretID,
 		TencentCaptchaCloudSecretKey:     req.TencentCaptchaCloudSecretKey,
+		TencentCaptchaRegion:             req.TencentCaptchaRegion,
 		AliyunCaptchaEnabled:             req.AliyunCaptchaEnabled,
 		AliyunCaptchaAccessKeyID:         req.AliyunCaptchaAccessKeyID,
 		AliyunCaptchaAccessKeySecret:     req.AliyunCaptchaAccessKeySecret,
@@ -1857,6 +1875,24 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.ChannelMonitorDefaultIntervalSeconds
 		}(),
+		GrokDefaultTextModel: func() string {
+			if req.GrokDefaultTextModel != nil {
+				return *req.GrokDefaultTextModel
+			}
+			return previousSettings.GrokDefaultTextModel
+		}(),
+		GrokCrossClientModelMapEnabled: func() bool {
+			if req.GrokCrossClientModelMapEnabled != nil {
+				return *req.GrokCrossClientModelMapEnabled
+			}
+			return previousSettings.GrokCrossClientModelMapEnabled
+		}(),
+		GrokDefaultBaseURLMode: func() string {
+			if req.GrokDefaultBaseURLMode != nil {
+				return strings.TrimSpace(*req.GrokDefaultBaseURLMode)
+			}
+			return previousSettings.GrokDefaultBaseURLMode
+		}(),
 		AvailableChannelsEnabled: func() bool {
 			if req.AvailableChannelsEnabled != nil {
 				return *req.AvailableChannelsEnabled
@@ -2108,6 +2144,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		TencentCaptchaAppSecretKeyConfigured:                   updatedSettings.TencentCaptchaAppSecretKeyConfigured,
 		TencentCaptchaCloudSecretIDConfigured:                  updatedSettings.TencentCaptchaCloudSecretIDConfigured,
 		TencentCaptchaCloudSecretKeyConfigured:                 updatedSettings.TencentCaptchaCloudSecretKeyConfigured,
+		TencentCaptchaRegion:                                   updatedSettings.TencentCaptchaRegion,
 		AliyunCaptchaEnabled:                                   updatedSettings.AliyunCaptchaEnabled,
 		AliyunCaptchaAccessKeyID:                               updatedSettings.AliyunCaptchaAccessKeyID,
 		AliyunCaptchaAccessKeySecretConfigured:                 updatedSettings.AliyunCaptchaAccessKeySecretConfigured,
@@ -2307,6 +2344,10 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		ChannelMonitorEnabled:                updatedSettings.ChannelMonitorEnabled,
 		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
 
+		GrokDefaultTextModel:           updatedSettings.GrokDefaultTextModel,
+		GrokCrossClientModelMapEnabled: updatedSettings.GrokCrossClientModelMapEnabled,
+		GrokDefaultBaseURLMode:         updatedSettings.GrokDefaultBaseURLMode,
+
 		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
 
 		VideoGenerationEnabled: updatedSettings.VideoGenerationEnabled,
@@ -2322,6 +2363,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		RiskControlEnabled:          updatedSettings.RiskControlEnabled,
 		CyberSessionBlockEnabled:    updatedSettings.CyberSessionBlockEnabled,
 		CyberSessionBlockTTLSeconds: updatedSettings.CyberSessionBlockTTLSeconds,
+		AccountSchedulingThresholds: updatedSettings.AccountSchedulingThresholds,
 		AllowUserViewErrorRequests:  updatedSettings.AllowUserViewErrorRequests,
 	}
 	if fastPolicy, err := h.settingService.GetOpenAIFastPolicySettings(c.Request.Context()); err != nil {

@@ -150,6 +150,22 @@ func (c *openAIImagesSplitGatewayCache) DeleteSessionAccountID(_ context.Context
 	return nil
 }
 
+func (c *openAIImagesSplitGatewayCache) ClaimGrokVideoBilled(_ context.Context, _ string, _ time.Duration) (bool, error) {
+	return true, nil
+}
+
+func (c *openAIImagesSplitGatewayCache) SetGrokVideoPendingBilling(_ context.Context, _ string, _ []byte, _ time.Duration) error {
+	return nil
+}
+
+func (c *openAIImagesSplitGatewayCache) GetGrokVideoPendingBilling(_ context.Context, _ string) ([]byte, error) {
+	return nil, nil
+}
+
+func (c *openAIImagesSplitGatewayCache) ReleaseGrokVideoBilled(_ context.Context, _ string) error {
+	return nil
+}
+
 func (c *openAIImagesSplitGatewayCache) setAccounts() []int64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()

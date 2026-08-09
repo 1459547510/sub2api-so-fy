@@ -5065,3 +5065,422 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this hardening and verification round.
 - `.superpowers/` remains an existing untracked directory and was not modified.
 - Rollback the complete image `n` feature with `git restore -- .gitignore backend/internal/handler/openai_images.go backend/internal/handler/grok_media.go backend/internal/handler/openai_images_failover_test.go backend/internal/service/openai_images.go backend/internal/service/grok_media.go`, then run `Remove-Item -LiteralPath backend/internal/handler/openai_images_split.go,backend/internal/handler/grok_images_split.go,backend/internal/service/openai_images_n_split_test.go,docs/IMAGE_BATCH_REQUESTS.md`; keep this append-only progress history as the audit record.
+
+## 2026-08-09 - Task: Merge upstream v0.1.172 and publish fork release
+
+### What was done
+- Merged `upstream/main` at `fb0475656` (upstream tag `v0.1.172`) into `codex/leo-video-channel` on top of fork commit `6c3490659`.
+- Resolved 21 merge conflicts while retaining the fork's Leo video routes and pricing, token-incentive settings, account scheduling thresholds, mandatory media billing, and OpenAI/Grok image `n=1-10` account-pool fan-out.
+- Integrated upstream Grok Voice, Web Search, async video billing, per-model video prices, response-model auditing, CAPTCHA/security updates, and migrations `194`, `195`, and `217-220`.
+- Updated the unit-tag image fan-out cache stub for the expanded upstream Grok video billing cache contract.
+- Prepared release tag `v0.1.172-fy.1`; the tag-triggered workflow builds and publishes the Linux amd64 archive and SHA-256 checksums.
+
+### Testing
+- `go test ./... -count=1` passed for all backend packages.
+- `go vet ./...` passed.
+- `go test -race -tags unit ./internal/handler -run 'TestOpenAIGatewayHandlerImages_NSplitsIntoConcurrentSingleImageRequests|TestOpenAIGatewayHandlerImages_NSplitSupportsPoolModeAPIKey' -count=1` passed.
+- Full frontend Vitest passed: 221 files and 1558 tests.
+- Conflict-focused frontend Vitest passed: 4 files and 48 tests.
+- `vue-tsc --noEmit` passed.
+- Full frontend ESLint check passed.
+- Vite production build passed; only the existing chunk-size warning remains.
+- `git diff --cached --check` passed and no unmerged paths remain.
+
+### Notes
+- `.gitignore`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `README.md`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `README_CN.md`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `README_JA.md`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `assets/partners/logos/haoai.png`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/cmd/server/VERSION`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/cmd/server/wire_gen.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/group.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/group/group.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/group/where.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/group_create.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/group_update.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/migrate/schema.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/mutation.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/runtime/runtime.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/schema/group.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/schema/usage_log.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/usagelog.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/usagelog/usagelog.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/usagelog/where.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/usagelog_create.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/ent/usagelog_update.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/go.sum`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/config/config.go`: merged the upstream Tencent CAPTCHA CSP allowlist while retaining blob media support for the fork video surface.
+- `backend/internal/config/config_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/domain/constants.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/domain/constants_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/account_handler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/dashboard_handler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/dashboard_handler_request_type_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/dashboard_query_cache.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/dashboard_snapshot_v2_handler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/grok_import_probe.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/grok_import_probe_handler_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/grok_import_probe_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/grok_oauth_handler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/grok_oauth_handler_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/group_handler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/setting_handler.go`: returns upstream Grok and scheduling settings together with the fork video and token-incentive settings.
+- `backend/internal/handler/admin/setting_handler_audit.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/setting_handler_partial_payload_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/setting_handler_update.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/usage_handler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/admin/usage_query_cache.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/auth_captcha_request_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/auth_oauth_pending_flow.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/auth_oauth_pending_flow_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/dto/mappers.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/dto/mappers_usage_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/dto/settings.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/dto/types.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/gateway_handler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/gateway_web_search.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/grok_audio.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/grok_audio_billing_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/grok_media.go`: merged async Grok video billing with the fork image fan-out usage context and Leo media behavior.
+- `backend/internal/handler/grok_media_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/openai_gateway_handler.go`: makes image, video, search, web-search, and voice usage writes mandatory when the async queue overflows.
+- `backend/internal/handler/openai_gateway_handler_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/openai_images.go`: retains n>1 image fan-out while adding the upstream OpenAI images endpoint context.
+- `backend/internal/handler/openai_images_failover_test.go`: keeps fork image fan-out coverage compatible with the expanded upstream GatewayCache interface.
+- `backend/internal/handler/setting_handler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/setting_handler_public_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/usage_handler_request_type_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/handler/usage_record_submit_task_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/antigravity/claude_types.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/antigravity/claude_types_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/antigravity/client.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/apicompat/responses_to_anthropic_invalid_blocks_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/apicompat/responses_to_anthropic_request.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/ctxkey/ctxkey.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/ip/ip.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/ip/ip_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/openai/request.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/proxyutil/dialer.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/proxyutil/dialer_timeout_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/redissession/store.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/redissession/store_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/usagestats/usage_log_types.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/billing.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/billing_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/cli_identity.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/cli_identity_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/models.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/models_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/oauth.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/oauth_redis_fallback_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/oauth_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/quota.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/quota_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/sso_device.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/pkg/xai/sso_device_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/api_key_repo.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/api_key_repo_messages_dispatch_unit_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/gateway_cache.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/grok_oauth_client.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/grok_oauth_client_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/group_repo.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/http_upstream.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/http_upstream_dial_timeout_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/migrations_runner.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/migrations_runner_notx_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/migrations_schema_integration_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/tencent_captcha_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/tencent_captcha_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/usage_log_repo_insert.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/usage_log_repo_query.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/usage_log_repo_request_type_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/usage_log_repo_stats.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/usage_log_repo_stats_integration_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/usage_log_repo_trend.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/usage_log_session_id_unit_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/user_subscription_repo.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/repository/user_subscription_repo_integration_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/server/api_contract_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/server/middleware/api_key_auth_google_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/server/middleware/api_key_auth_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/server/middleware/security_headers.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/server/middleware/security_headers_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/server/routes/admin.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/server/routes/gateway.go`: keeps Leo upload/job/internal routes and adds upstream public video, Grok Voice, and Web Search routes.
+- `backend/internal/server/routes/gateway_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/server/routes/prompt_audit_route_coverage_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_credentials_redact.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_grok_media_eligibility.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_grok_media_eligibility_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_scheduling_threshold_eval.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_scheduling_threshold_eval_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_scheduling_threshold_integration_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_scheduling_threshold_reason.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_scheduling_threshold_reason_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_test_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_test_service_grok_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_usage_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_usage_service_batch_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/account_wildcard_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/admin_account.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/admin_group.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/admin_group_duplicate.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/admin_group_duplicate_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/admin_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/antigravity_gateway_claude.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/antigravity_gateway_compat.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/antigravity_gateway_compat_stream.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/antigravity_gateway_gemini.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/antigravity_gateway_streaming.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/antigravity_gateway_upstream.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/api_key_auth_cache.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/api_key_auth_cache_impl.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/api_key_auth_cache_profit_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/billing_search_audio_cost_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/billing_service.go`: combines Leo resolution pricing with upstream per-model video, search, and audio billing.
+- `backend/internal/service/channel_plaza.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/channel_plaza_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/credentials_sanitize.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/credentials_sanitize_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/dashboard_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/domain_constants.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_anthropic_passthrough.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_forward.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_hotpath_optimization_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_multiplatform_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_scheduling.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_upstream_response.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_usage_billing.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gateway_usage_billing_request_id_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gemini_messages_compat_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/gemini_multiplatform_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_audio.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_audio_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_base_url_mode_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_credential_failure.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_credential_failure_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_free_quota_gate.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_free_quota_gate_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_media.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_media_video_billing_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_model_quota_block.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_oauth_reconciliation_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_oauth_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_oauth_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_observed_models.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_p2_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_quota_fetcher.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_quota_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_quota_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_search_count.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_search_count_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_spending_reauth.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_stream_idle.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_stream_idle_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_team_rate_limit.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_team_rate_limit_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_token_refresher.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_token_refresher_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_upstream_errors.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_upstream_failure.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_upstream_failure_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_upstream_headers.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_upstream_headers_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_upstream_url.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/grok_upstream_url_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/group.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/media_price_config.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/model_rate_limit.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/oauth_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_account_scheduler.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_account_scheduler_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_alpha_search.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_alpha_search_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_capacity_shed_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_codex_identity.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_codex_identity_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_codex_models_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_codex_models_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_codex_pat_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_codex_pat_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_codex_version_consistency_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_codex_version_sync_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_compact_service_tier_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_compat_model_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_cyber_session_block_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_chat_completions.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_chat_completions_raw.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_count_tokens.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_count_tokens_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_forward.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_grok.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_grok_405_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_grok_cache.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_grok_cache_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_grok_chat_bridge.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_grok_search_billing_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_grok_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_messages.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_passthrough.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_record_usage_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_request_body.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_response_flush_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_response_handling.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_scheduling.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_search_surcharge_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_upstream_errors.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_gateway_usage.go`: combines fork-wide video billing with upstream response-model auditing and search/audio surcharges.
+- `backend/internal/service/openai_images_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_messages_dispatch.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_messages_dispatch_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_oauth_passthrough_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_responses_tool_schema.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_responses_tool_schema_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_routing_hint.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_routing_hint_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_forwarder_ingress.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_forwarder_ingress_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_forwarder_payload.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_forwarder_success_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_forwarder_v2.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_http_bridge.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_http_bridge_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_pool.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_pool_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_state_store_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_v2/passthrough_relay.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_v2/passthrough_relay_internal_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/openai_ws_v2_passthrough_adapter.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/ops_system_log_sink.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/ops_system_log_sink_backoff_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/ratelimit_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/ratelimit_service_model_not_found_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/ratelimit_service_scheduling_threshold_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/setting_features.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/setting_gateway_runtime.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/setting_parse.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/setting_public.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/setting_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/setting_service_platform_threshold_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/setting_update.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/settings_view.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/subscription_assign_idempotency_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/subscription_daily_midnight_reset_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/subscription_expiry_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/subscription_monthly_window_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/subscription_reset_quota_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/subscription_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/temp_unsched.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/tencent_captcha_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/tencent_captcha_service_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/tencent_captcha_settings_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/token_refresh_service.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/upstream_models.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/upstream_models_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/upstream_response_model.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/upstream_response_model_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/usage_log.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/user_subscription.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/user_subscription_daily_quota_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/user_subscription_port.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/video_billing.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/video_billing_resolution.go`: separates generic three-tier resolution fallback from model-aware Leo high-resolution billing.
+- `backend/internal/service/video_billing_test.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/websearch_config.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/service/wire.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/internal/testutil/stubs.go`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/migrations/194_add_usage_log_upstream_response_model.sql`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/migrations/195_add_usage_log_upstream_model_mismatch_index_notx.sql`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/migrations/217_group_video_model_prices.sql`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/migrations/218_group_audio_voice_pricing.sql`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/migrations/219_group_search_price_per_1k.sql`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `backend/migrations/220_clear_non_grok_video_generation_config.sql`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `deploy/config.example.yaml`: documents the merged CAPTCHA CSP domains while retaining blob media support.
+- `frontend/pnpm-lock.yaml`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/api/__tests__/admin.grok.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/api/admin/accounts.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/api/admin/dashboard.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/api/admin/grok.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/api/admin/settings.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/api/admin/usage.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/CaptchaChallenge.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/TencentCaptchaGate.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/__tests__/TencentCaptchaGate.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/AccountStatusIndicator.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/AccountUsageCell.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/CreateAccountModal.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/EditAccountModal.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/GrokQuotaProbeCell.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/OAuthAuthorizationFlow.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/TempUnschedStatusModal.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/__tests__/AccountUsageCell.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/account/__tests__/CreateAccountModal.grok.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/account/AccountTestModal.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/account/ReAuthAccountModal.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/account/__tests__/AccountTestModal.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/account/__tests__/ReAuthAccountModal.grok.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/proxy/ImportDataModal.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/usage/UsageFilters.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/usage/UsageTable.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/usage/__tests__/UsageFilters.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/admin/usage/__tests__/UsageTable.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/auth/PendingOAuthCreateAccountForm.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/common/BaseDialog.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/common/ImageUpload.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/common/PlatformTypeBadge.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/common/__tests__/BaseDialog.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/common/__tests__/PlatformTypeBadge.grok.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/keys/UseKeyModal.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/keys/__tests__/UseKeyModal.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/modelPlaza/PlazaModelPricingTable.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/components/modelPlaza/__tests__/PlazaModelPricingTable.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/composables/__tests__/useGrokOAuth.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/composables/__tests__/useModelWhitelist.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/composables/useAccountOAuth.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/composables/useGrokOAuth.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/composables/useModelWhitelist.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/en/admin/accounts.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/en/admin/overview.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/en/admin/resources.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/en/admin/settings.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/en/common.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/en/dashboard.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/zh/admin/overview.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/zh/admin/resources.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/zh/admin/settings.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/zh/common.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/types/index.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/utils/__tests__/billingMode.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/utils/billingMode.ts`: keeps explicit video/token modes authoritative, recognizes image usage, and retains the fork token fallback.
+- `frontend/src/utils/tencentCaptcha.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/AccountsView.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/GroupsView.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/SettingsView.vue`: loads and saves both token-incentive rules and account scheduling thresholds.
+- `frontend/src/views/admin/UsageView.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/__tests__/GroupsView.columnSettings.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/__tests__/GroupsView.duplicate.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/__tests__/SettingsView.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/__tests__/UsageView.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/__tests__/groupsVideoModelPricing.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/groupsVideoModelPricing.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/ops/OpsDashboard.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/ops/components/OpsErrorDetailsModal.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/ops/utils/__tests__/opsErrorParams.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/admin/ops/utils/opsErrorParams.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/auth/EmailVerifyView.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/auth/ForgotPasswordView.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/auth/LoginView.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/auth/RegisterView.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/auth/__tests__/TencentCaptchaForgotPassword.spec.ts`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `frontend/src/views/user/UsageView.vue`: merged the upstream v0.1.172 change for this file within the fork release set.
+- `progress.md`: records this merge, verification evidence, complete changed-file inventory, and rollback point.
+- `.superpowers/`: remains an existing untracked directory and is excluded from the merge and release.
+- Rollback after publication with `git revert -m 1 v0.1.172-fy.1`, then push the revert commit and publish a follow-up fork tag.

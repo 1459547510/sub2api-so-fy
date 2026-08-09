@@ -144,7 +144,9 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 	}
 
 	sessionHash := h.gatewayService.GenerateExplicitSessionHash(c, body)
-	requestCtx := service.WithOpenAIImageGenerationIntent(c.Request.Context())
+	requestCtx := service.WithOpenAIImagesEndpoint(
+		service.WithOpenAIImageGenerationIntent(c.Request.Context()),
+	)
 	if parsed.N > 1 && !parsed.Stream {
 		if h.handleOpenAIImagesNSplit(
 			c,

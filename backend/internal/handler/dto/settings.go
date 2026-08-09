@@ -69,6 +69,7 @@ type SystemSettings struct {
 	TencentCaptchaAppSecretKeyConfigured   bool     `json:"tencent_captcha_app_secret_key_configured"`
 	TencentCaptchaCloudSecretIDConfigured  bool     `json:"tencent_captcha_cloud_secret_id_configured"`
 	TencentCaptchaCloudSecretKeyConfigured bool     `json:"tencent_captcha_cloud_secret_key_configured"`
+	TencentCaptchaRegion                   string   `json:"tencent_captcha_region"`
 	AliyunCaptchaEnabled                   bool     `json:"aliyun_captcha_enabled"`
 	AliyunCaptchaAccessKeyID               string   `json:"aliyun_captcha_access_key_id"`
 	AliyunCaptchaAccessKeySecretConfigured bool     `json:"aliyun_captcha_access_key_secret_configured"`
@@ -307,6 +308,11 @@ type SystemSettings struct {
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 
+	// Grok model mapping policy (admin settings; empty account mapping falls back to these).
+	GrokDefaultTextModel           string `json:"grok_default_text_model"`
+	GrokCrossClientModelMapEnabled bool   `json:"grok_cross_client_model_map_enabled"`
+	GrokDefaultBaseURLMode         string `json:"grok_default_base_url_mode"`
+
 	// Available Channels feature switch (user-facing aggregate view)
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
 
@@ -337,6 +343,9 @@ type SystemSettings struct {
 	// 系统全局默认平台配额（key = platform，nil/缺省 = 不限制）
 	DefaultPlatformQuotas map[string]*service.DefaultPlatformQuotaSetting `json:"default_platform_quotas,omitempty"`
 
+	// 系统全局账号自动停调阈值（key = platform，100 = disabled）
+	AccountSchedulingThresholds map[string]int `json:"account_scheduling_thresholds,omitempty"`
+
 	// 允许终端用户在用量页查看自己的失败请求
 	AllowUserViewErrorRequests bool `json:"allow_user_view_error_requests"`
 }
@@ -365,6 +374,7 @@ type PublicSettings struct {
 	TurnstileSiteKey                 string                   `json:"turnstile_site_key"`
 	TencentCaptchaEnabled            bool                     `json:"tencent_captcha_enabled"`
 	TencentCaptchaAppID              string                   `json:"tencent_captcha_app_id"`
+	TencentCaptchaRegion             string                   `json:"tencent_captcha_region"`
 	AliyunCaptchaEnabled             bool                     `json:"aliyun_captcha_enabled"`
 	AliyunCaptchaSceneID             string                   `json:"aliyun_captcha_scene_id"`
 	AliyunCaptchaPrefix              string                   `json:"aliyun_captcha_prefix"`
