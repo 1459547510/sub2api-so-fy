@@ -4965,3 +4965,27 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this audit, verification evidence, and rollback point.
 - `.superpowers/` remains an existing untracked directory and is excluded from the commit.
 - Rollback: `git restore -- backend/internal/service/leo_video.go backend/internal/service/leo_video_test.go backend/internal/handler/leo_video_async.go backend/internal/handler/leo_video_integration_test.go docs/LEO_VIDEO_CHANNEL.md docs/LEO_VIDEO_MODEL_SPECS.md frontend/src/views/user/VideoGenerationView.vue frontend/src/views/user/VideoApiDocsView.vue frontend/src/views/user/__tests__/VideoGenerationView.spec.ts frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts frontend/src/i18n/locales/en/dashboard.ts frontend/src/i18n/locales/zh/dashboard.ts progress.md`.
+
+## 2026-08-09 - Task: Enable latest Leo video models in channel sync
+
+### What was done
+- Fixed the admin channel "Sync Latest Models" endpoint so the `leo` video platform returns the current Leo video model registry instead of being rejected as an unsupported LiteLLM platform.
+- Kept the response isolated from the global registry by returning a copy of the model slice.
+- Updated the admin API comment and regression coverage for the full Leo model list and copy isolation.
+
+### Testing
+- `go test -tags unit ./internal/handler/admin -run TestSyncPricingModels -count=1 -v` passed.
+- `go test ./internal/service -run 'TestDefaultModelsListCandidateIDsLeo' -count=1` passed.
+- `frontend/node_modules/.bin/vitest.cmd run src/components/admin/channel/__tests__/types.spec.ts src/components/admin/channel/__tests__/PricingEntryCard.spec.ts --reporter=verbose` passed: 2 files, 21 tests.
+- `frontend/node_modules/.bin/vue-tsc.cmd --noEmit` passed.
+- `frontend/node_modules/.bin/eslint.cmd src/api/admin/channels.ts` passed.
+- `frontend/node_modules/.bin/vite.cmd build` passed with 1005 modules transformed; only existing chunk-size and dynamic-import warnings remain.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/handler/admin/channel_handler.go`: serves the latest Leo video model registry from the sync endpoint.
+- `backend/internal/handler/admin/channel_handler_test.go`: verifies Leo sync status, model list, and copy isolation.
+- `frontend/src/api/admin/channels.ts`: documents that Leo sync uses the video registry.
+- `progress.md`: records this fix, verification evidence, and rollback point.
+- `.superpowers/` remains an existing untracked directory and is excluded from the commit.
+- Rollback: `git restore -- backend/internal/handler/admin/channel_handler.go backend/internal/handler/admin/channel_handler_test.go frontend/src/api/admin/channels.ts progress.md`.

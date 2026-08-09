@@ -459,7 +459,7 @@ func TestSyncPricingModels_ValidPlatform_EmptyService(t *testing.T) {
 	svc := service.NewPricingService(nil, nil)
 	router := setupSyncPricingModelsRouter(svc)
 
-	for _, platform := range []string{"anthropic", "openai", "gemini", "antigravity"} {
+	for _, platform := range []string{"anthropic", "openai", "gemini", "antigravity", service.PlatformLeo} {
 		req := httptest.NewRequest(http.MethodGet, "/channels/pricing/sync-models?platform="+platform, nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -473,5 +473,28 @@ func TestSyncPricingModels_ValidPlatform_EmptyService(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 		require.NotNil(t, body.Data.Models, "models must not be null for platform=%s", platform)
+		if platform == service.PlatformLeo {
+			require.Equal(t, service.LeoDefaultVideoModelIDs, body.Data.Models)
+		}
 	}
+}
+
+func TestSyncPricingModels_LeoReturnsCopyOfLatestVideoModels(t *testing.T) {
+	svc := service.NewPricingService(nil, nil)
+	router := setupSyncPricingModelsRouter(svc)
+
+	req := httptest.NewRequest(http.MethodGet, "/channels/pricing/sync-models?platform=leo", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body struct {
+		Data struct {
+			Models []string `json:"models"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	require.Equal(t, service.LeoDefaultVideoModelIDs, body.Data.Models)
+	body.Data.Models[0] = "mutated"
+	require.Equal(t, "seedance-2.0", service.LeoDefaultVideoModelIDs[0])
 }

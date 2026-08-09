@@ -517,13 +517,19 @@ var platformToLiteLLMProvider = map[string]string{
 	service.PlatformGrok:        "xai",
 }
 
-// SyncPricingModels 返回 LiteLLM 定价目录中指定平台的最新模型列表
+// SyncPricingModels 返回指定平台的最新模型列表。
+// Leo 视频模型来自本地模型注册表，其他平台来自 LiteLLM 定价目录。
 // GET /api/v1/admin/channels/pricing/sync-models?platform=anthropic
 func (h *ChannelHandler) SyncPricingModels(c *gin.Context) {
 	platform := strings.ToLower(strings.TrimSpace(c.Query("platform")))
 	if platform == "" {
 		response.ErrorFrom(c, infraerrors.BadRequest("MISSING_PARAMETER", "platform parameter is required").
 			WithMetadata(map[string]string{"param": "platform"}))
+		return
+	}
+
+	if platform == service.PlatformLeo {
+		response.Success(c, gin.H{"models": append([]string(nil), service.LeoDefaultVideoModelIDs...)})
 		return
 	}
 
