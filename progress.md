@@ -4989,3 +4989,79 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this fix, verification evidence, and rollback point.
 - `.superpowers/` remains an existing untracked directory and is excluded from the commit.
 - Rollback: `git restore -- backend/internal/handler/admin/channel_handler.go backend/internal/handler/admin/channel_handler_test.go frontend/src/api/admin/channels.ts progress.md`.
+
+## 2026-08-09 - Task: Remove Leo provider names from customer-facing gateway errors
+
+### What was done
+- Replaced the two customer-facing gateway rejection messages that named the internal Leo platform with neutral platform/video API wording.
+- Kept internal routing, admin labels, logs, and upstream error sanitization unchanged; only public gateway response text was adjusted.
+- Added route regression assertions covering unsupported video upload/job paths and unsupported capabilities for video groups.
+
+### Testing
+- `go test ./internal/server/routes ./internal/handler` passed.
+- `git diff --check` passed.
+- Source audit confirmed the remaining `Leo` provider-name regexes are internal sanitizers and are not emitted directly by customer gateway responses.
+
+### Notes
+- `backend/internal/server/routes/gateway.go`: removes `Leo` from public unsupported-capability and video-only route messages.
+- `backend/internal/server/routes/gateway_test.go`: verifies customer responses contain the neutral message and no `leo` token.
+- `progress.md`: records this audit, fix, and verification evidence.
+- Rollback: `git restore -- backend/internal/server/routes/gateway.go backend/internal/server/routes/gateway_test.go progress.md`.
+
+## 2026-08-09 - Task: Add concurrent image `n` fan-out with account-pool scheduling
+
+### What was done
+- Added non-streaming `n>1` image fan-out for OpenAI-compatible OpenAI and Grok image endpoints. Each requested image is dispatched as an independent single-image child request and the successful JSON responses are combined into one standard `data[]` response.
+- Kept account scheduling, account concurrency slots, failover, and pool-mode same-account retry in the child path; usage is recorded per successful child account/result so multi-account dispatch does not collapse billing attribution.
+- Added JSON and multipart `n=1` rewriting for child requests, recursive usage merging, and regression coverage for request rewriting, response merging, concurrent handler dispatch, and race detection.
+- Added public API documentation for `n` behavior without exposing upstream account or provider-internal identifiers.
+
+### Testing
+- `go test ./internal/service -run 'TestRewriteOpenAIImagesN_RewritesJSONAndMultipart|TestMergeOpenAIImageResponses_AppendsDataAndSumsUsage' -count=1` passed.
+- `go test -tags unit ./internal/handler -run 'TestOpenAIGatewayHandlerImages_NSplitsIntoConcurrentSingleImageRequests|TestOpenAIGatewayHandlerImages_NSplitSupportsPoolModeAPIKey' -count=1 -v` passed; observed three child calls plus two child calls on one pool-mode API-key account, with combined image output.
+- `go test -race -tags unit ./internal/handler -run TestOpenAIGatewayHandlerImages_NSplitsIntoConcurrentSingleImageRequests -count=1` passed.
+- `go test ./internal/handler ./internal/service -run '^$' -count=1` and `go test -tags unit ./internal/handler -run '^$' -count=1` passed.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/handler/openai_images.go`: routes non-streaming multi-image requests to the fan-out path.
+- `backend/internal/handler/openai_images_split.go`: schedules child OpenAI image tasks, enforces slots/failover, merges output, and records per-account usage.
+- `backend/internal/handler/grok_media.go`: routes Grok image generation/edit multi-image requests to fan-out.
+- `backend/internal/handler/grok_images_split.go`: schedules and merges Grok image child tasks with pool-mode handling.
+- `backend/internal/handler/openai_images_failover_test.go`: verifies three concurrent child requests and combined output.
+- `backend/internal/service/openai_images.go`: rewrites child `n` values and merges OpenAI-compatible image responses.
+- `backend/internal/service/openai_images_n_split_test.go`: covers JSON/multipart rewriting and usage/data merge behavior.
+- `docs/IMAGE_BATCH_REQUESTS.md`: documents the public `n` contract and scheduling/billing behavior.
+- `progress.md`: records this implementation and verification round.
+- `.superpowers/` remains an existing untracked directory and is excluded from the commit.
+- Rollback: `git restore -- backend/internal/handler/openai_images.go backend/internal/handler/openai_images_split.go backend/internal/handler/grok_media.go backend/internal/handler/grok_images_split.go backend/internal/handler/openai_images_failover_test.go backend/internal/service/openai_images.go backend/internal/service/openai_images_n_split_test.go docs/IMAGE_BATCH_REQUESTS.md progress.md`.
+
+## 2026-08-09 - Task: Harden concurrent image `n` fan-out and pool-mode billing
+
+### What was done
+- Bound every pool-mode child request to its selected account before retry so configured same-account retries cannot drift to another account.
+- Derived a distinct, deterministic billing request ID for each successful child image so one client request with `n>1` records and deducts every returned image without losing request-level idempotency.
+- Limited `n` to integers from 1 through 10 across JSON, multipart, OpenAI-compatible, and Grok image routes to prevent unbounded goroutine fan-out.
+- Made the new image batching document trackable and aligned its public validation contract with the implemented limit.
+
+### Testing
+- `go test ./internal/service ./internal/handler -count=1` passed.
+- `go test -tags unit ./internal/handler -count=1` passed.
+- `go test -race -tags unit ./internal/handler -run 'TestOpenAIGatewayHandlerImages_NSplitsIntoConcurrentSingleImageRequests|TestOpenAIGatewayHandlerImages_NSplitSupportsPoolModeAPIKey' -count=1` passed.
+- `go vet ./internal/service ./internal/handler` passed.
+- The pool-mode regression simulated an initial HTTP 502, observed three `n=1` upstream calls on the same account, and returned two combined images.
+- `git diff --check` passed.
+
+### Notes
+- `.gitignore`: tracks the formal image batching API document.
+- `backend/internal/handler/openai_images_split.go`: binds pool sessions and separates child billing request identities.
+- `backend/internal/handler/grok_images_split.go`: applies the same pool retry and billing identity behavior to Grok image requests.
+- `backend/internal/handler/grok_media.go`: validates the public image count and accepts an explicit usage-record parent context.
+- `backend/internal/handler/openai_images_failover_test.go`: covers pool retry after a transient failure, sticky binding, and distinct child billing IDs.
+- `backend/internal/service/openai_images.go`: enforces integer `n` values from 1 through 10 for JSON and multipart image requests.
+- `backend/internal/service/grok_media.go`: parses and validates Grok image counts without changing video request behavior.
+- `backend/internal/service/openai_images_n_split_test.go`: covers safe fan-out limits in addition to child request rewriting and response merging.
+- `docs/IMAGE_BATCH_REQUESTS.md`: documents `n=1-10`, concurrent dispatch, partial success, pool scheduling, and public response boundaries.
+- `progress.md`: records this hardening and verification round.
+- `.superpowers/` remains an existing untracked directory and was not modified.
+- Rollback the complete image `n` feature with `git restore -- .gitignore backend/internal/handler/openai_images.go backend/internal/handler/grok_media.go backend/internal/handler/openai_images_failover_test.go backend/internal/service/openai_images.go backend/internal/service/grok_media.go`, then run `Remove-Item -LiteralPath backend/internal/handler/openai_images_split.go,backend/internal/handler/grok_images_split.go,backend/internal/service/openai_images_n_split_test.go,docs/IMAGE_BATCH_REQUESTS.md`; keep this append-only progress history as the audit record.

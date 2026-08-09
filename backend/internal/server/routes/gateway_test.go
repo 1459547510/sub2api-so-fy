@@ -250,6 +250,12 @@ func TestGatewayRoutesNonGrokVideosAreRejectedAtPlatformGate(t *testing.T) {
 		{http.MethodGet, "/videos/request-123", ""},
 		{http.MethodGet, "/v1/videos/request-123/content", ""},
 		{http.MethodGet, "/videos/request-123/content", ""},
+		{http.MethodPost, "/v1/videos/uploads", ""},
+		{http.MethodPost, "/videos/uploads", ""},
+		{http.MethodGet, "/v1/videos/jobs", ""},
+		{http.MethodGet, "/videos/jobs", ""},
+		{http.MethodGet, "/v1/videos/jobs/request-123", ""},
+		{http.MethodGet, "/videos/jobs/request-123", ""},
 	} {
 		req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
 		req.Header.Set("Content-Type", "application/json")
@@ -258,6 +264,7 @@ func TestGatewayRoutesNonGrokVideosAreRejectedAtPlatformGate(t *testing.T) {
 		router.ServeHTTP(w, req)
 		require.Equal(t, http.StatusNotFound, w.Code, "method=%s path=%s", tc.method, tc.path)
 		require.Contains(t, w.Body.String(), "Videos API is not supported for this platform")
+		require.NotContains(t, strings.ToLower(w.Body.String()), "leo")
 	}
 }
 
@@ -299,6 +306,7 @@ func TestGatewayRoutesLeoSupportsOnlyVideoGeneration(t *testing.T) {
 
 		require.Equal(t, http.StatusNotFound, w.Code, "method=%s path=%s body=%s", tc.method, tc.path, w.Body.String())
 		require.Contains(t, w.Body.String(), "not_found_error")
+		require.NotContains(t, strings.ToLower(w.Body.String()), "leo")
 	}
 }
 

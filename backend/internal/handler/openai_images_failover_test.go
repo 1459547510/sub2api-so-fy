@@ -5,13 +5,16 @@ package handler
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -63,6 +66,105 @@ type openAIImagesFailoverHTTPUpstream struct {
 	service.HTTPUpstream
 	mu         sync.Mutex
 	accountIDs []int64
+}
+
+type openAIImagesNSplitHTTPUpstream struct {
+	service.HTTPUpstream
+	mu              sync.Mutex
+	accountIDs      []int64
+	bodies          [][]byte
+	failFirstStatus int
+	failed          bool
+}
+
+func (u *openAIImagesNSplitHTTPUpstream) Do(req *http.Request, _ string, accountID int64, _ int) (*http.Response, error) {
+	body, _ := io.ReadAll(req.Body)
+	u.mu.Lock()
+	u.accountIDs = append(u.accountIDs, accountID)
+	u.bodies = append(u.bodies, append([]byte(nil), body...))
+	index := len(u.accountIDs)
+	failStatus := 0
+	if !u.failed && u.failFirstStatus > 0 {
+		u.failed = true
+		failStatus = u.failFirstStatus
+	}
+	u.mu.Unlock()
+	if failStatus > 0 {
+		return &http.Response{
+			StatusCode: failStatus,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(bytes.NewBufferString(`{"error":{"message":"temporary upstream failure"}}`)),
+		}, nil
+	}
+	responseBody := "data: {\"type\":\"response.completed\",\"response\":{\"created_at\":1710000000,\"output\":[{\"type\":\"image_generation_call\",\"result\":\"aW1hZ2U=\",\"output_format\":\"png\"}]}}\n\n" +
+		"data: [DONE]\n\n"
+	responseType := "text/event-stream"
+	if req.Header.Get("Accept") != "text/event-stream" {
+		responseType = "application/json"
+		responseBody = `{"created":1710000000,"data":[{"b64_json":"aW1hZ2U="}]}`
+	}
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type": []string{responseType},
+			"X-Request-Id": []string{fmt.Sprintf("req_img_split_%d", index)},
+		},
+		Body: io.NopCloser(bytes.NewBufferString(responseBody)),
+	}, nil
+}
+
+type openAIImagesSplitGatewayCache struct {
+	mu         sync.Mutex
+	bindings   map[string]int64
+	setAccount []int64
+}
+
+func (c *openAIImagesSplitGatewayCache) GetSessionAccountID(_ context.Context, _ int64, sessionHash string) (int64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if accountID, ok := c.bindings[sessionHash]; ok {
+		return accountID, nil
+	}
+	return 0, service.ErrStickySessionNotFound
+}
+
+func (c *openAIImagesSplitGatewayCache) SetSessionAccountID(_ context.Context, _ int64, sessionHash string, accountID int64, _ time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.bindings == nil {
+		c.bindings = make(map[string]int64)
+	}
+	c.bindings[sessionHash] = accountID
+	c.setAccount = append(c.setAccount, accountID)
+	return nil
+}
+
+func (c *openAIImagesSplitGatewayCache) RefreshSessionTTL(_ context.Context, _ int64, _ string, _ time.Duration) error {
+	return nil
+}
+
+func (c *openAIImagesSplitGatewayCache) DeleteSessionAccountID(_ context.Context, _ int64, sessionHash string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.bindings, sessionHash)
+	return nil
+}
+
+func (c *openAIImagesSplitGatewayCache) setAccounts() []int64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return append([]int64(nil), c.setAccount...)
+}
+
+func (u *openAIImagesNSplitHTTPUpstream) calls() ([]int64, [][]byte) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	ids := append([]int64(nil), u.accountIDs...)
+	bodies := make([][]byte, len(u.bodies))
+	for i := range u.bodies {
+		bodies[i] = append([]byte(nil), u.bodies[i]...)
+	}
+	return ids, bodies
 }
 
 func (u *openAIImagesFailoverHTTPUpstream) Do(_ *http.Request, _ string, accountID int64, _ int) (*http.Response, error) {
@@ -200,4 +302,122 @@ func TestOpenAIGatewayHandlerImages_ServerErrorFailsOverAndReturnsClearErrorWhen
 	require.Len(t, events, 2)
 	require.Equal(t, "failover", events[0].Kind)
 	require.Equal(t, "failover", events[1].Kind)
+}
+
+func TestOpenAIGatewayHandlerImages_NSplitsIntoConcurrentSingleImageRequests(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	groupID := int64(3131)
+	accounts := []service.Account{
+		{ID: 11, Name: "image-account-1", Platform: service.PlatformOpenAI, Type: service.AccountTypeOAuth, Status: service.StatusActive, Schedulable: true, Credentials: map[string]any{"access_token": "token-1"}},
+		{ID: 12, Name: "image-account-2", Platform: service.PlatformOpenAI, Type: service.AccountTypeOAuth, Status: service.StatusActive, Schedulable: true, Credentials: map[string]any{"access_token": "token-2"}},
+	}
+	upstream := &openAIImagesNSplitHTTPUpstream{}
+	cfg := &config.Config{RunMode: config.RunModeSimple}
+	billingService := service.NewBillingService(cfg, nil)
+	gatewayService := service.NewOpenAIGatewayService(
+		openAIImagesFailoverAccountRepo{accounts: accounts}, nil, nil, nil, nil, nil, nil,
+		cfg, nil, service.NewConcurrencyService(nil), billingService, nil, nil, upstream,
+		nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+	billingCache := service.NewBillingCacheService(nil, nil, nil, nil, nil, nil, cfg, nil)
+	t.Cleanup(billingCache.Stop)
+	h := NewOpenAIGatewayHandler(
+		gatewayService,
+		service.NewConcurrencyService(nil),
+		billingCache,
+		service.NewAPIKeyService(nil, nil, nil, nil, nil, nil, cfg),
+		nil, nil, nil, nil, cfg,
+	)
+
+	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","n":3}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		ID: 100, GroupID: &groupID,
+		Group: &service.Group{ID: groupID, AllowImageGeneration: true},
+		User:  &service.User{ID: 101},
+	})
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 101})
+
+	h.Images(c)
+	ids, bodies := upstream.calls()
+	require.Len(t, ids, 3)
+	require.Len(t, gjson.GetBytes(rec.Body.Bytes(), "data").Array(), 3)
+	for _, childBody := range bodies {
+		require.NotEqual(t, int64(3), gjson.GetBytes(childBody, "tools.0.n").Int())
+	}
+}
+
+func TestOpenAIGatewayHandlerImages_NSplitSupportsPoolModeAPIKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	groupID := int64(3132)
+	accounts := []service.Account{{
+		ID: 21, Name: "image-pool", Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKey,
+		Status: service.StatusActive, Schedulable: true,
+		Credentials: map[string]any{
+			"api_key":                      "pool-key",
+			"pool_mode":                    true,
+			"pool_mode_retry_count":        float64(1),
+			"pool_mode_retry_status_codes": []any{float64(http.StatusBadGateway)},
+		},
+	}}
+	upstream := &openAIImagesNSplitHTTPUpstream{failFirstStatus: http.StatusBadGateway}
+	cache := &openAIImagesSplitGatewayCache{}
+	cfg := &config.Config{RunMode: config.RunModeSimple}
+	billingService := service.NewBillingService(cfg, nil)
+	gatewayService := service.NewOpenAIGatewayService(
+		openAIImagesFailoverAccountRepo{accounts: accounts}, nil, nil, nil, nil, nil, cache,
+		cfg, nil, service.NewConcurrencyService(nil), billingService, nil, nil, upstream,
+		nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+	billingCache := service.NewBillingCacheService(nil, nil, nil, nil, nil, nil, cfg, nil)
+	t.Cleanup(billingCache.Stop)
+	h := NewOpenAIGatewayHandler(
+		gatewayService,
+		service.NewConcurrencyService(nil),
+		billingCache,
+		service.NewAPIKeyService(nil, nil, nil, nil, nil, nil, cfg),
+		nil, nil, nil, nil, cfg,
+	)
+	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","n":2}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		ID: 110, GroupID: &groupID,
+		Group: &service.Group{ID: groupID, AllowImageGeneration: true},
+		User:  &service.User{ID: 111},
+	})
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 111})
+
+	h.Images(c)
+	ids, bodies := upstream.calls()
+	require.Equal(t, []int64{21, 21, 21}, ids)
+	require.Len(t, gjson.GetBytes(rec.Body.Bytes(), "data").Array(), 2)
+	for _, childBody := range bodies {
+		require.Equal(t, int64(1), gjson.GetBytes(childBody, "n").Int())
+	}
+	boundAccounts := cache.setAccounts()
+	require.NotEmpty(t, boundAccounts)
+	for _, accountID := range boundAccounts {
+		require.Equal(t, int64(21), accountID)
+	}
+}
+
+func TestSplitImageUsageContextDerivesDistinctBillingRequestIDs(t *testing.T) {
+	parent := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-request")
+	parent = context.WithValue(parent, ctxkey.RequestID, "local-request")
+
+	first := splitImageUsageContext(parent, 0)
+	second := splitImageUsageContext(parent, 1)
+
+	require.Equal(t, "client-request:image:1", first.Value(ctxkey.ClientRequestID))
+	require.Equal(t, "local-request:image:1", first.Value(ctxkey.RequestID))
+	require.Equal(t, "client-request:image:2", second.Value(ctxkey.ClientRequestID))
+	require.Equal(t, "local-request:image:2", second.Value(ctxkey.RequestID))
 }

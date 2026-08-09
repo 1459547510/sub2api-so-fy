@@ -64,7 +64,7 @@ func RegisterGatewayRoutes(
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": gin.H{
 				"type":    "not_found_error",
-				"message": capability + " is not supported for Leo groups",
+				"message": capability + " is not supported for this platform",
 			},
 		})
 		return true
@@ -176,7 +176,7 @@ func RegisterGatewayRoutes(
 		return func(c *gin.Context) {
 			if getGroupPlatform(c) != service.PlatformLeo {
 				service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
-				c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"type": "not_found_error", "message": "Leo videos API is not supported for this platform"}})
+				c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"type": "not_found_error", "message": "Videos API is not supported for this platform"}})
 				return
 			}
 			next(c)

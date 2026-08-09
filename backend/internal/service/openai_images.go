@@ -40,6 +40,7 @@ const (
 	openAIImageMaxDownloadBytes    = 20 << 20 // 20MB per image download
 	openAIImageMaxUploadPartSize   = 20 << 20 // 20MB per multipart upload part
 	openAIImagesResponsesMainModel = "gpt-5.4-mini"
+	openAIImagesMaxN               = 10
 )
 
 type OpenAIImagesCapability string
@@ -241,10 +242,14 @@ func parseOpenAIImagesJSONRequest(body []byte, req *OpenAIImagesRequest) error {
 		if nResult.Type != gjson.Number {
 			return fmt.Errorf("invalid n field type")
 		}
-		req.N = int(nResult.Int())
-		if req.N <= 0 {
-			return fmt.Errorf("n must be greater than 0")
+		n, err := strconv.Atoi(strings.TrimSpace(nResult.Raw))
+		if err != nil || n <= 0 {
+			return fmt.Errorf("n must be a positive integer")
 		}
+		if n > openAIImagesMaxN {
+			return fmt.Errorf("n must be between 1 and %d", openAIImagesMaxN)
+		}
+		req.N = n
 	}
 
 	if sizeResult := gjson.GetBytes(body, "size"); sizeResult.Exists() {
@@ -389,6 +394,9 @@ func parseOpenAIImagesMultipartRequest(body []byte, contentType string, req *Ope
 			n, err := strconv.Atoi(value)
 			if err != nil || n <= 0 {
 				return fmt.Errorf("n must be a positive integer")
+			}
+			if n > openAIImagesMaxN {
+				return fmt.Errorf("n must be between 1 and %d", openAIImagesMaxN)
 			}
 			req.N = n
 		case "quality":
@@ -601,6 +609,13 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	if err != nil {
 		return nil, err
 	}
+	// A handler-level manual n split passes a parsed request with N=1 while
+	// retaining the original client body. Keep API-key upstream payloads in
+	// sync with the parsed sub-request for both JSON and multipart requests.
+	forwardBody, forwardContentType, err = rewriteOpenAIImagesN(forwardBody, forwardContentType, parsed.N)
+	if err != nil {
+		return nil, err
+	}
 	upstreamCtx, releaseUpstreamCtx := detachStreamUpstreamContext(ctx, parsed.Stream)
 	defer releaseUpstreamCtx()
 
@@ -806,6 +821,156 @@ func rewriteOpenAIImagesModel(body []byte, contentType string, model string) ([]
 		return nil, "", fmt.Errorf("rewrite image request model: %w", err)
 	}
 	return rewritten, contentType, nil
+}
+
+func rewriteOpenAIImagesN(body []byte, contentType string, n int) ([]byte, string, error) {
+	if n <= 0 {
+		n = 1
+	}
+	if gjson.ValidBytes(body) {
+		out, err := sjson.SetBytes(body, "n", n)
+		if err != nil {
+			return nil, "", fmt.Errorf("rewrite images n: %w", err)
+		}
+		return out, contentType, nil
+	}
+
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil || !strings.EqualFold(mediaType, "multipart/form-data") {
+		return body, contentType, nil
+	}
+	boundary := strings.TrimSpace(params["boundary"])
+	if boundary == "" {
+		return nil, "", fmt.Errorf("multipart boundary is required")
+	}
+
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+	nWritten := false
+	reader := multipart.NewReader(bytes.NewReader(body), boundary)
+	for {
+		part, readErr := reader.NextPart()
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return nil, "", fmt.Errorf("read multipart body: %w", readErr)
+		}
+		partHeader := cloneMultipartHeader(part.Header)
+		target, createErr := writer.CreatePart(partHeader)
+		if createErr != nil {
+			_ = part.Close()
+			return nil, "", fmt.Errorf("create multipart part: %w", createErr)
+		}
+		if strings.TrimSpace(part.FormName()) == "n" && part.FileName() == "" {
+			if _, writeErr := target.Write([]byte(strconv.Itoa(n))); writeErr != nil {
+				_ = part.Close()
+				return nil, "", fmt.Errorf("rewrite multipart n: %w", writeErr)
+			}
+			nWritten = true
+		} else if _, copyErr := io.Copy(target, part); copyErr != nil {
+			_ = part.Close()
+			return nil, "", fmt.Errorf("copy multipart body: %w", copyErr)
+		}
+		_ = part.Close()
+	}
+	if !nWritten {
+		if err := writer.WriteField("n", strconv.Itoa(n)); err != nil {
+			return nil, "", fmt.Errorf("append multipart n: %w", err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		return nil, "", fmt.Errorf("finalize multipart body: %w", err)
+	}
+	return buffer.Bytes(), writer.FormDataContentType(), nil
+}
+
+// RewriteOpenAIImagesN rewrites the public image request count for a child
+// request used by manual batching. It supports JSON and multipart bodies.
+func RewriteOpenAIImagesN(body []byte, contentType string, n int) ([]byte, string, error) {
+	return rewriteOpenAIImagesN(body, contentType, n)
+}
+
+// MergeOpenAIImageResponses combines buffered OpenAI-compatible image JSON
+// responses into one response while preserving the first response metadata.
+// Usage objects are merged recursively so numeric counters remain accurate.
+func MergeOpenAIImageResponses(parts [][]byte) ([]byte, error) {
+	var merged map[string]json.RawMessage
+	var mergedData []json.RawMessage
+	for _, part := range parts {
+		if len(bytes.TrimSpace(part)) == 0 {
+			continue
+		}
+		var current map[string]json.RawMessage
+		if err := json.Unmarshal(part, &current); err != nil {
+			return nil, fmt.Errorf("parse image response: %w", err)
+		}
+		if merged == nil {
+			merged = make(map[string]json.RawMessage, len(current))
+			for key, value := range current {
+				merged[key] = value
+			}
+		} else {
+			for key, value := range current {
+				if key == "data" {
+					continue
+				}
+				if key == "usage" {
+					merged[key] = mergeOpenAIImageUsageRaw(merged[key], value)
+				}
+			}
+		}
+		if rawData, ok := current["data"]; ok {
+			var data []json.RawMessage
+			if err := json.Unmarshal(rawData, &data); err != nil {
+				return nil, fmt.Errorf("parse image response data: %w", err)
+			}
+			mergedData = append(mergedData, data...)
+		}
+	}
+	if merged == nil {
+		return []byte(`{"created":0,"data":[]}`), nil
+	}
+	data, err := json.Marshal(mergedData)
+	if err != nil {
+		return nil, fmt.Errorf("marshal image response data: %w", err)
+	}
+	merged["data"] = data
+	out, err := json.Marshal(merged)
+	if err != nil {
+		return nil, fmt.Errorf("marshal merged image response: %w", err)
+	}
+	return out, nil
+}
+
+func mergeOpenAIImageUsageRaw(left, right json.RawMessage) json.RawMessage {
+	if len(left) == 0 {
+		return right
+	}
+	if len(right) == 0 {
+		return left
+	}
+	var lmap, rmap map[string]json.RawMessage
+	if json.Unmarshal(left, &lmap) != nil || json.Unmarshal(right, &rmap) != nil {
+		return left
+	}
+	for key, value := range rmap {
+		if existing, ok := lmap[key]; ok {
+			var lnum, rnum float64
+			if json.Unmarshal(existing, &lnum) == nil && json.Unmarshal(value, &rnum) == nil {
+				lmap[key], _ = json.Marshal(lnum + rnum)
+				continue
+			}
+			lmap[key] = mergeOpenAIImageUsageRaw(existing, value)
+			continue
+		}
+		lmap[key] = value
+	}
+	out, err := json.Marshal(lmap)
+	if err != nil {
+		return left
+	}
+	return out
 }
 
 func rewriteOpenAIImagesMultipartModel(body []byte, contentType string, model string) ([]byte, string, error) {

@@ -61,6 +61,7 @@ type GrokMediaRequestInfo struct {
 	MaskImageURL    string
 	Uploads         []OpenAIImagesUpload
 	MaskUpload      *OpenAIImagesUpload
+	nValid          bool
 }
 
 func (r GrokMediaRequestInfo) ModerationBody() []byte {
@@ -113,7 +114,7 @@ func ExtractGrokMediaModel(contentType string, body []byte) string {
 }
 
 func ParseGrokMediaRequest(contentType string, body []byte) GrokMediaRequestInfo {
-	info := GrokMediaRequestInfo{N: 1}
+	info := GrokMediaRequestInfo{N: 1, nValid: true}
 	if gjson.ValidBytes(body) {
 		parseGrokMediaJSONRequest(body, &info)
 	} else {
@@ -131,6 +132,16 @@ func ParseGrokMediaRequest(contentType string, body []byte) GrokMediaRequestInfo
 	return info
 }
 
+func (r GrokMediaRequestInfo) ValidateImageCount() error {
+	if !r.nValid || r.N <= 0 {
+		return fmt.Errorf("n must be a positive integer")
+	}
+	if r.N > openAIImagesMaxN {
+		return fmt.Errorf("n must be between 1 and %d", openAIImagesMaxN)
+	}
+	return nil
+}
+
 func parseGrokMediaJSONRequest(body []byte, info *GrokMediaRequestInfo) {
 	if info == nil {
 		return
@@ -142,8 +153,13 @@ func parseGrokMediaJSONRequest(body []byte, info *GrokMediaRequestInfo) {
 	if duration := gjson.GetBytes(body, "duration"); duration.Exists() && duration.Type == gjson.Number {
 		info.DurationSeconds = int(duration.Int())
 	}
-	if n := gjson.GetBytes(body, "n"); n.Exists() && n.Type == gjson.Number {
-		info.N = int(n.Int())
+	if n := gjson.GetBytes(body, "n"); n.Exists() {
+		parsed, err := strconv.Atoi(strings.TrimSpace(n.Raw))
+		if n.Type != gjson.Number || err != nil || parsed <= 0 {
+			info.nValid = false
+		} else {
+			info.N = parsed
+		}
 	}
 	appendJSONImageURLs := func(value gjson.Result) {
 		if !value.Exists() {
@@ -256,8 +272,10 @@ func parseGrokMediaMultipartRequest(contentType string, body []byte, info *GrokM
 				info.DurationSeconds = duration
 			}
 		case "n":
-			if n, err := strconv.Atoi(value); err == nil {
+			if n, err := strconv.Atoi(value); err == nil && n > 0 {
 				info.N = n
+			} else {
+				info.nValid = false
 			}
 		case "image", "image_url":
 			if value != "" {

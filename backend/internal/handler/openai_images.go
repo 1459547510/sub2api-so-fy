@@ -145,6 +145,23 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 
 	sessionHash := h.gatewayService.GenerateExplicitSessionHash(c, body)
 	requestCtx := service.WithOpenAIImageGenerationIntent(c.Request.Context())
+	if parsed.N > 1 && !parsed.Stream {
+		if h.handleOpenAIImagesNSplit(
+			c,
+			apiKey,
+			parsed,
+			body,
+			requestCtx,
+			sessionHash,
+			routingModel,
+			requestModel,
+			channelMapping,
+			subscription,
+			reqLog,
+		) {
+			return
+		}
+	}
 
 	maxAccountSwitches := h.maxAccountSwitches
 	switchCount := 0
