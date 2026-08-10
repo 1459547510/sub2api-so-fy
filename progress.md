@@ -5692,3 +5692,16 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_MODEL_SYNC.md`: documents the endpoint contract, security boundaries, verification, and rollback.
 - `progress.md`: records this local implementation and verification.
 - Rollback before commit: restore the four modified source/test files from `HEAD` and remove `docs/LEO_MODEL_SYNC.md`; no production service or database has been changed.
+
+## 2026-08-10 - Task: Push Leo upstream model synchronization patch
+### What was done
+- Committed the verified Leo model synchronization change as `1cc9606` (`fix: sync Leo upstream models`).
+- Pushed it to the remote branch `fix/leo-model-sync` only; no server, service, database, or deployment action was performed.
+
+### Testing
+- Confirmed the remote branch resolves to commit `1cc9606`.
+- Confirmed the local working tree was clean after the code push.
+
+### Notes
+- `progress.md`: records the Git push and the deliberate no-deployment boundary.
+- Rollback: delete the remote branch with `git push origin --delete fix/leo-model-sync` and revert commit `1cc9606` wherever it is merged; production remains unchanged until a separate deployment.
