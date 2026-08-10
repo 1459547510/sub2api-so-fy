@@ -5626,3 +5626,48 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this merge, verification evidence, changed-file inventory, and rollback point.
 - `.superpowers/`: remains an existing untracked directory and is excluded from the merge and release.
 - Rollback after publication with `git revert -m 1 v0.1.173-fy.1`, then push the revert commit and publish a follow-up fork tag.
+
+## 2026-08-10 - Task: Redact upstream fallback URLs from client errors
+### What was done
+- Added client-only URL redaction for upstream error messages, replacing complete HTTP(S) URLs with `[upstream URL]`.
+- Applied the redaction to OpenAI WebSocket fallback errors, error passthrough rules, and failover-exhausted gateway responses without changing scheduling or status-code behavior.
+- Kept internal Ops upstream messages available for diagnostics while preserving the existing masking of sensitive query values.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'Test(ResolveOpenAIWSFallbackErrorResponse|ApplyErrorPassthroughRule)' -count=1` passed.
+- `cd backend && go test ./internal/handler -run 'Test(OpenAIGatewayHandler|GatewayHandler|.*Failover.*|.*Stream.*)' -count=1` passed.
+- `cd backend && go test ./internal/service ./internal/handler -run '^$' -count=1` passed package compilation.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/gemini_messages_compat_service.go`: added the shared client-facing URL redaction helper while leaving the internal sanitizer behavior intact.
+- `backend/internal/service/error_passthrough_runtime.go`: redacts upstream URLs in matched passthrough messages and configured custom messages.
+- `backend/internal/service/openai_gateway_service.go`: separates redacted WebSocket fallback client messages from internal Ops messages.
+- `backend/internal/handler/gateway_handler.go`: redacts failover passthrough messages for the generic gateway.
+- `backend/internal/handler/openai_gateway_handler.go`: redacts failover passthrough messages for the OpenAI gateway.
+- `backend/internal/handler/gemini_v1beta_handler.go`: redacts failover passthrough messages for the Gemini native gateway.
+- `backend/internal/service/error_passthrough_runtime_test.go`: verifies passthrough URL redaction.
+- `backend/internal/service/openai_ws_fallback_test.go`: verifies fallback URL redaction and internal diagnostic preservation.
+- `.gitignore`: allows the upstream error redaction document to be versioned under `docs/`.
+- `docs/UPSTREAM_ERROR_URL_REDACTION.md`: documents the client-visible behavior and verification commands.
+- `progress.md`: records implementation, verification, changed files, and rollback instructions.
+- Rollback with `git revert <commit-containing-this-task>` after commit, or before commit restore only the files listed above from `HEAD` and remove `docs/UPSTREAM_ERROR_URL_REDACTION.md`.
+
+## 2026-08-10 - Task: Replace redacted URL placeholders with customer-safe errors
+### What was done
+- Replaced client-visible URL placeholders and transport diagnostics with `Service temporarily unavailable, please retry later`.
+- Added detection for common DNS, TCP, proxy, TLS, timeout, and routing failure text while preserving ordinary upstream business errors.
+- Kept internal WebSocket fallback diagnostics separate from the customer response.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'Test(ResolveOpenAIWSFallbackErrorResponse|ApplyErrorPassthroughRule|SanitizeClientUpstreamErrorMessage)' -count=1` passed.
+- `cd backend && go test ./internal/handler -run 'Test(OpenAIGatewayHandler|GatewayHandler|.*Failover.*|.*Stream.*)' -count=1` passed.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/gemini_messages_compat_service.go`: classifies client-visible infrastructure errors and returns a stable service-unavailable message.
+- `backend/internal/service/error_passthrough_runtime_test.go`: verifies network diagnostics are hidden and ordinary business errors remain unchanged.
+- `backend/internal/service/openai_ws_fallback_test.go`: verifies fallback clients receive only the stable customer message.
+- `docs/UPSTREAM_ERROR_URL_REDACTION.md`: documents the final customer-facing behavior.
+- `progress.md`: records this refinement, verification, files, and rollback instructions.
+- Rollback this refinement by reverting its commit, or before commit restore the four files listed above from the prior working-tree state.

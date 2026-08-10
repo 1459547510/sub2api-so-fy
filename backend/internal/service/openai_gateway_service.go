@@ -840,7 +840,7 @@ func resolveOpenAIWSFallbackErrorResponse(err error) (statusCode int, errType st
 			errType = "upstream_error"
 		}
 	}
-	clientMessage = upstreamMessage
+	clientMessage = SanitizeClientUpstreamErrorMessage(upstreamMessage)
 	return statusCode, errType, clientMessage, upstreamMessage, true
 }
 

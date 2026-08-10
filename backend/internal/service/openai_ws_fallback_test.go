@@ -154,6 +154,21 @@ func TestResolveOpenAIWSFallbackErrorResponse(t *testing.T) {
 		require.Equal(t, "forbidden", upstreamMessage)
 	})
 
+	t.Run("redacts_upstream_url_from_client_message", func(t *testing.T) {
+		statusCode, errType, clientMessage, upstreamMessage, ok := resolveOpenAIWSFallbackErrorResponse(
+			wrapOpenAIWSFallback("auth_failed", &openAIWSDialError{
+				StatusCode: http.StatusBadGateway,
+				Err:        errors.New(`Post "https://fallback.example.test/v1/responses?access_token=secret": dial tcp: lookup fallback.example.test: no such host`),
+			}),
+		)
+		require.True(t, ok)
+		require.Equal(t, http.StatusBadGateway, statusCode)
+		require.Equal(t, "upstream_error", errType)
+		require.Equal(t, upstreamServiceUnavailableClientMessage, clientMessage)
+		require.Contains(t, upstreamMessage, "https://fallback.example.test")
+		require.NotContains(t, upstreamMessage, "access_token=secret")
+	})
+
 	t.Run("non_fallback_error_not_resolved", func(t *testing.T) {
 		_, _, _, _, ok := resolveOpenAIWSFallbackErrorResponse(errors.New("plain error"))
 		require.False(t, ok)

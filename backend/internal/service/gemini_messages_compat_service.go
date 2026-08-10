@@ -1745,15 +1745,28 @@ func sleepGeminiBackoff(attempt int) {
 }
 
 var (
-	sensitiveQueryParamRegex = regexp.MustCompile(`(?i)([?&](?:key|client_secret|access_token|refresh_token)=)[^&"\s]+`)
-	retryInRegex             = regexp.MustCompile(`Please retry in ([0-9.]+)s`)
+	sensitiveQueryParamRegex        = regexp.MustCompile(`(?i)([?&](?:key|client_secret|access_token|refresh_token)=)[^&"\s]+`)
+	clientUpstreamTechnicalErrRegex = regexp.MustCompile(`(?i)(https?://|(?:dial|proxyconnect)\s+(?:tcp|udp)|tls handshake|no such host|connection refused|network is unreachable|no route to host|i/o timeout|context deadline exceeded)`)
+	retryInRegex                    = regexp.MustCompile(`Please retry in ([0-9.]+)s`)
 )
+
+const upstreamServiceUnavailableClientMessage = "Service temporarily unavailable, please retry later"
 
 func sanitizeUpstreamErrorMessage(msg string) string {
 	if msg == "" {
 		return msg
 	}
 	return sensitiveQueryParamRegex.ReplaceAllString(msg, `$1***`)
+}
+
+// SanitizeClientUpstreamErrorMessage replaces infrastructure details with a
+// stable customer-facing message while preserving ordinary upstream errors.
+func SanitizeClientUpstreamErrorMessage(msg string) string {
+	msg = sanitizeUpstreamErrorMessage(msg)
+	if clientUpstreamTechnicalErrRegex.MatchString(msg) {
+		return upstreamServiceUnavailableClientMessage
+	}
+	return msg
 }
 
 func (s *GeminiMessagesCompatService) writeGeminiMappedError(c *gin.Context, account *Account, upstreamStatus int, upstreamRequestID string, body []byte) error {

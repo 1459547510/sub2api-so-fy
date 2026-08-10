@@ -37,6 +37,54 @@ func TestApplyErrorPassthroughRule_NoBoundService(t *testing.T) {
 	assert.Equal(t, "Upstream request failed", errMsg)
 }
 
+func TestApplyErrorPassthroughRule_RedactsUpstreamURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+
+	ruleSvc := &ErrorPassthroughService{}
+	ruleSvc.setLocalCache([]*model.ErrorPassthroughRule{{
+		ID:              1,
+		Name:            "redact-upstream-url",
+		Enabled:         true,
+		Priority:        1,
+		ErrorCodes:      []int{http.StatusBadGateway},
+		Keywords:        []string{"fallback.example.test"},
+		MatchMode:       model.MatchModeAll,
+		PassthroughCode: true,
+		PassthroughBody: true,
+	}})
+	BindErrorPassthroughService(c, ruleSvc)
+
+	status, errType, errMsg, matched := applyErrorPassthroughRule(
+		c,
+		PlatformOpenAI,
+		http.StatusBadGateway,
+		[]byte(`{"error":{"message":"Post https://fallback.example.test/v1/responses?key=secret failed"}}`),
+		http.StatusBadGateway,
+		"upstream_error",
+		"Upstream request failed",
+	)
+
+	require.True(t, matched)
+	require.Equal(t, http.StatusBadGateway, status)
+	require.Equal(t, "upstream_error", errType)
+	require.Equal(t, upstreamServiceUnavailableClientMessage, errMsg)
+}
+
+func TestSanitizeClientUpstreamErrorMessage(t *testing.T) {
+	require.Equal(
+		t,
+		upstreamServiceUnavailableClientMessage,
+		SanitizeClientUpstreamErrorMessage("dial tcp: lookup fallback.example.test: no such host"),
+	)
+	require.Equal(
+		t,
+		"Invalid model name",
+		SanitizeClientUpstreamErrorMessage("Invalid model name"),
+	)
+}
+
 func TestGatewayHandleErrorResponse_NoRuleKeepsDefault(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	rec := httptest.NewRecorder()
