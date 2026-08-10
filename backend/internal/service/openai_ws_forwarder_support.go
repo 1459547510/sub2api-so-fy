@@ -384,6 +384,7 @@ func (s *OpenAIGatewayService) SelectAccountByPreviousResponseID(
 	excludedIDs map[int64]struct{},
 	requireCompact bool,
 ) (*AccountSelectionResult, error) {
+	ctx = s.withCyberPolicyUserFilterContext(ctx)
 	// 分组利润控制：公共入口装门，保证不经 selectAccountWithScheduler
 	// 的调用方也无法绕过利润准入（scheduler 内部路径已在唯一调度入口装门）。
 	ctx = s.withOpenAIProfitControlGate(ctx, groupID)
@@ -399,6 +400,7 @@ func (s *OpenAIGatewayService) selectAccountByPreviousResponseIDForCapability(
 	requiredCapability OpenAIEndpointCapability,
 	requireCompact bool,
 ) (*AccountSelectionResult, error) {
+	ctx = s.withCyberPolicyUserFilterContext(ctx)
 	if s == nil {
 		return nil, nil
 	}
@@ -446,6 +448,7 @@ func (s *OpenAIGatewayService) ResolveAccountIDByPreviousResponseIDForScheduler(
 	requiredCapability OpenAIEndpointCapability,
 	requireCompact bool,
 ) int64 {
+	ctx = s.withCyberPolicyUserFilterContext(ctx)
 	accountID, _, _, _ := s.resolveAccountByPreviousResponseIDForCapability(ctx, groupID, previousResponseID, requestedModel, excludedIDs, requiredCapability, requireCompact)
 	return accountID
 }
@@ -483,6 +486,10 @@ func (s *OpenAIGatewayService) resolveAccountByPreviousResponseIDForCapability(
 
 	account, err := s.getSchedulableAccount(ctx, accountID)
 	if err != nil || account == nil {
+		_ = store.DeleteResponseAccount(ctx, derefGroupID(groupID), responseID)
+		return 0, nil, "", nil
+	}
+	if s.shouldSkipCyberPolicyUserAccount(ctx, account) {
 		_ = store.DeleteResponseAccount(ctx, derefGroupID(groupID), responseID)
 		return 0, nil, "", nil
 	}
@@ -550,6 +557,10 @@ func (s *OpenAIGatewayService) resolveAccountByPreviousResponseIDForCapability(
 			return 0, nil, "", nil
 		}
 		account = latest
+	}
+	if s.shouldSkipCyberPolicyUserAccount(ctx, account) {
+		_ = store.DeleteResponseAccount(ctx, derefGroupID(groupID), responseID)
+		return 0, nil, "", nil
 	}
 	if requireCompact && openAICompactSupportTier(account) == 0 {
 		_ = store.DeleteResponseAccount(ctx, derefGroupID(groupID), responseID)

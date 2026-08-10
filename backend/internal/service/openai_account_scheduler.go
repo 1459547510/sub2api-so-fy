@@ -2047,6 +2047,7 @@ func (s *OpenAIGatewayService) SelectAccountWithScheduler(
 	requiredTransport OpenAIUpstreamTransport,
 	requireCompact bool,
 ) (*AccountSelectionResult, OpenAIAccountScheduleDecision, error) {
+	ctx = s.withCyberPolicyUserFilterContext(ctx)
 	return s.selectAccountWithScheduler(ctx, groupID, previousResponseID, sessionHash, requestedModel, excludedIDs, requiredTransport, "", "", requireCompact, PlatformOpenAI, false, true)
 }
 
@@ -2067,6 +2068,7 @@ func (s *OpenAIGatewayService) SelectAccountWithSchedulerForCapability(
 	useUpstreamTokenCost bool,
 	platformOverride ...string,
 ) (*AccountSelectionResult, OpenAIAccountScheduleDecision, error) {
+	ctx = s.withCyberPolicyUserFilterContext(ctx)
 	platform := PlatformOpenAI
 	if len(platformOverride) > 0 {
 		platform = platformOverride[0]
@@ -2082,6 +2084,7 @@ func (s *OpenAIGatewayService) SelectAccountWithSchedulerForImages(
 	excludedIDs map[int64]struct{},
 	requiredCapability OpenAIImagesCapability,
 ) (*AccountSelectionResult, OpenAIAccountScheduleDecision, error) {
+	ctx = s.withCyberPolicyUserFilterContext(ctx)
 	selection, decision, err := s.selectAccountWithScheduler(ctx, groupID, "", sessionHash, requestedModel, excludedIDs, OpenAIUpstreamTransportHTTPSSE, "", requiredCapability, false, PlatformOpenAI, false, false)
 	if err == nil && selection != nil && selection.Account != nil {
 		return selection, decision, nil

@@ -506,6 +506,9 @@ export default {
       apiKeyHint: 'Your Claude Console API Key',
       // OpenAI specific hints
       openai: {
+        cyberPolicyUserBlocking: 'Block users with upstream CY history',
+        cyberPolicyUserBlockingDesc:
+          'When enabled, users who have triggered upstream cyber_policy are skipped for this account. The default is off; administrators are exempt.',
         baseUrlHint: 'Leave default for official OpenAI API',
         apiKeyHint: 'Your OpenAI API Key',
         oauthPassthrough: 'Auto passthrough (auth only)',

@@ -3023,6 +3023,7 @@ func (s *ContentModerationService) RecordCyberPolicyEvent(ctx context.Context, i
 		cfg = &ContentModerationConfig{}
 	}
 	s.revokeCyberPolicyGroup(ctx, cfg, in.UserID)
+	s.markCyberPolicyUser(ctx, in.UserID, time.Now())
 	var userID *int64
 	if in.UserID > 0 {
 		userID = &in.UserID

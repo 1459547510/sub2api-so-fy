@@ -5671,3 +5671,70 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/UPSTREAM_ERROR_URL_REDACTION.md`: documents the final customer-facing behavior.
 - `progress.md`: records this refinement, verification, files, and rollback instructions.
 - Rollback this refinement by reverting its commit, or before commit restore the four files listed above from the prior working-tree state.
+
+## 2026-08-10 - Task: Add account-level OpenAI CY user scheduling filter
+### What was done
+- Added a permanent database marker for regular users with historical upstream `cyber_policy` events and backfilled existing flagged moderation logs.
+- Added an opt-in OpenAI account setting that skips marked users before scoring and during sticky, previous-response, WebSocket, model-routing, and retry rechecks while preserving normal failover behavior.
+- Added trusted user-role context, admin exemption, Redis positive/negative marker caching, fail-open error handling, admin UI controls, tests, and documentation.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'Test(OpenAICyberPolicyUserFilter|ContentModerationService_MarkCyberPolicyUser|RecordCyberPolicyEvent_Marks|RecordCyberPolicyEvent_DoesNotMark)' -count=1` passed.
+- `cd backend && go test ./internal/service ./internal/repository ./internal/server/middleware -run '^$' -count=0` passed package compilation.
+- `cd frontend && pnpm typecheck` passed.
+- `cd frontend && pnpm exec vitest run src/components/account/__tests__/EditAccountModal.spec.ts --reporter=dot` passed.
+- `git diff --check` passed.
+
+### Notes
+- `backend/migrations/221_cyber_policy_user_marks.sql`: creates and backfills permanent CY user markers.
+- `backend/internal/repository/user_repo.go`: adds marker persistence queries.
+- `backend/internal/repository/cyber_policy_user_marker_cache.go`: adds Redis marker cache operations.
+- `backend/internal/pkg/ctxkey/ctxkey.go`: adds trusted request user-role context key.
+- `backend/internal/server/middleware/api_key_auth.go`: stores authenticated role in request context.
+- `backend/internal/service/openai_cyber_policy_user_filter.go`: defines the account setting, marker interfaces, cache lookup, and fail-open filtering.
+- `backend/internal/service/content_moderation.go`: records a regular user marker on upstream CY events.
+- `backend/internal/service/openai_gateway_scheduling.go`: filters protected accounts before scoring and final DB rechecks.
+- `backend/internal/service/openai_account_scheduler.go`: initializes filtering for advanced and image scheduling entrypoints.
+- `backend/internal/service/openai_ws_forwarder_support.go`: rejects protected previous-response bindings.
+- `backend/internal/service/openai_cyber_policy_user_filter_test.go`: covers marking, admin/default behavior, cache/DB failures, and scheduler rechecks.
+- `frontend/src/components/account/EditAccountModal.vue`: adds and persists the per-account toggle.
+- `frontend/src/i18n/locales/en/admin/accounts.ts`: adds English labels.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: adds Chinese labels.
+- `docs/OPENAI_CYBER_POLICY_ACCOUNT_FILTER.md`: documents semantics, migration, fail-open behavior, and rollback.
+- Rollback before deployment by reverting the listed code/docs changes and excluding migration 221; after migration, disable account toggles first and use a reviewed follow-up migration to remove the marker table if required. Preserve unrelated `.superpowers/`.
+
+## 2026-08-10 - Task: Harden CY filter fail-open behavior and verification
+### What was done
+- Made marker-cache read errors immediately fail open instead of changing availability based on a database fallback during a cache outage.
+- Initialized the request-local filter state in legacy model selection and previous-response resolver entrypoints so all direct scheduler callers share one marker lookup.
+- Added SQL repository coverage for regular-user insert, admin/no-op insert, and marker lookup, and allowed the new documentation file through the existing docs ignore policy.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'Test(OpenAICyberPolicyUserFilter|ContentModerationService_MarkCyberPolicyUser|RecordCyberPolicyEvent_Marks|RecordCyberPolicyEvent_DoesNotMark)' -count=1` passed.
+- `cd backend && go test ./internal/repository -run TestUserRepositoryCyberPolicyUserMarker -count=1` passed.
+- `cd backend && go test ./internal/service -run 'TestOpenAIGatewayService_SelectAccountWithScheduler_(DefaultDisabledUsesLegacyLoadAwareness|EnabledUsesAdvancedPreviousResponseRouting|PreviousResponseSticky|SessionSticky|SessionStickyBusyKeepsSticky|StickyWeightedPreviousRequiresMovableContext)|TestOpenAIGatewayService_SelectAccountWithLoadAwareness_DBFreshGroupRecheckWaitsOnValidAccount' -count=1` passed.
+- `cd frontend && pnpm typecheck` and the focused `EditAccountModal.spec.ts` Vitest run passed.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/openai_cyber_policy_user_filter.go`: fail-open cache-read handling and direct-entrypoint state support.
+- `backend/internal/service/openai_gateway_scheduling.go`: request-local state for legacy model/load scheduling.
+- `backend/internal/service/openai_ws_forwarder_support.go`: request-local state for direct previous-response resolution.
+- `backend/internal/service/openai_cyber_policy_user_filter_test.go`: validates cache outage behavior and final marker semantics.
+- `backend/internal/repository/cyber_policy_user_marker_test.go`: validates marker SQL operations with a SQL mock.
+- `.gitignore`: allows the new behavior documentation to be versioned.
+- Rollback this hardening by reverting the files listed above; preserve the earlier task implementation and unrelated `.superpowers/` unless the whole feature is being rolled back.
+
+## 2026-08-10 - Task: Record CY marker dependency on global risk control
+### What was done
+- Documented that new CY user markers are not written while the global risk-control switch is disabled.
+- Recorded the accepted operating assumption that global risk control remains enabled for the foreseeable future; no scheduling or risk-control logic was changed.
+
+### Testing
+- Verified the limitation text states the current behavior and the required precaution before disabling global risk control.
+- `git diff --check` passed.
+
+### Notes
+- `docs/OPENAI_CYBER_POLICY_ACCOUNT_FILTER.md`: added the known limitation and the operational prerequisite.
+- `progress.md`: recorded the accepted limitation; this task made no code changes.
+- Rollback by reverting this documentation-only entry and the corresponding known-limitation section; no runtime rollback is required.

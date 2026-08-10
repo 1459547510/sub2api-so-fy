@@ -2117,6 +2117,20 @@
         v-if="account?.platform === 'openai'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600 space-y-4"
       >
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <label class="input-label mb-0">{{ t('admin.accounts.openai.cyberPolicyUserBlocking') }}</label>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.accounts.openai.cyberPolicyUserBlockingDesc') }}
+            </p>
+          </div>
+          <Toggle
+            :model-value="cyberPolicyUserBlockingEnabled"
+            data-testid="openai-cyber-policy-user-blocking"
+            :aria-label="t('admin.accounts.openai.cyberPolicyUserBlocking')"
+            @update:model-value="cyberPolicyUserBlockingEnabled = $event"
+          />
+        </div>
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <label class="input-label mb-0">{{ t('admin.accounts.autoPause5hDisabled') }}</label>
@@ -2900,6 +2914,7 @@ const autoPause5hThreshold = ref<number | null>(null)
 const autoPause7dThreshold = ref<number | null>(null)
 const autoPause5hDisabled = ref(false)
 const autoPause7dDisabled = ref(false)
+const cyberPolicyUserBlockingEnabled = ref(false)
 const upstreamBillingAutoProbeEnabled = ref(false)
 const upstreamBillingRateSyncEnabled = ref(false)
 const mixedScheduling = ref(false) // For antigravity accounts: enable mixed scheduling
@@ -3406,6 +3421,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 	autoPause7dThreshold.value = typeof extra?.auto_pause_7d_threshold === 'number' ? extra.auto_pause_7d_threshold * 100 : null
 	autoPause5hDisabled.value = extra?.auto_pause_5h_disabled === true
 	autoPause7dDisabled.value = extra?.auto_pause_7d_disabled === true
+	cyberPolicyUserBlockingEnabled.value = extra?.openai_block_cyber_policy_users === true
 	upstreamBillingAutoProbeEnabled.value = extra?.upstream_billing_probe_enabled === true
   upstreamBillingRateSyncEnabled.value =
     upstreamBillingAutoProbeEnabled.value && extra?.upstream_billing_rate_sync_enabled === true
@@ -4795,6 +4811,11 @@ const handleSubmit = async () => {
 			newExtra.auto_pause_7d_disabled = true
 		} else {
 			delete newExtra.auto_pause_7d_disabled
+		}
+		if (cyberPolicyUserBlockingEnabled.value) {
+			newExtra.openai_block_cyber_policy_users = true
+		} else {
+			delete newExtra.openai_block_cyber_policy_users
 		}
 
 		delete newExtra.codex_image_generation_bridge_enabled

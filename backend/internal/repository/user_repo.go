@@ -185,6 +185,54 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*service.User, 
 	return out, nil
 }
 
+func (r *userRepository) MarkCyberPolicyUser(ctx context.Context, userID int64, at time.Time) (bool, error) {
+	if r == nil || r.sql == nil || userID <= 0 {
+		return false, errors.New("user repository SQL executor unavailable")
+	}
+	result, err := r.sql.ExecContext(ctx, `
+		INSERT INTO cyber_policy_user_marks (user_id, first_triggered_at, last_triggered_at)
+		SELECT $1, $2, $2
+		FROM users
+		WHERE id = $1 AND role <> 'admin'
+		ON CONFLICT (user_id) DO UPDATE SET
+			last_triggered_at = GREATEST(cyber_policy_user_marks.last_triggered_at, EXCLUDED.last_triggered_at)
+	`, userID, at.UTC())
+	if err != nil {
+		return false, err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows > 0, nil
+}
+
+func (r *userRepository) HasCyberPolicyUser(ctx context.Context, userID int64) (bool, error) {
+	if r == nil || r.sql == nil || userID <= 0 {
+		return false, errors.New("user repository SQL executor unavailable")
+	}
+	rows, err := r.sql.QueryContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM cyber_policy_user_marks WHERE user_id = $1
+		)
+	`, userID)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return false, err
+		}
+		return false, sql.ErrNoRows
+	}
+	var marked bool
+	if err := rows.Scan(&marked); err != nil {
+		return false, err
+	}
+	return marked, rows.Err()
+}
+
 func (r *userRepository) GetByIDIncludeDeleted(ctx context.Context, id int64) (*service.User, error) {
 	ctx = mixins.SkipSoftDelete(ctx)
 	m, err := r.client.User.Query().Where(dbuser.IDEQ(id)).Only(ctx)
