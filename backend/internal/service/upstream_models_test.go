@@ -210,6 +210,18 @@ func TestBuildUpstreamModelsRequestsForAPIKeyAccounts(t *testing.T) {
 	require.Equal(t, "https://openai.example.com/v1/models", openAIReq.URL.String())
 	require.Equal(t, "Bearer openai-key", openAIReq.Header.Get("Authorization"))
 
+	leoReq, err := svc.buildUpstreamModelsRequest(ctx, &Account{
+		Platform: PlatformLeo,
+		Type:     AccountTypeAPIKey,
+		Credentials: map[string]any{
+			"api_key":  "leo-key",
+			"base_url": "https://leo.example.com/v1",
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "https://leo.example.com/v1/models", leoReq.URL.String())
+	require.Equal(t, "Bearer leo-key", leoReq.Header.Get("Authorization"))
+
 	grokReq, err := svc.buildUpstreamModelsRequest(ctx, &Account{
 		Platform: PlatformGrok,
 		Type:     AccountTypeAPIKey,
@@ -340,6 +352,34 @@ func TestFetchUpstreamSupportedModelsParsesOpenAIResponse(t *testing.T) {
 	require.Equal(t, []string{"gpt-5", "o3"}, models)
 	require.Equal(t, "https://openai.example.com/v1/models", upstream.lastReq.URL.String())
 	require.Equal(t, "Bearer openai-key", upstream.lastReq.Header.Get("Authorization"))
+}
+
+func TestFetchUpstreamSupportedModelsParsesLeoResponse(t *testing.T) {
+	t.Parallel()
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"seedance-2.0"},{"id":"seedance-2.0"},{"id":"flux-dev"}]}`)),
+	}}
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          upstreamModelSyncTestConfig(),
+	}
+
+	models, err := svc.FetchUpstreamSupportedModels(context.Background(), &Account{
+		ID:       1682,
+		Platform: PlatformLeo,
+		Type:     AccountTypeAPIKey,
+		Credentials: map[string]any{
+			"api_key":  "leo-key",
+			"base_url": "https://leo.example.com/v1",
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"flux-dev", "seedance-2.0"}, models)
+	require.Equal(t, "https://leo.example.com/v1/models", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer leo-key", upstream.lastReq.Header.Get("Authorization"))
 }
 
 func TestFetchUpstreamSupportedModelsParsesGrokAPIKeyResponse(t *testing.T) {

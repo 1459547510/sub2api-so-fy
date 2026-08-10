@@ -5671,3 +5671,24 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/UPSTREAM_ERROR_URL_REDACTION.md`: documents the final customer-facing behavior.
 - `progress.md`: records this refinement, verification, files, and rollback instructions.
 - Rollback this refinement by reverting its commit, or before commit restore the four files listed above from the prior working-tree state.
+
+## 2026-08-10 - Task: Enable Leo upstream model synchronization
+### What was done
+- Added Leo as an upstream-sync platform in the administrator model whitelist control.
+- Added a Leo API-key `/v1/models` request path in Sub2, using the existing URL policy, proxy/TLS client, account header overrides, and redacted error handling.
+- Added backend and frontend regression coverage plus an operator document; this change is prepared locally and has not been pushed or deployed.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'Test(BuildUpstreamModels|FetchUpstreamSupportedModels)' -count=1` passed.
+- `cd backend && go test ./internal/service -count=1` passed.
+- `cd frontend && corepack pnpm@10.28.1 exec vitest run src/components/account/__tests__/ModelWhitelistSelector.spec.ts` passed (3 tests).
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/upstream_models.go`: routes Leo accounts to a validated `/v1/models` request with Bearer authentication.
+- `backend/internal/service/upstream_models_test.go`: verifies Leo request construction and OpenAI-compatible model response parsing.
+- `frontend/src/components/account/ModelWhitelistSelector.vue`: enables the Leo sync action.
+- `frontend/src/components/account/__tests__/ModelWhitelistSelector.spec.ts`: verifies the Leo sync action is visible.
+- `docs/LEO_MODEL_SYNC.md`: documents the endpoint contract, security boundaries, verification, and rollback.
+- `progress.md`: records this local implementation and verification.
+- Rollback before commit: restore the four modified source/test files from `HEAD` and remove `docs/LEO_MODEL_SYNC.md`; no production service or database has been changed.
