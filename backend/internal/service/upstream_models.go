@@ -137,6 +137,8 @@ func (s *AccountTestService) buildUpstreamModelsRequest(ctx context.Context, acc
 		return s.buildAntigravityAPIKeyModelsRequest(ctx, account)
 	case account.IsGrok():
 		return s.buildGrokUpstreamModelsRequest(ctx, account)
+	case account.IsLeo():
+		return s.buildLeoUpstreamModelsRequest(ctx, account)
 	case account.IsOpenAI():
 		return s.buildOpenAIUpstreamModelsRequest(ctx, account)
 	case account.IsGemini():
@@ -368,6 +370,36 @@ func (s *AccountTestService) buildOpenAIUpstreamModelsRequest(ctx context.Contex
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	// 账号级请求头覆写：模型列表探测与真实转发保持一致的最终头
+	account.ApplyHeaderOverrides(req.Header)
+	return req, nil
+}
+
+func (s *AccountTestService) buildLeoUpstreamModelsRequest(ctx context.Context, account *Account) (*http.Request, error) {
+	if account.Type != AccountTypeAPIKey {
+		return nil, newUpstreamModelSyncUnsupportedError(
+			fmt.Sprintf("Unsupported Leo account type for upstream model sync: %s", account.Type), nil,
+		)
+	}
+	apiKey := account.GetLeoAPIKey()
+	if apiKey == "" {
+		return nil, newUpstreamModelSyncConfigError("No Leo API key is available", nil)
+	}
+
+	baseURL := account.GetLeoBaseURL()
+	if baseURL == "" {
+		return nil, newUpstreamModelSyncConfigError("Invalid Leo base URL", nil)
+	}
+	normalizedBaseURL, err := s.validateUpstreamBaseURL(baseURL)
+	if err != nil {
+		return nil, newUpstreamModelSyncConfigError("Invalid Leo base URL", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, buildOpenAIModelsURL(normalizedBaseURL), nil)
+	if err != nil {
+		return nil, newUpstreamModelSyncConfigError("Invalid Leo model list URL", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
 	account.ApplyHeaderOverrides(req.Header)
 	return req, nil
 }

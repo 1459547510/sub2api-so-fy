@@ -5738,3 +5738,57 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/OPENAI_CYBER_POLICY_ACCOUNT_FILTER.md`: added the known limitation and the operational prerequisite.
 - `progress.md`: recorded the accepted limitation; this task made no code changes.
 - Rollback by reverting this documentation-only entry and the corresponding known-limitation section; no runtime rollback is required.
+## 2026-08-10 - Task: Enable Leo upstream model synchronization
+### What was done
+- Added Leo as an upstream-sync platform in the administrator model whitelist control.
+- Added a Leo API-key `/v1/models` request path in Sub2, using the existing URL policy, proxy/TLS client, account header overrides, and redacted error handling.
+- Added backend and frontend regression coverage plus an operator document; this change is prepared locally and has not been pushed or deployed.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'Test(BuildUpstreamModels|FetchUpstreamSupportedModels)' -count=1` passed.
+- `cd backend && go test ./internal/service -count=1` passed.
+- `cd frontend && corepack pnpm@10.28.1 exec vitest run src/components/account/__tests__/ModelWhitelistSelector.spec.ts` passed (3 tests).
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/upstream_models.go`: routes Leo accounts to a validated `/v1/models` request with Bearer authentication.
+- `backend/internal/service/upstream_models_test.go`: verifies Leo request construction and OpenAI-compatible model response parsing.
+- `frontend/src/components/account/ModelWhitelistSelector.vue`: enables the Leo sync action.
+- `frontend/src/components/account/__tests__/ModelWhitelistSelector.spec.ts`: verifies the Leo sync action is visible.
+- `docs/LEO_MODEL_SYNC.md`: documents the endpoint contract, security boundaries, verification, and rollback.
+- `progress.md`: records this local implementation and verification.
+- Rollback before commit: restore the four modified source/test files from `HEAD` and remove `docs/LEO_MODEL_SYNC.md`; no production service or database has been changed.
+
+## 2026-08-10 - Task: Push Leo upstream model synchronization patch
+### What was done
+- Committed the verified Leo model synchronization change as `1cc9606` (`fix: sync Leo upstream models`).
+- Pushed it to the remote branch `fix/leo-model-sync` only; no server, service, database, or deployment action was performed.
+
+### Testing
+- Confirmed the remote branch resolves to commit `1cc9606`.
+- Confirmed the local working tree was clean after the code push.
+
+### Notes
+- `progress.md`: records the Git push and the deliberate no-deployment boundary.
+- Rollback: delete the remote branch with `git push origin --delete fix/leo-model-sync` and revert commit `1cc9606` wherever it is merged; production remains unchanged until a separate deployment.
+
+## 2026-08-11 - Task: Merge Leo model synchronization into the release branch
+### What was done
+- Reviewed `fix/leo-model-sync` and merged it into `codex/leo-video-channel` instead of releasing the branch directly, preserving the CY account protection introduced in `v0.1.173-fy.3`.
+- Kept Leo model discovery limited to API-key accounts and the existing validated upstream request path.
+- Resolved the append-only progress log conflict by retaining both branches' complete histories.
+
+### Testing
+- `cd backend && go test ./... -count=1` passed.
+- `cd backend && go vet ./...` passed.
+- `cd frontend && node node_modules/vitest/vitest.mjs run src/components/account/__tests__/ModelWhitelistSelector.spec.ts --reporter=default --maxWorkers=2 --minWorkers=1` passed (3 tests).
+- `cd frontend && pnpm.exe build` passed; Vite transformed 1031 modules.
+
+### Notes
+- `backend/internal/service/upstream_models.go`: adds validated Leo `/v1/models` request construction with Bearer authentication.
+- `backend/internal/service/upstream_models_test.go`: covers Leo request construction and OpenAI-compatible model parsing.
+- `frontend/src/components/account/ModelWhitelistSelector.vue`: enables upstream model synchronization for Leo accounts.
+- `frontend/src/components/account/__tests__/ModelWhitelistSelector.spec.ts`: verifies the Leo synchronization action is available.
+- `docs/LEO_MODEL_SYNC.md`: documents behavior, security boundaries, verification, and rollback.
+- `progress.md`: preserves both branch histories and records this release integration.
+- Rollback after publication with `git revert -m 1 v0.1.173-fy.4`, then push the revert and publish a follow-up tag.
