@@ -14,6 +14,10 @@ import (
 // users with a historical upstream cyber_policy event.
 const OpenAICyberPolicyUserBlockingExtraKey = "openai_block_cyber_policy_users"
 
+// User 55 (hjt13845049131@163.com) is explicitly exempt from this account
+// filter, matching the existing administrator exemption.
+const openAICyberPolicyUserBlockingExemptUserID int64 = 55
+
 // CyberPolicyUserMarkerRepository is intentionally optional so existing
 // UserRepository implementations and test doubles remain source-compatible.
 type CyberPolicyUserMarkerRepository interface {
@@ -68,6 +72,9 @@ func (s *OpenAIGatewayService) cyberPolicyUserMarked(ctx context.Context) bool {
 	}
 	userID, ok := ctx.Value(ctxkey.UserID).(int64)
 	if !ok || userID <= 0 {
+		return false
+	}
+	if userID == openAICyberPolicyUserBlockingExemptUserID {
 		return false
 	}
 	if role, _ := ctx.Value(ctxkey.UserRole).(string); strings.EqualFold(strings.TrimSpace(role), RoleAdmin) {

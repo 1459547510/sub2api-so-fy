@@ -5672,6 +5672,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this refinement, verification, files, and rollback instructions.
 - Rollback this refinement by reverting its commit, or before commit restore the four files listed above from the prior working-tree state.
 
+## 2026-08-11 - Task: Exempt hjt13845049131 from OpenAI CY history filtering
+### What was done
+- Confirmed `hjt13845049131@163.com` is user ID `55` through the existing admin users API.
+- Added a fixed user-ID exemption before CY marker lookup, so this user is not skipped even when the account toggle is enabled and a historical marker exists.
+- Updated the Chinese and English account-toggle descriptions and the CY filter documentation.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'Test(OpenAICyberPolicyUserFilter|ContentModerationService_MarkCyberPolicyUser|RecordCyberPolicyEvent_)' -count=1` passed.
+- `cd frontend && pnpm exec vitest run src/i18n/__tests__/localesMessageCompile.spec.ts` passed.
+- `cd frontend && pnpm exec eslint src/i18n/locales/zh/admin/accounts.ts src/i18n/locales/en/admin/accounts.ts` passed.
+- `cd frontend && pnpm exec vue-tsc --noEmit` passed.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/service/openai_cyber_policy_user_filter.go`: exempts user ID `55` from the protected-account filter without an extra database lookup.
+- `backend/internal/service/openai_cyber_policy_user_filter_test.go`: verifies the explicit exemption bypasses both cache and database marker reads.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: documents the Chinese exemption.
+- `frontend/src/i18n/locales/en/admin/accounts.ts`: documents the English exemption.
+- `docs/OPENAI_CYBER_POLICY_ACCOUNT_FILTER.md`: documents the fixed user-ID exemption.
+- `progress.md`: records implementation, verification, changed files, and rollback instructions.
+- Rollback this change by reverting its commit, or before commit remove the user-ID exemption and the matching test/documentation lines from the files listed above.
+
 ## 2026-08-10 - Task: Add account-level OpenAI CY user scheduling filter
 ### What was done
 - Added a permanent database marker for regular users with historical upstream `cyber_policy` events and backfilled existing flagged moderation logs.

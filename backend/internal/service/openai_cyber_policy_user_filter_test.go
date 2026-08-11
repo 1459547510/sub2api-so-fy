@@ -35,11 +35,13 @@ type cyberPolicyMarkerCacheStub struct {
 	marked    bool
 	found     bool
 	getErr    error
+	getCalls  int
 	setCalls  int
 	setMarked bool
 }
 
 func (c *cyberPolicyMarkerCacheStub) GetCyberPolicyUserMark(context.Context, int64) (bool, bool, error) {
+	c.getCalls++
 	return c.marked, c.found, c.getErr
 }
 
@@ -89,6 +91,22 @@ func TestOpenAICyberPolicyUserFilter_DefaultOffAndAdminExempt(t *testing.T) {
 	require.Len(t, filtered, 1)
 	require.False(t, svc.shouldSkipCyberPolicyUserAccount(admin, &account))
 	require.Equal(t, 0, repo.hasCalls)
+}
+
+func TestOpenAICyberPolicyUserFilter_ExplicitUserExempt(t *testing.T) {
+	repo := &cyberPolicyMarkerUserRepoStub{marked: true, markAllowed: true}
+	cache := &cyberPolicyMarkerCacheStub{marked: true, found: true}
+	svc := &OpenAIGatewayService{userRepo: repo, cache: cache}
+	ctx := withCyberPolicyUserFilterState(context.WithValue(
+		context.Background(),
+		ctxkey.UserID,
+		openAICyberPolicyUserBlockingExemptUserID,
+	))
+	account := Account{ID: 1, Platform: PlatformOpenAI, Extra: map[string]any{OpenAICyberPolicyUserBlockingExtraKey: true}}
+
+	require.False(t, svc.shouldSkipCyberPolicyUserAccount(ctx, &account))
+	require.Equal(t, 0, repo.hasCalls)
+	require.Equal(t, 0, cache.getCalls)
 }
 
 func TestOpenAICyberPolicyUserFilter_CacheHitAndFailureFailOpen(t *testing.T) {
