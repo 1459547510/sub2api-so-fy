@@ -5976,3 +5976,20 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/admin/ops/utils/opsFormatters.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
 - `progress.md`: records the merge, conflict resolutions, test evidence, changed-file inventory, and rollback point.
 - Rollback after publication with `git revert -m 1 <merge-commit>`, then push the revert and publish a follow-up fork tag; no database rollback is required. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-13 - Task: Publish OpenAI reasoning compatibility release
+### What was done
+- Pushed merge commit `f61031bea4a1a0061ac2f43cdedeaf54fb96c407` to `origin/codex/leo-video-channel`.
+- Published tag and GitHub Release `v0.1.175-fy.1` from the verified merge commit.
+- Confirmed the public Linux amd64 archive and checksum manifest are downloadable.
+
+### Testing
+- Both public Release asset URLs returned HTTP `200`.
+- Downloaded `sub2api_0.1.175-fy.1_linux_amd64.tar.gz` and verified its SHA-256 is `320961c19a19e0a6d4ca840cf687dfd647b06ac0b49fc45d530b9978d5dd81db`, exactly matching `checksums.txt`.
+- Verified the archive is `37,425,206` bytes and contains the single expected `sub2api` entry.
+- Confirmed remote tag `v0.1.175-fy.1` resolves to merge commit `f61031bea4a1a0061ac2f43cdedeaf54fb96c407`.
+
+### Notes
+- `progress.md`: records the pushed commit, published Release, asset availability, checksum, archive content, and rollback point.
+- The Release does not require a database migration or configuration change.
+- Rollback source behavior with `git revert -m 1 f61031bea4a1a0061ac2f43cdedeaf54fb96c407` and publish a follow-up release; withdraw this release only after removing the GitHub Release and deleting remote tag `v0.1.175-fy.1`. Preserve unrelated `.superpowers/` content.
