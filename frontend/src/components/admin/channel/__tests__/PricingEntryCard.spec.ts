@@ -73,4 +73,16 @@ describe('PricingEntryCard video mode', () => {
     expect(wrapper.findAll('[data-testid^="video-price-"]')).toHaveLength(1)
     expect(wrapper.find('[data-testid="video-price-720p"]').exists()).toBe(true)
   })
+
+  it('renders generic default pricing for non-Leo group video entries', () => {
+    const entry = createPricingFormEntry(['video-model'], 'video')
+    entry.per_request_price = '0.08'
+    const wrapper = shallowMount(PricingEntryCard, {
+      props: { entry, platform: 'openai', hideTokenIntervals: true },
+    })
+
+    expect(wrapper.text()).toContain('admin.channels.form.defaultVideoPrice')
+    expect(wrapper.findAll('[data-testid^="video-price-"]')).toHaveLength(0)
+    expect(wrapper.get('input[type="number"]').element.value).toBe('0.08')
+  })
 })

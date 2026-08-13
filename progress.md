@@ -5993,3 +5993,126 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the pushed commit, published Release, asset availability, checksum, archive content, and rollback point.
 - The Release does not require a database migration or configuration change.
 - Rollback source behavior with `git revert -m 1 f61031bea4a1a0061ac2f43cdedeaf54fb96c407` and publish a follow-up release; withdraw this release only after removing the GitHub Release and deleting remote tag `v0.1.175-fy.1`. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-13 - Task: Merge upstream v0.1.176 into the fork
+### What was done
+- Merged the formal upstream `v0.1.176` tag while preserving the fork's Leo video pricing, CY account filtering, administrator audit exemption, Leo model catalog, and other fork-only behavior.
+- Resolved seven conflicts across group validation, Grok pricing, channel video pricing, usage billing, and the pricing editor; Leo video pricing remains model-specific while upstream generic group video pricing remains available to other platforms.
+- Added upstream Grok 4.6 and JWT subscription-tier support, group model pricing and long-context controls, native `/x_search`, and the upstream billing, backup, cache, and account-usage fixes included in the tag.
+- Documented the additive PostgreSQL migration and retained both complete `221_*` migration filenames so deployed migration history and checksums remain stable.
+
+### Testing
+- `cd backend && go test -tags=unit ./internal/service -run '^TestValidatePricingBillingMode$' -count=1`: passed, including Leo strict video pricing and generic video default pricing.
+- `cd frontend && node node_modules/vitest/vitest.mjs run src/components/admin/channel/__tests__/PricingEntryCard.spec.ts --reporter=default --maxWorkers=2 --minWorkers=1`: passed (5 tests).
+- `cd backend && go test -p 1 ./... -count=1`: passed.
+- `cd frontend && node node_modules/vitest/vitest.mjs run --reporter=default --maxWorkers=2 --minWorkers=1`: passed; existing i18n and jsdom warnings remained non-fatal.
+- `cd backend && go vet ./...`: passed.
+- `cd frontend && npm run build`: passed (`vue-tsc` and Vite, 1031 modules); existing chunk warnings remained non-fatal.
+- `git diff --cached --check` and conflict-marker checks are required immediately before the merge commit.
+
+### Notes
+- `.gitignore`: allows the v0.1.176 group pricing deployment document to be tracked.
+- `README.md`: merges upstream v0.1.176 partner and release information.
+- `README_CN.md`: merges upstream v0.1.176 Chinese partner and release information.
+- `README_JA.md`: merges upstream v0.1.176 Japanese partner and release information.
+- `assets/partners/logos/duckip.png`: adds the upstream DuckIP partner logo.
+- `assets/partners/logos/haoai.svg`: removes the upstream-retired HaoAI partner logo.
+- `assets/partners/logos/swiftprox.png`: adds the upstream SwiftProx partner logo.
+- `backend/cmd/server/VERSION`: merges the version metadata present at the formal upstream tag; the fork Release workflow injects the fork tag version during packaging.
+- `backend/cmd/server/wire_gen.go`: wires the upstream group pricing resolver dependencies.
+- `backend/ent/group.go`: adds generated group model pricing and long-context fields.
+- `backend/ent/group/group.go`: adds generated group field descriptors.
+- `backend/ent/group/where.go`: adds generated group pricing predicates.
+- `backend/ent/group_create.go`: adds generated create setters for group pricing fields.
+- `backend/ent/group_update.go`: adds generated update setters for group pricing fields.
+- `backend/ent/migrate/schema.go`: adds the group pricing columns to the generated schema.
+- `backend/ent/mutation.go`: adds generated mutation support for group pricing fields.
+- `backend/ent/runtime/runtime.go`: refreshes generated runtime schema bindings.
+- `backend/ent/schema/group.go`: defines group model pricing and the default-enabled long-context switch.
+- `backend/internal/handler/admin/group_handler.go`: retains Leo platform validation and exposes group pricing fields.
+- `backend/internal/handler/dto/mappers.go`: maps new upstream account usage metadata.
+- `backend/internal/handler/dto/types.go`: exposes new upstream account usage fields.
+- `backend/internal/handler/gateway_handler.go`: merges upstream Grok gateway behavior.
+- `backend/internal/handler/gateway_web_search.go`: composes shared web and x_search request handling.
+- `backend/internal/handler/grok_audio.go`: merges upstream Grok audio billing behavior.
+- `backend/internal/handler/grok_audio_billing_test.go`: covers upstream Grok audio billing changes.
+- `backend/internal/handler/openai_x_search.go`: adds the native `/x_search` handler.
+- `backend/internal/handler/openai_x_search_test.go`: covers native x_search request handling.
+- `backend/internal/pkg/apicompat/chatcompletions_responses_bridge.go`: preserves x_search fields in Chat-to-Responses conversion.
+- `backend/internal/pkg/apicompat/chatcompletions_responses_bridge_custom_tools_test.go`: expands custom-tool conversion coverage.
+- `backend/internal/pkg/apicompat/chatcompletions_to_responses.go`: maps x_search filtering and tool choice.
+- `backend/internal/pkg/apicompat/chatcompletions_x_search_test.go`: covers x_search protocol conversion.
+- `backend/internal/pkg/apicompat/types.go`: adds x_search-compatible protocol fields.
+- `backend/internal/pkg/xai/models.go`: adds Grok 4.6 model identifiers.
+- `backend/internal/pkg/xai/models_test.go`: covers Grok 4.6 model recognition.
+- `backend/internal/pkg/xai/oauth_test.go`: updates upstream OAuth fixtures.
+- `backend/internal/pkg/xai/quota.go`: exposes JWT-derived subscription tiers.
+- `backend/internal/pkg/xai/subscription_tier.go`: implements Grok JWT subscription-tier detection.
+- `backend/internal/pkg/xai/subscription_tier_test.go`: covers Grok subscription-tier claims and fallbacks.
+- `backend/internal/repository/api_key_repo.go`: preloads group pricing for API-key billing resolution.
+- `backend/internal/repository/group_repo.go`: persists group pricing and long-context controls.
+- `backend/internal/server/api_contract_test.go`: updates the gateway API contract for x_search.
+- `backend/internal/server/routes/gateway.go`: registers the native x_search route.
+- `backend/internal/server/routes/prompt_audit_route_coverage_test.go`: covers x_search prompt-audit routing.
+- `backend/internal/service/account_test_service.go`: merges upstream Grok account test behavior.
+- `backend/internal/service/admin_group.go`: validates and normalizes per-group model pricing.
+- `backend/internal/service/admin_group_platform_cache_test.go`: covers channel cache invalidation after group platform changes.
+- `backend/internal/service/admin_service.go`: invalidates affected channel caches after group changes.
+- `backend/internal/service/backup_service.go`: adds the upstream scheduled-backup leader lock.
+- `backend/internal/service/backup_service_test.go`: covers single-leader scheduled backups.
+- `backend/internal/service/billing_search_audio_cost_test.go`: updates search and audio billing expectations.
+- `backend/internal/service/billing_service.go`: uses upstream Grok 4.3/4.5/4.6 prices and 200k long-context rules without duplicate fork pricing.
+- `backend/internal/service/billing_service_test.go`: covers new Grok and long-context pricing behavior.
+- `backend/internal/service/channel.go`: retains video non-token interval semantics while merging upstream normalization.
+- `backend/internal/service/channel_service.go`: preserves strict Leo video validation, allows generic video pricing elsewhere, and merges cache and normalization fixes.
+- `backend/internal/service/channel_service_test.go`: covers pricing-key normalization plus explicit Leo and generic video validation boundaries.
+- `backend/internal/service/gateway_usage_billing.go`: resolves group pricing before channel and built-in pricing.
+- `backend/internal/service/grok_audio.go`: merges upstream Grok audio usage and pricing behavior.
+- `backend/internal/service/grok_audio_test.go`: covers Grok audio usage changes.
+- `backend/internal/service/grok_media.go`: merges upstream Grok media billing updates.
+- `backend/internal/service/grok_model_quota_block.go`: adds model-scoped Grok quota blocking.
+- `backend/internal/service/grok_oauth_service.go`: refreshes JWT-derived Grok subscription tiers.
+- `backend/internal/service/grok_oauth_service_test.go`: covers tier refresh and stale-tier replacement.
+- `backend/internal/service/grok_quota_fetcher.go`: derives Grok capacity and tiers from current account data.
+- `backend/internal/service/grok_quota_fetcher_test.go`: covers tier and quota edge cases.
+- `backend/internal/service/grok_quota_service.go`: carries current Grok tier metadata.
+- `backend/internal/service/grok_upstream_failure.go`: classifies new Grok model quota failures.
+- `backend/internal/service/grok_upstream_failure_test.go`: covers model-scoped Grok failures.
+- `backend/internal/service/group.go`: adds group model pricing and long-context domain fields.
+- `backend/internal/service/model_pricing_resolver.go`: implements Group to Channel to built-in pricing precedence.
+- `backend/internal/service/model_pricing_resolver_test.go`: covers group pricing resolution and long-context selection.
+- `backend/internal/service/openai_apikey_responses_probe.go`: avoids unsupported verdicts for incomplete probe responses.
+- `backend/internal/service/openai_apikey_responses_probe_verdict_test.go`: covers complete, truncated, and failed probe verdicts.
+- `backend/internal/service/openai_gateway_chat_completions_raw.go`: preserves x_search response sources.
+- `backend/internal/service/openai_gateway_grok.go`: routes Grok 4.6 and x_search requests.
+- `backend/internal/service/openai_gateway_grok_cache.go`: updates Grok cache handling for current model behavior.
+- `backend/internal/service/openai_gateway_grok_chat_bridge.go`: preserves x_search fields through the Grok bridge.
+- `backend/internal/service/openai_gateway_grok_chat_bridge_test.go`: covers Grok x_search bridge behavior.
+- `backend/internal/service/openai_gateway_grok_test.go`: updates Grok gateway regression coverage.
+- `backend/internal/service/openai_gateway_messages.go`: merges upstream message conversion behavior.
+- `backend/internal/service/openai_gateway_record_usage_test.go`: covers group media pricing and new usage paths.
+- `backend/internal/service/openai_gateway_usage.go`: composes group media pricing with retained Leo model, resolution, and duration normalization.
+- `backend/internal/service/openai_ws_http_bridge.go`: merges upstream WebSocket HTTP bridge behavior.
+- `backend/internal/service/wire.go`: registers the group model pricing resolver.
+- `backend/migrations/221_group_model_pricing.sql`: adds and backfills additive group pricing columns; the existing `221_cyber_policy_user_marks.sql` remains unchanged.
+- `docs/GROUP_MODEL_PRICING_V176.md`: documents startup migration, compatibility, verification, and rollback boundaries.
+- `frontend/src/components/account/AccountUsageCell.vue`: displays current Grok subscription-tier usage data.
+- `frontend/src/components/account/__tests__/AccountUsageCell.spec.ts`: covers current-tier account usage rendering.
+- `frontend/src/components/admin/channel/PricingEntryCard.vue`: retains the Leo resolution editor and adds the upstream generic group video editor.
+- `frontend/src/components/admin/channel/__tests__/PricingEntryCard.spec.ts`: distinguishes Leo fixed-resolution pricing from generic group video pricing.
+- `frontend/src/components/common/PlatformTypeBadge.vue`: displays Grok subscription-tier badges.
+- `frontend/src/components/common/__tests__/PlatformTypeBadge.grok.spec.ts`: covers new Grok tier badges.
+- `frontend/src/composables/__tests__/useModelWhitelist.spec.ts`: covers Grok 4.6 whitelist options.
+- `frontend/src/composables/useModelWhitelist.ts`: adds Grok 4.6 to model selection.
+- `frontend/src/i18n/locales/en/admin/channels.ts`: adds English group video pricing labels.
+- `frontend/src/i18n/locales/en/admin/overview.ts`: adds English Grok tier labels.
+- `frontend/src/i18n/locales/zh/admin/channels.ts`: adds Chinese group video pricing labels.
+- `frontend/src/i18n/locales/zh/admin/overview.ts`: adds Chinese Grok tier labels.
+- `frontend/src/types/index.ts`: types new group and Grok usage fields.
+- `frontend/src/utils/__tests__/accountUsageRefresh.spec.ts`: covers tier-aware incremental account usage refresh.
+- `frontend/src/utils/accountUsageRefresh.ts`: refreshes account rows when Grok tier snapshots change.
+- `frontend/src/views/admin/AccountsView.vue`: shows current Grok tier details in account administration.
+- `frontend/src/views/admin/GroupsView.vue`: adds group model pricing and long-context controls while retaining the Leo-specific video editor.
+- `frontend/src/views/admin/__tests__/AccountsView.sparkShadow.spec.ts`: covers updated account-tier display and refresh behavior.
+- `progress.md`: records the merge scope, verification evidence, changed-file inventory, migration impact, and rollback point.
+- Rollback source behavior after commit with `git revert -m 1 <merge-commit>`, push the revert, and publish a follow-up fork tag. Existing deployments may leave the additive group columns and `schema_migrations` row in place because the previous binary ignores them; do not drop the columns unless their data is backed up and a separate database change is explicitly approved. Preserve unrelated `.superpowers/` content.

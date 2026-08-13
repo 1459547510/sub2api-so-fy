@@ -134,8 +134,8 @@
             </div>
           </div>
 
-          <!-- Token intervals -->
-          <div class="mt-3">
+          <!-- Token intervals (channel-only; group long-context uses official presets) -->
+          <div v-if="!hideTokenIntervals" class="mt-3">
             <div class="flex items-center justify-between">
               <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
                 {{ t('admin.channels.form.intervals') }}
@@ -196,7 +196,6 @@
 
         <!-- Image mode -->
         <div v-else-if="entry.billing_mode === 'image'">
-          <!-- Default image price (per-request, same as per_request mode) -->
           <label class="mt-3 block text-xs font-medium text-gray-500 dark:text-gray-400">
             {{ t('admin.channels.form.defaultImagePrice') }}
             <span class="ml-1 font-normal text-gray-400">$</span>
@@ -206,12 +205,11 @@
               type="number" step="any" min="0" class="input text-sm" :placeholder="t('admin.channels.form.pricePlaceholder')" />
           </div>
 
-          <!-- Image tiers -->
           <div class="mt-3 flex items-center justify-between">
             <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
               {{ t('admin.channels.form.imageTiers') }}
             </label>
-            <button type="button" @click="addImageTier" class="text-xs text-primary-600 hover:text-primary-700">
+            <button type="button" @click="addMediaTier" class="text-xs text-primary-600 hover:text-primary-700">
               + {{ t('admin.channels.form.addTier') }}
             </button>
           </div>
@@ -227,7 +225,7 @@
           </div>
         </div>
 
-        <!-- Video mode -->
+        <!-- Leo channel video mode: fixed model-specific per-second tiers -->
         <div v-else-if="props.allowVideo && entry.billing_mode === 'video'">
           <label class="mt-3 block text-xs font-medium text-gray-500 dark:text-gray-400">
             {{ t('admin.channels.form.videoResolutionPrices') }}
@@ -249,6 +247,36 @@
             </div>
           </div>
         </div>
+
+        <!-- Group video mode: generic default/tier pricing -->
+        <div v-else-if="props.hideTokenIntervals && entry.billing_mode === 'video'">
+          <label class="mt-3 block text-xs font-medium text-gray-500 dark:text-gray-400">
+            {{ t('admin.channels.form.defaultVideoPrice') }}
+            <span class="ml-1 font-normal text-gray-400">$</span>
+          </label>
+          <div class="mt-1 w-48">
+            <input :value="entry.per_request_price" @input="emitField('per_request_price', ($event.target as HTMLInputElement).value)"
+              type="number" step="any" min="0" class="input text-sm" :placeholder="t('admin.channels.form.pricePlaceholder')" />
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
+              {{ t('admin.channels.form.videoTiers') }}
+            </label>
+            <button type="button" @click="addMediaTier" class="text-xs text-primary-600 hover:text-primary-700">
+              + {{ t('admin.channels.form.addTier') }}
+            </button>
+          </div>
+          <div v-if="entry.intervals && entry.intervals.length > 0" class="mt-2 space-y-2">
+            <IntervalRow
+              v-for="(iv, idx) in entry.intervals"
+              :key="idx"
+              :interval="iv"
+              :mode="entry.billing_mode"
+              @update="updateInterval(idx, $event)"
+              @remove="removeInterval(idx)"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -268,11 +296,15 @@ import channelsAPI from '@/api/admin/channels'
 
 const { t } = useI18n()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   entry: PricingFormEntry
   platform?: string
   allowVideo?: boolean
-}>()
+  hideTokenIntervals?: boolean
+}>(), {
+  allowVideo: false,
+  hideTokenIntervals: false,
+})
 
 const emit = defineEmits<{
   update: [entry: PricingFormEntry]
@@ -286,7 +318,7 @@ const billingModeOptions = computed(() => [
   { value: 'token', label: t('admin.channels.billingMode.token') },
   { value: 'per_request', label: t('admin.channels.billingMode.perRequest') },
   { value: 'image', label: t('admin.channels.billingMode.image') },
-  ...(props.allowVideo
+  ...(props.allowVideo || props.hideTokenIntervals
     ? [{ value: 'video', label: t('admin.channels.billingMode.video') }]
     : []),
 ])
@@ -304,7 +336,9 @@ function onBillingModeUpdate(mode: BillingMode) {
   emit('update', {
     ...props.entry,
     billing_mode: mode,
-    intervals: mode === 'video' ? normalizeVideoIntervals(props.entry.intervals, props.entry.models[0]) : [],
+    intervals: mode === 'video' && props.allowVideo
+      ? normalizeVideoIntervals(props.entry.intervals, props.entry.models[0])
+      : [],
   })
 }
 
@@ -333,9 +367,11 @@ function addInterval() {
   emit('update', { ...props.entry, intervals })
 }
 
-function addImageTier() {
+function addMediaTier() {
   const intervals = [...(props.entry.intervals || [])]
-  const labels = ['1K', '2K', '4K', 'HD']
+  const labels = props.entry.billing_mode === 'video'
+    ? ['480p', '720p', '1080p']
+    : ['1K', '2K', '4K', 'HD']
   intervals.push({
     min_tokens: 0, max_tokens: null, tier_label: labels[intervals.length] || '',
     input_price: null, output_price: null, cache_write_price: null,
