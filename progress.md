@@ -6116,3 +6116,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/admin/__tests__/AccountsView.sparkShadow.spec.ts`: covers updated account-tier display and refresh behavior.
 - `progress.md`: records the merge scope, verification evidence, changed-file inventory, migration impact, and rollback point.
 - Rollback source behavior after commit with `git revert -m 1 <merge-commit>`, push the revert, and publish a follow-up fork tag. Existing deployments may leave the additive group columns and `schema_migrations` row in place because the previous binary ignores them; do not drop the columns unless their data is backed up and a separate database change is explicitly approved. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-13 - Task: Publish v0.1.176-fy.1
+### What was done
+- Pushed merge commit `dc5188088bc6e7f30477a611bbd60c0ec7743bad` to `origin/codex/leo-video-channel`.
+- Published annotated tag and GitHub Release `v0.1.176-fy.1` from that verified merge commit.
+- Confirmed the Release workflow compiled, packaged, and published the Linux amd64 binary successfully.
+
+### Testing
+- GitHub Actions run `31662265668` completed with conclusion `success`; Linux build, package, and Release publication steps all passed.
+- Public downloads for `sub2api_0.1.176-fy.1_linux_amd64.tar.gz` and `checksums.txt` both returned HTTP `200`.
+- The archive is `37,464,294` bytes and its SHA-256 is `ec52f7085645a7d28a1956f43cb01ffd61074b24bbefd3932af51c5d222e0e43`, exactly matching `checksums.txt`.
+- `tar -tzf` confirmed the archive contains the single expected `sub2api` entry.
+- The remote annotated tag dereferences to `dc5188088bc6e7f30477a611bbd60c0ec7743bad`; the Release is public, non-draft, and non-prerelease.
+
+### Notes
+- `progress.md`: records the pushed merge commit, Release workflow result, public asset availability, checksum, archive content, and rollback point.
+- Deploying this Release runs `221_group_model_pricing.sql` during startup; existing group long-context pricing remains enabled by default.
+- Rollback source behavior with `git revert -m 1 dc5188088bc6e7f30477a611bbd60c0ec7743bad` and publish a follow-up release. Leave the additive group columns in place for binary rollback; withdraw this Release only after removing GitHub Release `v0.1.176-fy.1` and deleting its remote tag. Preserve unrelated `.superpowers/` content.
