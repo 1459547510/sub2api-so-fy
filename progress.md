@@ -5838,3 +5838,141 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_MODEL_CATALOG.md`: documents the Sub2 response contract and endpoint behavior.
 - `progress.md`: appends this implementation and verification record.
 - Rollback: revert the task commit; existing account model whitelist strings require no data migration.
+
+
+## 2026-08-13 - Task: Fix OpenAI pool reasoning rendering and merge upstream v0.1.175
+### What was done
+- Confirmed upstream release `v0.1.175` contains PR #5304 / commit `8aa425d22`, which accepts both Chat Completions `reasoning_content` and `reasoning` fields and converts them to standard Responses reasoning events.
+- Merged upstream `v0.1.175` into the fork while retaining the fork's CY account filtering, administrator audit exemption, CY input summaries, and Leo model catalog behavior.
+- Resolved four merge conflicts by composing both branches' required behavior; no database schema or deployment configuration changed.
+- Added an operator document for the reasoning compatibility path. Upstream commits after the `v0.1.175` tag were deliberately excluded because they are not part of a formal upstream release.
+
+### Testing
+- `cd backend && go test ./internal/pkg/apicompat -run 'TestChatReasoningAlias|TestChatCompletions.*Reasoning|TestResponsesToChatCompletions.*Reasoning' -count=1` passed.
+- `cd backend && go test ./internal/handler -run 'TestRunSecurityAudit|TestCachesSecurityAuditCompletion|TestOpenAIResponsesWebSocket' -count=1` passed.
+- `cd backend && go test ./internal/service -run 'TestOpenAICyberPolicyUserFilter|TestOpenAIPoolMode|TestOpenAI.*Responses.*ChatCompletions|TestForwardResponses.*ChatCompletions' -count=1` passed.
+- `cd backend && go test ./internal/service -run 'TestExtractUpstreamModelDetailsPreservesDisplayName|TestExtractUpstreamModelIDs|TestExtractGrokUpstreamModelIDs' -count=1` passed.
+- `cd backend && go vet ./...` passed.
+- `cd frontend && pnpm vitest run` passed, and `pnpm build` passed with Vite transforming 1031 modules.
+- `cd backend && go test -p 1 ./... -count=1` passed. One earlier parallel full-suite run showed a load-sensitive server-timing test failure; that test passed 10 isolated repetitions and the complete serial suite.
+- `git diff --cached --check` is required immediately before commit.
+- A real production upstream replay was not available; protocol parity is established by deterministic stream and non-stream conversion fixtures.
+
+### Notes
+- `.gitignore`: allows the OpenAI reasoning compatibility document to be tracked.
+- `DEV_GUIDE.md`: merges the upstream v0.1.175 development guidance update.
+- `README.md`: merges the upstream v0.1.175 release documentation update.
+- `README_CN.md`: merges the upstream v0.1.175 Chinese release documentation update.
+- `README_JA.md`: merges the upstream v0.1.175 Japanese release documentation update.
+- `backend/internal/handler/admin/backup_handler.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/handler/admin/channel_handler.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/handler/api_key_handler.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/handler/api_key_handler_validation_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/handler/failover_loop.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/handler/failover_loop_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/handler/openai_chat_completions.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/handler/openai_gateway_handler.go`: combines upstream WebSocket turn numbering with the fork's CY input-summary extraction.
+- `backend/internal/handler/openai_gateway_handler_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/handler/security_audit_helper.go`: combines upstream per-turn WebSocket audit deduplication with the fork's administrator audit exemption.
+- `backend/internal/handler/security_audit_helper_test.go`: retains both branches' audit tests and uses the shared evaluation counter.
+- `backend/internal/pkg/apicompat/chatcompletions_anthropic_bridge.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/pkg/apicompat/chatcompletions_reasoning_alias_test.go`: covers stream and non-stream reasoning aliases plus field precedence.
+- `backend/internal/pkg/apicompat/chatcompletions_responses_bridge.go`: accepts Chat Completions reasoning aliases and emits standard Responses reasoning events.
+- `backend/internal/pkg/apicompat/testdata/issue5302/nonstream_reasoning.json`: adds the upstream regression fixture for Chat Completions reasoning alias conversion.
+- `backend/internal/pkg/apicompat/testdata/issue5302/reasoning_content_precedence.json`: adds the upstream regression fixture for Chat Completions reasoning alias conversion.
+- `backend/internal/pkg/apicompat/testdata/issue5302/stream_reasoning.json`: adds the upstream regression fixture for Chat Completions reasoning alias conversion.
+- `backend/internal/pkg/apicompat/types.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/repository/backup_s3_store.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/repository/backup_s3_store_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/account_scheduling_threshold_eval.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/account_scheduling_threshold_eval_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/account_stats_pricing.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/account_stats_pricing_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/api_key_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/api_key_service_validation_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/backup_archive.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/backup_archive_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/backup_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/backup_service_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/billing_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/channel.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/channel_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/content_moderation.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/content_moderation_cyber_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/gateway_channel_restriction_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/gateway_forward.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/gateway_usage_billing.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/gemini_messages_compat_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/gemini_messages_compat_service_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/identity_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/identity_service_user_agent_validation_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_codex_fingerprint.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_codex_fingerprint_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_first_output_timeout_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_gateway_apikey_item_id_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_gateway_chat_completions.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_gateway_chat_completions_raw.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_gateway_chat_completions_raw_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_gateway_forward.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_gateway_grok_chat_bridge_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_gateway_grok_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_gateway_passthrough.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_gateway_response_handling.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_gateway_responses_empty_completed_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_gateway_scheduling.go`: combines upstream compatible-account eligibility checks with the fork's CY user account filter.
+- `backend/internal/service/openai_gateway_service_codex_cli_only_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_gateway_service_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_gateway_upstream_errors.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_gateway_usage.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_gateway_usage_integrity.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_gateway_usage_integrity_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_images_responses.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_images_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_oauth_passthrough_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_oauth_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_privacy_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_profit_control_legacy_diagnostics_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_responses_item_id.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_silent_refusal.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_stream_read_error.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_subscription_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_upstream_client_error.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_upstream_client_error_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_visible_ttft_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_ws_v2/passthrough_relay.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/openai_ws_v2/passthrough_relay_internal_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/openai_ws_v2/passthrough_relay_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/pricing_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/ratelimit_service.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/ratelimit_service_403_html_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/response_model_billing_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/setting_features.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `backend/internal/service/setting_service_platform_threshold_test.go`: merges upstream v0.1.175 regression coverage into the fork release set.
+- `backend/internal/service/upstream_response_model.go`: merges the upstream v0.1.175 backend behavior into the fork release set.
+- `docs/OPENAI_REASONING_ALIAS_COMPAT.md`: documents the affected fallback path, protocol behavior, verification, and rollback.
+- `frontend/src/api/admin/backup.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/components/account/BulkEditAccountModal.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/components/account/CreateAccountModal.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/components/account/EditAccountModal.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/components/admin/usage/UsageTable.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/components/admin/usage/__tests__/UsageTable.spec.ts`: merges upstream v0.1.175 frontend regression coverage into the fork release set.
+- `frontend/src/components/layout/AppSidebar.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/constants/channel.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/i18n/locales/en/admin/accounts.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/i18n/locales/en/admin/channels.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/i18n/locales/en/admin/overview.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/i18n/locales/zh/admin/channels.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/i18n/locales/zh/admin/overview.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/views/admin/BackupView.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/views/admin/ChannelsView.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/views/admin/UsageView.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/views/admin/__tests__/BackupView.spec.ts`: merges upstream v0.1.175 frontend regression coverage into the fork release set.
+- `frontend/src/views/admin/__tests__/UsageView.spec.ts`: merges upstream v0.1.175 frontend regression coverage into the fork release set.
+- `frontend/src/views/admin/__tests__/groupsImagePricing.spec.ts`: merges upstream v0.1.175 frontend regression coverage into the fork release set.
+- `frontend/src/views/admin/groupsImagePricing.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/views/admin/ops/components/OpsDashboardHeader.vue`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `frontend/src/views/admin/ops/utils/__tests__/opsFormatters.spec.ts`: merges upstream v0.1.175 frontend regression coverage into the fork release set.
+- `frontend/src/views/admin/ops/utils/opsFormatters.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
+- `progress.md`: records the merge, conflict resolutions, test evidence, changed-file inventory, and rollback point.
+- Rollback after publication with `git revert -m 1 <merge-commit>`, then push the revert and publish a follow-up fork tag; no database rollback is required. Preserve unrelated `.superpowers/` content.

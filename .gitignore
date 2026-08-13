@@ -148,6 +148,7 @@ docs/*
 !docs/OPENAI_CODEX_FINGERPRINT.md
 !docs/IMAGE_BATCH_REQUESTS.md
 !docs/OPENAI_CYBER_POLICY_ACCOUNT_FILTER.md
+!docs/OPENAI_REASONING_ALIAS_COMPAT.md
 !docs/对接二开文档.md
 !docs/legal/
 !docs/legal/*.md
