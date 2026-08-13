@@ -71,6 +71,46 @@ func setupSyncUpstreamModelsRouter(adminSvc service.AdminService, upstream servi
 	return router
 }
 
+func TestAccountHandlerSyncUpstreamModelsReturnsDisplayNames(t *testing.T) {
+	svc := &availableModelsAdminService{
+		stubAdminService: newStubAdminService(),
+		account: service.Account{
+			ID:       47,
+			Name:     "leo-api-key",
+			Platform: service.PlatformLeo,
+			Type:     service.AccountTypeAPIKey,
+			Status:   service.StatusActive,
+			Credentials: map[string]any{
+				"api_key":  "leo-key",
+				"base_url": "https://leo.example.com/v1",
+			},
+		},
+	}
+	upstream := &syncUpstreamHTTPUpstream{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"11111111-1111-1111-1111-111111111111","name":"Leonardo Vision XL"},{"id":"seedance-2.0","name":"Seedance 2.0"}]}`)),
+	}}
+	router := setupSyncUpstreamModelsRouter(svc, upstream)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/accounts/47/models/sync-upstream", nil)
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var envelope struct {
+		Data struct {
+			Models       []string                `json:"models"`
+			ModelDetails []service.UpstreamModel `json:"model_details"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
+	require.Equal(t, []string{"11111111-1111-1111-1111-111111111111", "seedance-2.0"}, envelope.Data.Models)
+	require.Equal(t, []service.UpstreamModel{
+		{ID: "11111111-1111-1111-1111-111111111111", Name: "Leonardo Vision XL"},
+		{ID: "seedance-2.0", Name: "Seedance 2.0"},
+	}, envelope.Data.ModelDetails)
+}
+
 func TestAccountHandlerGetAvailableModels_GrokUsesXAIModels(t *testing.T) {
 	svc := &availableModelsAdminService{
 		stubAdminService: newStubAdminService(),

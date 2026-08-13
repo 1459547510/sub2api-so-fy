@@ -162,6 +162,17 @@ func TestExtractGrokUpstreamModelIDs(t *testing.T) {
 	require.Equal(t, []string{"grok-4.5", "grok-build-0.1", "grok-composer-2.5-fast", "grok-meta", "grok-name", "grok-safe"}, models)
 }
 
+func TestExtractUpstreamModelDetailsPreservesDisplayName(t *testing.T) {
+	t.Parallel()
+
+	models, err := extractUpstreamModelDetails([]byte(`{"data":[{"id":"11111111-1111-1111-1111-111111111111","name":"Leonardo Vision XL","display_name":"Leonardo Vision XL"},{"id":"seedance-2.0","name":"Seedance 2.0"}]}`))
+	require.NoError(t, err)
+	require.Equal(t, []UpstreamModel{
+		{ID: "11111111-1111-1111-1111-111111111111", Name: "Leonardo Vision XL"},
+		{ID: "seedance-2.0", Name: "Seedance 2.0"},
+	}, models)
+}
+
 func TestBuildUpstreamModelsRequestsForAPIKeyAccounts(t *testing.T) {
 	t.Parallel()
 

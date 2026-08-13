@@ -5814,3 +5814,27 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_MODEL_SYNC.md`: documents behavior, security boundaries, verification, and rollback.
 - `progress.md`: preserves both branch histories and records this release integration.
 - Rollback after publication with `git revert -m 1 v0.1.173-fy.4`, then push the revert and publish a follow-up tag.
+
+## 2026-08-11 - Task: Preserve Leo model names during Sub2 synchronization
+### What was done
+- Kept the existing `models: string[]` response for compatibility and added `model_details` entries containing each model ID and display name.
+- Preserved model names while parsing OpenAI-compatible, Grok, and Leo model-list responses.
+- Updated the account model selector to display `name (UUID)` while continuing to save and submit the UUID.
+- Documented the catalog contract and fallback behavior for upstreams without names.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'TestExtractUpstreamModelDetailsPreservesDisplayName|TestExtractUpstreamModelIDs|TestFetchUpstream' -count=1`: passed.
+- `cd backend && go test ./internal/handler/admin -run 'TestAccountHandlerSyncUpstreamModels' -count=1`: passed.
+- `cd frontend && node node_modules/vitest/vitest.mjs run src/components/account/__tests__/ModelWhitelistSelector.spec.ts --reporter=default --maxWorkers=2 --minWorkers=1`: passed (3 tests).
+- `cd frontend && npm run build`: passed (`vue-tsc` and Vite production build).
+
+### Notes
+- `backend/internal/service/upstream_models.go`: adds named model detail parsing without changing the ID-only service wrapper.
+- `backend/internal/service/upstream_models_test.go`: verifies display-name extraction and ID compatibility.
+- `backend/internal/handler/admin/account_handler.go`: returns `model_details` alongside the legacy model list.
+- `backend/internal/handler/admin/account_handler_available_models_test.go`: verifies IDs and names in the sync response.
+- `frontend/src/api/admin/accounts.ts`: types the optional model detail payload.
+- `frontend/src/components/account/ModelWhitelistSelector.vue`: renders names while preserving UUID values.
+- `docs/LEO_MODEL_CATALOG.md`: documents the Sub2 response contract and endpoint behavior.
+- `progress.md`: appends this implementation and verification record.
+- Rollback: revert the task commit; existing account model whitelist strings require no data migration.

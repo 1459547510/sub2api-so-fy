@@ -72,8 +72,30 @@ func newUpstreamModelSyncUpstreamError(message string, err error) error {
 	return &UpstreamModelSyncError{Kind: UpstreamModelSyncErrorUpstream, Message: message, Err: err}
 }
 
-// FetchUpstreamSupportedModels fetches the live model list from the account's upstream API format.
+// UpstreamModel describes a model ID and the optional upstream display name.
+// The ID remains the value used in account routing and generation requests.
+type UpstreamModel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// FetchUpstreamSupportedModels keeps the original ID-only service contract for
+// callers that do not need display metadata.
 func (s *AccountTestService) FetchUpstreamSupportedModels(ctx context.Context, account *Account) ([]string, error) {
+	details, err := s.FetchUpstreamSupportedModelDetails(ctx, account)
+	if err != nil {
+		return nil, err
+	}
+	models := make([]string, 0, len(details))
+	for _, model := range details {
+		models = append(models, model.ID)
+	}
+	return models, nil
+}
+
+// FetchUpstreamSupportedModelDetails fetches the live model list and preserves
+// display names when the upstream provides them.
+func (s *AccountTestService) FetchUpstreamSupportedModelDetails(ctx context.Context, account *Account) ([]UpstreamModel, error) {
 	if s == nil {
 		return nil, newUpstreamModelSyncConfigError("Account test service is not configured", nil)
 	}
@@ -82,7 +104,15 @@ func (s *AccountTestService) FetchUpstreamSupportedModels(ctx context.Context, a
 	}
 
 	if account.Platform == PlatformAntigravity && account.Type != AccountTypeAPIKey {
-		return s.fetchAntigravityOAuthUpstreamModels(ctx, account)
+		models, err := s.fetchAntigravityOAuthUpstreamModels(ctx, account)
+		if err != nil {
+			return nil, err
+		}
+		details := make([]UpstreamModel, 0, len(models))
+		for _, modelID := range models {
+			details = append(details, UpstreamModel{ID: modelID, Name: modelID})
+		}
+		return details, nil
 	}
 
 	if s.httpUpstream == nil {
@@ -116,9 +146,9 @@ func (s *AccountTestService) FetchUpstreamSupportedModels(ctx context.Context, a
 		)
 	}
 
-	extractModels := extractUpstreamModelIDs
+	extractModels := extractUpstreamModelDetails
 	if account.IsGrok() {
-		extractModels = extractGrokUpstreamModelIDs
+		extractModels = extractGrokUpstreamModelDetails
 	}
 	models, err := extractModels(body)
 	if err != nil {
@@ -531,6 +561,7 @@ type upstreamModelEntry struct {
 	ModelID      string          `json:"modelId"`
 	ModelIDSnake string          `json:"model_id"`
 	Name         string          `json:"name"`
+	DisplayName  string          `json:"display_name"`
 	Meta         json.RawMessage `json:"_meta"`
 }
 
@@ -540,17 +571,34 @@ type upstreamModelEntryMetadata struct {
 	ModelID      string `json:"modelId"`
 	ModelIDSnake string `json:"model_id"`
 	Name         string `json:"name"`
+	DisplayName  string `json:"display_name"`
 }
 
 func extractUpstreamModelIDs(body []byte) ([]string, error) {
-	return extractUpstreamModelIDsWithSelector(body, upstreamModelEntryID)
+	details, err := extractUpstreamModelDetails(body)
+	if err != nil {
+		return nil, err
+	}
+	return upstreamModelIDs(details), nil
 }
 
 func extractGrokUpstreamModelIDs(body []byte) ([]string, error) {
-	return extractUpstreamModelIDsWithSelector(body, grokUpstreamModelEntryID)
+	details, err := extractGrokUpstreamModelDetails(body)
+	if err != nil {
+		return nil, err
+	}
+	return upstreamModelIDs(details), nil
 }
 
-func extractUpstreamModelIDsWithSelector(body []byte, selectID func(upstreamModelEntry) string) ([]string, error) {
+func extractUpstreamModelDetails(body []byte) ([]UpstreamModel, error) {
+	return extractUpstreamModelDetailsWithSelector(body, upstreamModelEntryID)
+}
+
+func extractGrokUpstreamModelDetails(body []byte) ([]UpstreamModel, error) {
+	return extractUpstreamModelDetailsWithSelector(body, grokUpstreamModelEntryID)
+}
+
+func extractUpstreamModelDetailsWithSelector(body []byte, selectID func(upstreamModelEntry) string) ([]UpstreamModel, error) {
 	var response struct {
 		Data   []upstreamModelEntry `json:"data"`
 		Models []upstreamModelEntry `json:"models"`
@@ -561,31 +609,67 @@ func extractUpstreamModelIDsWithSelector(body []byte, selectID func(upstreamMode
 			return nil, fmt.Errorf("parse upstream model list: %w", err)
 		}
 
-		models := make([]string, 0, len(arrayResponse))
-		for _, entry := range arrayResponse {
-			models = append(models, selectID(entry))
-		}
-		return dedupeAndSortModelIDs(models), nil
+		return buildUpstreamModelDetails(arrayResponse, selectID), nil
 	}
 
-	models := make([]string, 0, len(response.Data)+len(response.Models))
-	for _, entry := range response.Data {
-		models = append(models, selectID(entry))
-	}
-	for _, entry := range response.Models {
-		models = append(models, selectID(entry))
-	}
+	entries := make([]upstreamModelEntry, 0, len(response.Data)+len(response.Models))
+	entries = append(entries, response.Data...)
+	entries = append(entries, response.Models...)
 
-	if len(models) == 0 {
+	if len(entries) == 0 {
 		var arrayResponse []upstreamModelEntry
 		if err := json.Unmarshal(body, &arrayResponse); err == nil {
-			for _, entry := range arrayResponse {
-				models = append(models, selectID(entry))
-			}
+			entries = append(entries, arrayResponse...)
 		}
 	}
 
-	return dedupeAndSortModelIDs(models), nil
+	return buildUpstreamModelDetails(entries, selectID), nil
+}
+
+func buildUpstreamModelDetails(entries []upstreamModelEntry, selectID func(upstreamModelEntry) string) []UpstreamModel {
+	byID := make(map[string]UpstreamModel, len(entries))
+	for _, entry := range entries {
+		modelID := strings.TrimSpace(selectID(entry))
+		if modelID == "" {
+			continue
+		}
+		name := upstreamModelEntryName(entry, modelID)
+		if existing, ok := byID[modelID]; ok && existing.Name != existing.ID {
+			continue
+		}
+		byID[modelID] = UpstreamModel{ID: modelID, Name: name}
+	}
+
+	models := make([]UpstreamModel, 0, len(byID))
+	for _, model := range byID {
+		models = append(models, model)
+	}
+	sort.Slice(models, func(i, j int) bool { return models[i].ID < models[j].ID })
+	return models
+}
+
+func upstreamModelEntryName(entry upstreamModelEntry, modelID string) string {
+	candidates := []string{entry.DisplayName, entry.Name}
+	if len(entry.Meta) > 0 {
+		var meta upstreamModelEntryMetadata
+		if err := json.Unmarshal(entry.Meta, &meta); err == nil {
+			candidates = append(candidates, meta.DisplayName, meta.Name)
+		}
+	}
+	for _, candidate := range candidates {
+		if name := strings.TrimSpace(strings.TrimPrefix(candidate, "models/")); name != "" {
+			return name
+		}
+	}
+	return modelID
+}
+
+func upstreamModelIDs(models []UpstreamModel) []string {
+	ids := make([]string, 0, len(models))
+	for _, model := range models {
+		ids = append(ids, model.ID)
+	}
+	return ids
 }
 
 func upstreamModelEntryID(entry upstreamModelEntry) string {

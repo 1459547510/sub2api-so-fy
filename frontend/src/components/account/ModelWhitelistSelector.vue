@@ -14,7 +14,7 @@
           >
             <span class="flex items-center gap-1 truncate">
               <ModelIcon :model="model" size="14px" />
-              <span class="truncate">{{ model }}</span>
+              <span class="truncate" :title="model">{{ modelDisplayName(model) }}</span>
             </span>
             <button
               type="button"
@@ -72,7 +72,9 @@
                 </svg>
               </span>
               <ModelIcon :model="model.value" size="18px" />
-              <span class="truncate text-gray-900 dark:text-white">{{ model.value }}</span>
+              <span class="min-w-0 truncate text-gray-900 dark:text-white" :title="model.value">
+                {{ modelDisplayName(model.value) }}
+              </span>
             </button>
             <button
               type="button"
@@ -149,7 +151,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { accountsAPI } from '@/api/admin/accounts'
-import type { SyncUpstreamPreviewParams } from '@/api/admin/accounts'
+import type { SyncUpstreamPreviewParams, UpstreamModelDetail } from '@/api/admin/accounts'
 import { useClipboard } from '@/composables/useClipboard'
 import ModelIcon from '@/components/common/ModelIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -182,6 +184,7 @@ const searchQuery = ref('')
 const customModel = ref('')
 const isComposing = ref(false)
 const isSyncingUpstream = ref(false)
+const syncedModelNames = ref<Record<string, string>>({})
 const normalizedPlatforms = computed(() => {
   const rawPlatforms =
     props.platforms && props.platforms.length > 0
@@ -212,18 +215,25 @@ const canSyncUpstream = computed(() => {
 })
 
 const availableOptions = computed(() => {
-  if (normalizedPlatforms.value.length === 0) {
-    return allModels
-  }
+  const configuredModels = normalizedPlatforms.value.length === 0
+    ? allModels
+    : allModels.filter(model => {
+        const allowedModels = new Set<string>()
+        for (const platform of normalizedPlatforms.value) {
+          for (const modelID of getModelsByPlatform(platform)) {
+            allowedModels.add(modelID)
+          }
+        }
+        return allowedModels.has(model.value)
+      })
 
-  const allowedModels = new Set<string>()
-  for (const platform of normalizedPlatforms.value) {
-    for (const model of getModelsByPlatform(platform)) {
-      allowedModels.add(model)
+  const options = [...configuredModels]
+  for (const [id, name] of Object.entries(syncedModelNames.value)) {
+    if (!options.some(model => model.value === id)) {
+      options.push({ value: id, label: name || id })
     }
   }
-
-  return allModels.filter(model => allowedModels.has(model.value))
+  return options
 })
 
 const filteredModels = computed(() => {
@@ -241,6 +251,11 @@ const toggleDropdown = () => {
 
 const removeModel = (model: string) => {
   emit('update:modelValue', props.modelValue.filter(m => m !== model))
+}
+
+const modelDisplayName = (modelID: string) => {
+  const name = syncedModelNames.value[modelID]?.trim()
+  return name && name !== modelID ? `${name} (${modelID})` : modelID
 }
 
 const toggleModel = (model: string) => {
@@ -295,6 +310,12 @@ const syncUpstreamModels = async () => {
       result = await accountsAPI.syncUpstreamModelsPreview(props.syncCredentials as SyncUpstreamPreviewParams)
     } else {
       return
+    }
+
+    for (const detail of (result.model_details ?? []) as UpstreamModelDetail[]) {
+      const id = detail.id?.trim()
+      const name = detail.name?.trim()
+      if (id && name) syncedModelNames.value[id] = name
     }
 
     const upstreamModels = result.models.map(model => model.trim()).filter(Boolean)

@@ -539,6 +539,12 @@ export async function getAvailableModels(id: number): Promise<ClaudeModel[]> {
 
 export interface SyncUpstreamModelsResult {
   models: string[]
+  model_details?: UpstreamModelDetail[]
+}
+
+export interface UpstreamModelDetail {
+  id: string
+  name?: string
 }
 
 /**
