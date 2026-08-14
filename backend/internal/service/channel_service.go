@@ -357,7 +357,7 @@ func isPlatformPricingMatch(groupPlatform, pricingPlatform string) bool {
 // fallback used before a request target has been resolved.
 func matchingPlatforms(groupPlatform string) []string {
 	if groupPlatform == PlatformComposite {
-		return []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrok}
+		return []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrok, PlatformLeo, PlatformOpenAIMedia}
 	}
 	return []string{groupPlatform}
 }
@@ -685,7 +685,7 @@ func validatePricingBillingMode(pricing []ChannelModelPricing) error {
 
 func checkBillingModeRequirements(p ChannelModelPricing) error {
 	if p.BillingMode == BillingModeVideo {
-		if p.Platform == PlatformLeo {
+		if IsMediaPlatform(p.Platform) {
 			return checkVideoBillingModeRequirements(p)
 		}
 		if p.PerRequestPrice == nil && len(p.Intervals) == 0 {

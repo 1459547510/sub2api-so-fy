@@ -447,7 +447,7 @@
                   :key="idx"
                   :entry="entry"
                   :platform="section.platform"
-                  :allow-video="section.platform === 'leo'"
+                  :allow-video="section.platform === 'leo' || section.platform === 'openai_media'"
                   @update="updatePricingEntry(sIdx, idx, $event)"
                   @remove="removePricingEntry(sIdx, idx)"
                 />
@@ -762,7 +762,7 @@ const form = reactive({
 let abortController: AbortController | null = null
 
 // ── Platform config ──
-const platformOrder: GroupPlatform[] = ['anthropic', 'openai', 'gemini', 'antigravity', 'grok', 'leo']
+const platformOrder: GroupPlatform[] = ['anthropic', 'openai', 'gemini', 'antigravity', 'grok', 'leo', 'openai_media']
 
 // ── Helpers ──
 function formatDate(value: string): string {
@@ -851,7 +851,7 @@ function toggleGroupInSection(sectionIdx: number, groupId: number) {
 // ── Pricing helpers ──
 function addPricingEntry(sectionIdx: number) {
   const section = form.platforms[sectionIdx]
-  if (section.platform !== 'leo') {
+  if (section.platform !== 'leo' && section.platform !== 'openai_media') {
     section.model_pricing.push(createPricingFormEntry())
     return
   }

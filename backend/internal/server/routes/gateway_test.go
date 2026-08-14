@@ -270,6 +270,26 @@ func TestGatewayRoutesCompositeVideoLookupsUseGrokHandler(t *testing.T) {
 	}
 }
 
+func TestCompositeVideoLookupRecognizesLegacyLeoJobIDs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		key  string
+	}{
+		{name: "generic lookup", key: "request_id"},
+		{name: "legacy job lookup", key: "job_id"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Params = gin.Params{{Key: tc.key, Value: "vidjob_legacy"}}
+			require.Equal(t, "vidjob_legacy", videoLookupRequestID(c))
+			require.True(t, isLeoVideoJobID(videoLookupRequestID(c)))
+		})
+	}
+
+	require.False(t, isLeoVideoJobID("request-123"))
+}
+
 func TestGatewayRoutesCompositeMessagesWithGrokModelUsesOpenAIGateway(t *testing.T) {
 	router := newGatewayRoutesTestRouter(service.PlatformComposite)
 

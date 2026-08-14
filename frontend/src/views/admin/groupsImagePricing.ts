@@ -4,13 +4,14 @@ export const imagePricingPlatforms = new Set([
   "gemini",
   "grok",
   "openai",
+  "openai_media",
 ]);
 
 export const supportsImagePricingPlatform = (platform: string): boolean =>
   imagePricingPlatforms.has(platform);
 
 export const supportsVideoPricingPlatform = (platform: string): boolean =>
-  platform === "grok" || platform === "leo";
+	platform === "grok" || platform === "leo" || platform === "openai_media";
 
 export const imagePricingI18nKey = (_platform: string, key: string): string =>
   `admin.groups.imagePricing.${key}`;
@@ -29,7 +30,7 @@ type VideoPricingValues = Record<VideoPricingTierKey, number | string | null> & 
 };
 
 export const hasCompleteLeoVideoPrices = (form: VideoPricingValues): boolean =>
-  form.platform !== "leo" ||
+	(form.platform !== "leo" && form.platform !== "openai_media") ||
   [form.video_price_480p, form.video_price_720p, form.video_price_1080p].every(
     (value) =>
       value !== null &&

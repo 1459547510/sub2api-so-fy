@@ -951,6 +951,7 @@ export default {
         antigravity: 'Antigravity',
         grok: 'Grok',
         leo: 'Leo',
+        openai_media: 'OpenAI Media',
         composite: 'Composite',
       },
       deleteConfirm:
@@ -992,7 +993,7 @@ export default {
         title: 'Video Generation Pricing',
         leoDescription: 'Leo videos are billed by actual output duration. Manually enter all 480p, 720p, and 1080p prices in USD per second.',
         allowVideoGeneration: 'Allow video generation for this group',
-        leoPricesRequired: 'Leo groups require non-negative 480p, 720p, and 1080p video prices',
+        leoPricesRequired: 'Video media groups require non-negative 480p, 720p, and 1080p video prices',
         description:
           'Configure Grok video generation prices in USD per second of output video. Leave empty to use the default per-second rates (grok-imagine-video: $0.05/s 480p, $0.07/s 720p; video-1.5: $0.08/s 480p, $0.14/s 720p, $0.25/s 1080p).',
         modelOverridesTitle: 'Per-model video price overrides',

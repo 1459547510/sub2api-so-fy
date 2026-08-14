@@ -299,6 +299,19 @@ As of 2026-07-29, the LTX channel prices are:
 Each LTX tier is frozen independently in the async job billing snapshot, so a
 later channel edit does not change an already accepted job's settlement price.
 
+As of 2026-08-13, the production channel also uses these recommended prices:
+
+| Model | Resolution prices (USD/s) |
+| --- | --- |
+| `gemini-omni-flash` | `720p = $0.110` |
+| `kling-video-o-1` | `1080p = $0.110` |
+| `kling-3.0` | `720p = $0.090`; `1080p = $0.120`; `2160p = $0.450` |
+| `kling-3.0-turbo` | `720p = $0.140`; `1080p = $0.170` |
+| `kling-video-o-3` | `720p = $0.180`; `1080p = $0.240`; `2160p = $0.450` |
+| `veo-3.1-generate-001` | `720p = $0.220`; `1080p = $0.220`; `2160p = $0.430` |
+| `veo-3.1-fast-generate-001` | `720p = $0.110`; `1080p = $0.430`; `2160p = $0.430` |
+| `veo-3.1-lite` | `720p = $0.032`; `1080p = $0.054` |
+
 ### Customer media upload contract
 
 `POST /v1/videos/uploads` accepts `image`, `video`, `audio`, or `file` with

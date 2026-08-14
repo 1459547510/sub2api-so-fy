@@ -174,6 +174,20 @@
             <PlatformIcon platform="leo" size="sm" />
             Leo
           </button>
+          <button
+            type="button"
+            data-testid="platform-openai-media"
+            @click="form.platform = 'openai_media'"
+            :class="[
+              'flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all',
+              form.platform === 'openai_media'
+                ? 'bg-white text-cyan-700 shadow-sm dark:bg-dark-600 dark:text-cyan-300'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            ]"
+          >
+            <PlatformIcon platform="openai_media" size="sm" />
+            OpenAI Media
+          </button>
         </div>
       </div>
 
@@ -1133,8 +1147,8 @@
           <input
             v-model="apiKeyBaseUrl"
             type="text"
-            :required="form.platform === 'leo'"
-            :data-testid="form.platform === 'leo' ? 'leo-base-url' : undefined"
+            :required="form.platform === 'leo' || form.platform === 'openai_media'"
+            :data-testid="form.platform === 'leo' ? 'leo-base-url' : form.platform === 'openai_media' ? 'openai-media-base-url' : undefined"
             class="input"
             :placeholder="
               form.platform === 'openai'
@@ -1145,6 +1159,8 @@
                     ? 'https://api.x.ai/v1'
                     : form.platform === 'leo'
                       ? 'http://leostudio:8000/v1'
+                      : form.platform === 'openai_media'
+                        ? 'https://pool-a.example.com/v1'
                       : 'https://api.anthropic.com'
             "
           />
@@ -1161,7 +1177,7 @@
             v-model="apiKeyValue"
             type="password"
             required
-            :data-testid="form.platform === 'leo' ? 'leo-api-key' : undefined"
+            :data-testid="form.platform === 'leo' ? 'leo-api-key' : form.platform === 'openai_media' ? 'openai-media-api-key' : undefined"
             class="input font-mono"
             :placeholder="
               form.platform === 'openai'
@@ -1172,6 +1188,8 @@
                     ? 'xai-...'
                     : form.platform === 'leo'
                       ? 'leo-api-key'
+                      : form.platform === 'openai_media'
+                        ? 'media-api-key'
                       : 'sk-ant-...'
             "
           />
@@ -1222,7 +1240,7 @@
             <!-- Mode Toggle -->
             <div class="mb-4 flex gap-2">
               <button
-                v-if="form.platform !== 'leo'"
+                v-if="form.platform !== 'leo' && form.platform !== 'openai_media'"
                 type="button"
                 @click="modelRestrictionMode = 'whitelist'"
                 :class="[
@@ -3686,7 +3704,7 @@ const baseUrlHint = computed(() => {
   if (form.platform === 'openai') return t('admin.accounts.openai.baseUrlHint')
   if (form.platform === 'gemini') return t('admin.accounts.gemini.baseUrlHint')
   if (form.platform === 'grok') return ''
-  if (form.platform === 'leo') return t('admin.accounts.leo.baseUrlHint')
+  if (form.platform === 'leo' || form.platform === 'openai_media') return t('admin.accounts.leo.baseUrlHint')
   return t('admin.accounts.baseUrlHint')
 })
 
@@ -3694,7 +3712,7 @@ const apiKeyHint = computed(() => {
   if (form.platform === 'openai') return t('admin.accounts.openai.apiKeyHint')
   if (form.platform === 'gemini') return t('admin.accounts.gemini.apiKeyHint')
   if (form.platform === 'grok') return ''
-  if (form.platform === 'leo') return t('admin.accounts.leo.apiKeyHint')
+  if (form.platform === 'leo' || form.platform === 'openai_media') return t('admin.accounts.leo.apiKeyHint')
   return t('admin.accounts.apiKeyHint')
 })
 
@@ -4279,7 +4297,7 @@ watch(
           ? 'https://generativelanguage.googleapis.com'
           : newPlatform === 'grok'
             ? 'https://api.x.ai/v1'
-            : newPlatform === 'leo'
+            : newPlatform === 'leo' || newPlatform === 'openai_media'
               ? ''
               : 'https://api.anthropic.com'
     // Clear model-related settings
@@ -4308,7 +4326,7 @@ watch(
       form.concurrency = 1
       form.load_factor = null
     }
-    if (newPlatform === 'leo') {
+    if (newPlatform === 'leo' || newPlatform === 'openai_media') {
       accountCategory.value = 'apikey'
       form.type = 'apikey'
       modelRestrictionMode.value = 'mapping'
@@ -5178,7 +5196,7 @@ const handleSubmit = async () => {
     appStore.showError(t('admin.accounts.pleaseEnterApiKey'))
     return
   }
-  if (form.platform === 'leo' && !apiKeyBaseUrl.value.trim()) {
+  if ((form.platform === 'leo' || form.platform === 'openai_media') && !apiKeyBaseUrl.value.trim()) {
     appStore.showError(t('admin.accounts.leo.baseUrlRequired'))
     return
   }
@@ -5186,7 +5204,7 @@ const handleSubmit = async () => {
   const modelMapping = !isOpenAIModelRestrictionDisabled.value
     ? buildModelMappingObject(modelRestrictionMode.value, allowedModels.value, modelMappings.value)
     : undefined
-  if (form.platform === 'leo' && !modelMapping) {
+  if ((form.platform === 'leo' || form.platform === 'openai_media') && !modelMapping) {
     appStore.showError(t('admin.accounts.leo.modelMappingRequired'))
     return
   }
@@ -5199,7 +5217,7 @@ const handleSubmit = async () => {
         ? 'https://generativelanguage.googleapis.com'
         : form.platform === 'grok'
           ? 'https://api.x.ai/v1'
-          : form.platform === 'leo'
+          : form.platform === 'leo' || form.platform === 'openai_media'
             ? ''
             : 'https://api.anthropic.com'
 

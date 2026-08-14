@@ -527,7 +527,7 @@ export interface PaginationConfig {
 
 // ==================== API Key & Group Types ====================
 
-export type GroupPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok' | 'leo' | 'video' | 'composite'
+export type GroupPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok' | 'leo' | 'openai_media' | 'video' | 'composite'
 
 export type VideoModelPrices = Record<string, Record<string, number>>
 

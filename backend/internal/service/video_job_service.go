@@ -253,7 +253,11 @@ func (s *OpenAIGatewayService) Select(ctx context.Context, groupID int64, model 
 	if s == nil {
 		return nil, errors.New("gateway service is nil")
 	}
-	selection, _, err := s.SelectAccountWithSchedulerForCapability(ctx, int64Pointer(groupID), "", "", model, excluded, OpenAIUpstreamTransportHTTPSSE, "", false, false, false, PlatformLeo)
+	platform := PlatformLeo
+	if resolved, ok := ResolvedTargetPlatformFromContext(ctx); ok && IsMediaPlatform(resolved) {
+		platform = resolved
+	}
+	selection, _, err := s.SelectAccountWithSchedulerForCapability(ctx, int64Pointer(groupID), "", "", model, excluded, OpenAIUpstreamTransportHTTPSSE, "", false, false, false, platform)
 	if err != nil || selection == nil || selection.Account == nil {
 		if err == nil {
 			err = errors.New("no leo account is available")

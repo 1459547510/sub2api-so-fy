@@ -1669,6 +1669,51 @@ func TestAdminService_CreateCompositeRoute_NormalizesAndPersists(t *testing.T) {
 	require.Equal(t, route, routeRepo.created)
 }
 
+func TestAdminService_CreateCompositeRoute_AllowsLeoTargetPlatform(t *testing.T) {
+	groupRepo := &groupRepoStubForAdmin{
+		getByID: &Group{ID: 7, Platform: PlatformComposite},
+	}
+	routeRepo := &compositeRouteRepoStubForAdmin{nextID: 100}
+	svc := &adminServiceImpl{groupRepo: groupRepo, compositeRouteRepo: routeRepo}
+
+	route, err := svc.CreateCompositeRoute(context.Background(), 7, CompositeRouteInput{
+		PublicModel:    "seedance-2.0",
+		MatchType:      CompositeRouteMatchExact,
+		TargetPlatform: PlatformLeo,
+		UpstreamModel:  "seedance-2.0-fast",
+		Endpoint:       CompositeRouteEndpointAny,
+		Enabled:        true,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, route)
+	require.Equal(t, int64(100), route.ID)
+	require.Equal(t, PlatformLeo, route.TargetPlatform)
+	require.Equal(t, "seedance-2.0-fast", route.UpstreamModel)
+	require.Equal(t, route, routeRepo.created)
+}
+
+func TestAdminService_CreateCompositeRoute_AllowsOpenAIMediaTargetPlatform(t *testing.T) {
+	groupRepo := &groupRepoStubForAdmin{
+		getByID: &Group{ID: 7, Platform: PlatformComposite},
+	}
+	routeRepo := &compositeRouteRepoStubForAdmin{nextID: 101}
+	svc := &adminServiceImpl{groupRepo: groupRepo, compositeRouteRepo: routeRepo}
+
+	route, err := svc.CreateCompositeRoute(context.Background(), 7, CompositeRouteInput{
+		PublicModel:    "happy-horse-1.1",
+		MatchType:      CompositeRouteMatchExact,
+		TargetPlatform: PlatformOpenAIMedia,
+		Endpoint:       CompositeRouteEndpointAny,
+		Enabled:        true,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, route)
+	require.Equal(t, PlatformOpenAIMedia, route.TargetPlatform)
+	require.Equal(t, route, routeRepo.created)
+}
+
 // TestAdminService_CreateCompositeRoute_ExactEmptyUpstreamBackfillsPublicModel 锁定
 // 保守行为：exact 路由留空 upstream_model 仍回填 public_model（持久化/展示契约不变）。
 func TestAdminService_CreateCompositeRoute_ExactEmptyUpstreamBackfillsPublicModel(t *testing.T) {

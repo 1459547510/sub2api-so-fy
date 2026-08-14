@@ -247,7 +247,7 @@ func defaultModelsListCandidateIDs(platform string) []string {
 		return ids
 	case PlatformGrok:
 		return xai.DefaultModelIDs()
-	case PlatformLeo:
+	case PlatformLeo, PlatformOpenAIMedia:
 		return append([]string(nil), LeoDefaultVideoModelIDs...)
 	case PlatformComposite:
 		return compositeDefaultModelsListCandidateIDs()
@@ -263,13 +263,13 @@ func defaultModelsListCandidateIDs(platform string) []string {
 func defaultAllowImageGenerationForPlatform(platform string) bool {
 	// Grok image and video generation routes share the legacy image-generation gate.
 	// Older clients send the false zero value, so Grok groups must default enabled.
-	return platform == PlatformGrok
+	return platform == PlatformGrok || platform == PlatformOpenAIMedia
 }
 
 func compositeDefaultModelsListCandidateIDs() []string {
 	seen := make(map[string]struct{})
 	ids := make([]string, 0)
-	for _, platform := range []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrok} {
+	for _, platform := range []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrok, PlatformLeo, PlatformOpenAIMedia} {
 		for _, id := range defaultModelsListCandidateIDs(platform) {
 			if _, ok := seen[id]; ok {
 				continue
@@ -572,17 +572,17 @@ func normalizePrice(price *float64) *float64 {
 }
 
 func validateLeoVideoPrices(group *Group) error {
-	if group == nil || group.Platform != PlatformLeo {
+	if group == nil || !IsMediaPlatform(group.Platform) {
 		return nil
 	}
 	if group.VideoPrice480P == nil {
-		return errors.New("video_price_480p is required for leo groups")
+		return errors.New("video_price_480p is required for media groups")
 	}
 	if group.VideoPrice720P == nil {
-		return errors.New("video_price_720p is required for leo groups")
+		return errors.New("video_price_720p is required for media groups")
 	}
 	if group.VideoPrice1080P == nil {
-		return errors.New("video_price_1080p is required for leo groups")
+		return errors.New("video_price_1080p is required for media groups")
 	}
 	return nil
 }

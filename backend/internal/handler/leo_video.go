@@ -18,6 +18,15 @@ import (
 	"go.uber.org/zap"
 )
 
+func leoVideoRequestPlatform(c *gin.Context) string {
+	if c != nil && c.Request != nil {
+		if platform, ok := service.ResolvedTargetPlatformFromContext(c.Request.Context()); ok && service.IsMediaPlatform(platform) {
+			return platform
+		}
+	}
+	return service.PlatformLeo
+}
+
 func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 	if service.PrefersLeoRespondAsync(c.Request.Header) {
 		h.LeoVideoAsyncGeneration(c)
@@ -65,6 +74,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 		return
 	}
 	requestModel := strings.TrimSpace(requestInfo.Model)
+	requestPlatform := leoVideoRequestPlatform(c)
 	if requestModel == "" {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "model is required")
 		return
@@ -154,11 +164,11 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 			false,
 			false,
 			false,
-			service.PlatformLeo,
+			requestPlatform,
 		)
 		if err != nil || selection == nil || selection.Account == nil {
 			if len(failedAccountIDs) == 0 {
-				cls := classifyNoAccountErrorFromGin(c, h.gatewayService, apiKey, requestModel, requestModel, service.PlatformLeo)
+				cls := classifyNoAccountErrorFromGin(c, h.gatewayService, apiKey, requestModel, requestModel, requestPlatform)
 				if !cls.ModelNotFound {
 					markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
 				}
@@ -166,7 +176,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 				return
 			}
 			if lastFailoverErr != nil {
-				h.handleFailoverExhausted(c, lastFailoverErr, false, service.PlatformLeo)
+				h.handleFailoverExhausted(c, lastFailoverErr, false, requestPlatform)
 			} else {
 				h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
 			}
@@ -219,14 +229,14 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 			if errors.As(err, &failoverErr) {
 				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
 				if c.Writer.Size() != writerSizeBeforeForward {
-					h.handleFailoverExhausted(c, failoverErr, true, service.PlatformLeo)
+					h.handleFailoverExhausted(c, failoverErr, true, requestPlatform)
 					return
 				}
 				h.gatewayService.RecordOpenAIAccountSwitch()
 				failedAccountIDs[account.ID] = struct{}{}
 				lastFailoverErr = failoverErr
 				if switchCount >= maxAccountSwitches {
-					h.handleFailoverExhausted(c, failoverErr, false, service.PlatformLeo)
+					h.handleFailoverExhausted(c, failoverErr, false, requestPlatform)
 					return
 				}
 				switchCount++

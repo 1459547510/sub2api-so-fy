@@ -6135,6 +6135,20 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Deploying this Release runs `221_group_model_pricing.sql` during startup; existing group long-context pricing remains enabled by default.
 - Rollback source behavior with `git revert -m 1 dc5188088bc6e7f30477a611bbd60c0ec7743bad` and publish a follow-up release. Leave the additive group columns in place for binary rollback; withdraw this Release only after removing GitHub Release `v0.1.176-fy.1` and deleting its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-13 - Task: Apply recommended production video pricing
+### What was done
+- Updated production video channel `5` with the recommended per-second prices for Gemini Omni Flash, Kling 3.0/O-series, and Veo 3.1 models.
+- Preserved all existing Seedance, Happy Horse, Grok Imagine, and LTX prices while normalizing Happy Horse and Grok onto their native resolution tiers.
+
+### Testing
+- The admin channel update returned HTTP `200`; the production channel remained `active` with group `25` attached.
+- A fresh `GET /api/v1/admin/channels/5` readback matched all 18 requested model-resolution prices exactly and reported 15 video models with 37 total price tiers.
+
+### Notes
+- `docs/LEO_VIDEO_CHANNEL.md`: records the 2026-08-13 production price snapshot for the eight newly priced video models.
+- `progress.md`: records the production configuration update, verification evidence, and rollback point.
+- Roll back by submitting the pre-change channel `5` model-pricing snapshot: remove the eight entries added on 2026-08-13, restore Happy Horse to `480p/720p/1080p = 0.15/0.15/0.19`, and restore Grok Imagine 1.5 to `480p/720p/1080p = 0.10/0.17/0.17`; keep the other seven model prices unchanged.
+
 ## 2026-08-14 - Task: Synchronize Leo image models and Seedance 2.5 capabilities
 ### What was done
 - Changed Leo channel pricing synchronization to read the live authenticated model catalog, classify known video models separately from dynamic image models, remove raw UUID entries, and create one unsaved pricing row per newly discovered model so administrators only need to enter prices and save.
@@ -6190,3 +6204,143 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verifies Seedance 2.5 options on the generation page.
 - `progress.md`: records this implementation, verification evidence, changed-file inventory, and rollback point.
 - Rollback point: source baseline `9b329d435aa18fa48be5aadc32166f83fa8f8e55`. After this task is committed, use `git revert <task-commit>`; preserve the pre-existing `docs/LEO_VIDEO_CHANNEL.md`, earlier `progress.md` history, and `.superpowers/` content.
+
+## 2026-08-14 - Task: Release Leo image and Seedance 2.5 update as v0.1.176-fy.2
+### What was done
+- Updated the stale Leo gateway route regression so it covers both video and image generation without changing production routing behavior.
+- Pushed test commit `1367b309de6ce9227731281de74195c519a78fc6` and published annotated tag `v0.1.176-fy.2` from that commit.
+- Confirmed the public GitHub Release contains the Linux amd64 archive and checksum manifest.
+
+### Testing
+- `go test -p 1 ./... -count=1`: passed for all backend packages.
+- `go vet ./...`: passed.
+- Full frontend Vitest suite: passed 230 test files and 1622 tests.
+- Targeted frontend Leo/channel/video suite: passed 3 test files and 50 tests.
+- `npm run build`: passed; Vite transformed 1031 modules with only pre-existing chunking and Browserslist warnings.
+- Both Release downloads returned HTTP `200`; `sub2api_0.1.176-fy.2_linux_amd64.tar.gz` is 37,467,734 bytes.
+- Archive SHA-256 `52a7219cc3b158e6e224f0b9b497e8281580caabddeb6f67bb59ab7e800a3b11` exactly matched `checksums.txt`; `tar -tzf` listed only `sub2api`.
+
+### Notes
+- `backend/internal/server/routes/gateway_test.go`: aligns the Leo route contract test with the newly supported image-generation endpoint.
+- `progress.md`: records validation, publication, artifact integrity, and rollback evidence for this Release while preserving pre-existing local entries.
+- Roll back with `git revert 1367b309de6ce9227731281de74195c519a78fc6` followed by a new Release if only the test adjustment must be removed. To withdraw this binary Release, remove GitHub Release `v0.1.176-fy.2` and delete its remote tag; the previous deployable Release remains `v0.1.176-fy.1`.
+
+## 2026-08-14 - Task: Preserve legacy Leo protocol in composite media groups
+### What was done
+- Allowed composite routes to target the Leo account platform for explicit video and image model aliases.
+- Kept the existing Leo endpoint paths and request-body contract available to composite-group keys.
+- Routed persisted `vidjob_` status and content lookups back to the Leo job service while retaining Grok handling for other media request IDs.
+- Added regression coverage for Leo route resolution, admin route creation, and legacy job-ID recognition.
+
+### Testing
+- `go test ./internal/server/routes ./internal/service -run 'Test(Composite|AdminService_CreateCompositeRoute)' -count=1 -timeout=120s`: passed.
+- `gofmt` and `git diff --check`: passed.
+
+### Notes
+- `backend/internal/server/routes/gateway.go`: dispatches composite legacy Leo job lookups by `vidjob_` ID and keeps composite Leo video gates open.
+- `backend/internal/server/routes/gateway_test.go`: covers legacy Leo lookup ID recognition.
+- `backend/internal/server/routes/composite_platform_test.go`: covers explicit composite-to-Leo model routing and body rewriting.
+- `backend/internal/service/admin_service_group_test.go`: covers creating a composite route targeting Leo.
+- `docs/COMPOSITE_GROUPS.md`: documents old-client compatibility and media route setup.
+- `progress.md`: records this task and verification evidence.
+- Roll back this task with `git revert <task-commit>` after committing; do not remove the pre-existing `.superpowers/` directory or unrelated progress history.
+
+## 2026-08-14 - Task: Include all compatible account pools in composite discovery
+### What was done
+- Included Leo as a concrete composite channel/model-list platform so its media pricing and available models are visible alongside other account pools.
+- Did not invent a new platform identifier for unspecified custom pools; their stored account platform and protocol still need to be confirmed before adding provider-specific handlers.
+
+### Testing
+- `go test ./internal/server/routes -count=1 -timeout=180s`: passed.
+- `go test ./internal/service -count=1 -timeout=180s`: passed.
+- `go test ./internal/handler -run 'Test(DefaultModelIDsForPlatform|Gateway.*Model|Composite.*Model)' -count=1 -timeout=120s`: passed.
+- `git diff --check`: passed.
+
+### Notes
+- `backend/internal/service/channel_service.go`: includes Leo in composite pricing fallback lookup.
+- `backend/internal/service/channel_service_test.go`: updates the composite concrete-platform contract to include Leo.
+- `backend/internal/handler/gateway_handler.go`: includes Leo models in composite model discovery and fallback lists.
+- `progress.md`: records this follow-up scope and the remaining custom-pool storage clarification.
+- Roll back with `git revert <task-commit>` after committing; preserve unrelated worktree changes.
+
+## 2026-08-14 - Task: Keep LeoStudio and OpenAI Media together in one composite group
+### What was done
+- Kept existing LeoStudio accounts on `platform=leo` and added `platform=openai_media` for new self-hosted OpenAI-compatible media pools.
+- Added explicit composite route targets for both platforms so one professional media group can serve both pools without changing the customer's existing OpenAI-compatible API contract.
+- Extended media account creation/editing, model discovery, pricing, quota validation, scheduling, image/video dispatch, error attribution, and admin UI platform selectors for `openai_media` while leaving the Leo route and Leo account contract unchanged.
+- Added the database constraint migration and documented the two-pool composite setup.
+
+### Testing
+- `go test ./internal/repository -count=1 -timeout=120s`: passed.
+- `go test ./internal/handler/admin -run 'Test.*Group|Test.*Platform|Test.*Composite' -count=1 -timeout=120s`: passed.
+- Targeted composite, Leo, image, and channel backend tests: passed.
+- Targeted frontend Vitest suite: passed 4 files / 78 tests.
+- `pnpm.cmd run typecheck`: passed.
+- `gofmt` and `git diff --check`: passed.
+- Wider `go test ./internal/service ./internal/handler ./internal/server/routes -count=1 -timeout=180s` reached the existing `TestValidateProfitControlConfig` and `TestNormalizeProfitControlConfig` failures; those tests expect legacy profit-control platform behavior and are unrelated to `openai_media` routing. Handler and route packages passed.
+
+### Notes
+- `backend/ent/schema/user_platform_quota.go`: accepts the new media platform in quota validation.
+- `backend/migrations/222_add_openai_media_platforms.sql`: adds database constraints for `openai_media` and composite targets.
+- `backend/internal/domain/constants.go`: defines the `openai_media` platform constant.
+- `backend/internal/handler/admin/channel_handler.go`: includes the media platform in admin channel handling.
+- `backend/internal/handler/admin/group_handler.go`: accepts the media platform in group APIs.
+- `backend/internal/handler/endpoint.go`: includes media endpoint capability checks.
+- `backend/internal/handler/gateway_handler.go`: exposes composite media models and platform-neutral routing.
+- `backend/internal/handler/leo_video.go`: preserves Leo video handling while allowing composite media keys.
+- `backend/internal/handler/openai_gateway_handler.go`: applies composite media target resolution.
+- `backend/internal/handler/openai_images.go`: routes OpenAI Media image requests without applying Leo-only restrictions.
+- `backend/internal/model/error_passthrough_rule.go`: records the media platform for error attribution.
+- `backend/internal/server/routes/composite_platform_test.go`: covers composite Leo and OpenAI Media route behavior.
+- `backend/internal/server/routes/gateway.go`: dispatches composite media routes and preserves legacy Leo job lookup.
+- `backend/internal/server/routes/gateway_test.go`: covers composite media and legacy Leo endpoint contracts.
+- `backend/internal/service/account.go`: recognizes media account capability and model mappings.
+- `backend/internal/service/account_test_service.go`: extends account test fixtures for media accounts.
+- `backend/internal/service/admin_group.go`: supports media platform group operations.
+- `backend/internal/service/admin_service_group_test.go`: covers composite route creation for media targets.
+- `backend/internal/service/channel_service.go`: includes media pools in channel model/pricing resolution.
+- `backend/internal/service/channel_service_test.go`: verifies media platform channel behavior.
+- `backend/internal/service/composite_platform.go`: resolves explicit Leo and OpenAI Media targets.
+- `backend/internal/service/composite_platform_test.go`: verifies concrete media route resolution.
+- `backend/internal/service/domain_constants.go`: registers media platform domain metadata.
+- `backend/internal/service/group.go`: includes media platform group behavior.
+- `backend/internal/service/leo_account.go`: preserves the Leo account contract alongside media accounts.
+- `backend/internal/service/leo_account_test.go`: verifies the unchanged Leo account contract.
+- `backend/internal/service/leo_video.go`: keeps Leo video scheduling semantics intact.
+- `backend/internal/service/leo_video_async.go`: keeps Leo async job binding intact.
+- `backend/internal/service/openai_account_scheduler.go`: schedules media accounts independently from Leo accounts.
+- `backend/internal/service/openai_gateway_scheduling.go`: carries composite media platform selection through scheduling.
+- `backend/internal/service/openai_images.go`: forwards media image requests using OpenAI-compatible credentials.
+- `backend/internal/service/openai_images_test.go`: verifies media image capability and routing.
+- `backend/internal/service/scheduler_snapshot_service.go`: includes media platform snapshots.
+- `backend/internal/service/upstream_models.go`: discovers and classifies media models.
+- `backend/internal/service/video_job_billing.go`: attributes media video billing to the resolved platform.
+- `backend/internal/service/video_job_service.go`: supports media video job dispatch.
+- `docs/COMPOSITE_GROUPS.md`: documents LeoStudio and OpenAI Media coexistence in one group.
+- `docs/LEO_VIDEO_CHANNEL.md`: clarifies legacy Leo channel compatibility.
+- `frontend/src/api/admin/settings.ts`: exposes media platform settings.
+- `frontend/src/api/admin/users.ts`: exposes media platform quota data.
+- `frontend/src/components/account/CreateAccountModal.vue`: adds OpenAI Media account creation.
+- `frontend/src/components/account/EditAccountModal.vue`: adds OpenAI Media account editing.
+- `frontend/src/components/account/ModelWhitelistSelector.vue`: supports media model selection.
+- `frontend/src/components/account/__tests__/CreateAccountModal.spec.ts`: covers media account creation UI.
+- `frontend/src/components/admin/ErrorPassthroughRulesModal.vue`: includes media platform labels.
+- `frontend/src/components/admin/account/AccountTableFilters.vue`: filters media accounts.
+- `frontend/src/components/admin/channel/types.ts`: classifies media pricing rows.
+- `frontend/src/components/admin/user/UserPlatformQuotaModal.vue`: supports media quotas.
+- `frontend/src/components/common/GroupBadge.vue`: renders media group badges.
+- `frontend/src/components/common/PlatformIcon.vue`: renders the media platform icon.
+- `frontend/src/components/common/PlatformTypeBadge.vue`: renders the media platform badge.
+- `frontend/src/components/user/UserPlatformQuotaCell.vue`: displays media quota usage.
+- `frontend/src/i18n/locales/en/admin/accounts.ts`: adds English media labels.
+- `frontend/src/i18n/locales/en/admin/overview.ts`: adds English media overview labels.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: adds Chinese media labels.
+- `frontend/src/i18n/locales/zh/admin/overview.ts`: adds Chinese media overview labels.
+- `frontend/src/types/index.ts`: adds the media platform type.
+- `frontend/src/views/admin/ChannelsView.vue`: handles media channel pricing.
+- `frontend/src/views/admin/GroupsView.vue`: exposes media groups and composite route targets.
+- `frontend/src/views/admin/groupsImagePricing.ts`: supports media image pricing.
+- `frontend/src/views/admin/ops/components/OpsDashboardHeader.vue`: includes media platform filters.
+- `frontend/src/views/user/VideoGenerationView.vue`: permits media-enabled composite keys.
+- `progress.md`: records this task and test evidence.
+- Rollback: after committing, use `git revert <task-commit>`; do not remove the pre-existing `.superpowers/` directory or unrelated progress history.

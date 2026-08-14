@@ -532,8 +532,8 @@ func (h *ChannelHandler) SyncPricingModels(c *gin.Context) {
 		return
 	}
 
-	if platform == service.PlatformLeo {
-		details := h.syncLeoPricingModels(c)
+	if service.IsMediaPlatform(platform) {
+		details := h.syncMediaPricingModels(c, platform)
 		response.Success(c, gin.H{"models": upstreamModelIDs(details), "model_details": details})
 		return
 	}
@@ -550,9 +550,9 @@ func (h *ChannelHandler) SyncPricingModels(c *gin.Context) {
 	response.Success(c, gin.H{"models": models})
 }
 
-func (h *ChannelHandler) syncLeoPricingModels(c *gin.Context) []service.UpstreamModel {
+func (h *ChannelHandler) syncMediaPricingModels(c *gin.Context, platform string) []service.UpstreamModel {
 	if h.accountRepo != nil && h.accountTest != nil {
-		accounts, err := h.accountRepo.ListSchedulableByPlatform(c.Request.Context(), service.PlatformLeo)
+		accounts, err := h.accountRepo.ListSchedulableByPlatform(c.Request.Context(), platform)
 		if err == nil {
 			for i := range accounts {
 				details, fetchErr := h.accountTest.FetchUpstreamSupportedModelDetails(c.Request.Context(), &accounts[i])

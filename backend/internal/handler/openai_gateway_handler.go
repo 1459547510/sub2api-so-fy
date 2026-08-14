@@ -2574,7 +2574,7 @@ func (h *OpenAIGatewayHandler) handleFailoverExhausted(c *gin.Context, failoverE
 }
 
 func publicUpstreamErrorMessage(platform, message string) string {
-	if strings.EqualFold(strings.TrimSpace(platform), service.PlatformLeo) {
+	if service.IsMediaPlatform(platform) {
 		return service.PublicVideoErrorMessage(message)
 	}
 	return message

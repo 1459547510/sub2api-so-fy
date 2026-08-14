@@ -2086,7 +2086,7 @@ func (s *OpenAIGatewayService) SelectAccountWithSchedulerForImages(
 	platform string,
 ) (*AccountSelectionResult, OpenAIAccountScheduleDecision, error) {
 	ctx = s.withCyberPolicyUserFilterContext(ctx)
-	if normalizeOpenAICompatiblePlatform(platform) != PlatformLeo {
+	if normalized := normalizeOpenAICompatiblePlatform(platform); normalized != PlatformLeo && normalized != PlatformOpenAIMedia {
 		platform = PlatformOpenAI
 	}
 	selection, decision, err := s.selectAccountWithScheduler(ctx, groupID, "", sessionHash, requestedModel, excludedIDs, OpenAIUpstreamTransportHTTPSSE, "", requiredCapability, false, platform, false, false)

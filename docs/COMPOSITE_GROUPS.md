@@ -14,6 +14,8 @@ Composite groups can route to these concrete account platforms:
 - OpenAI
 - Antigravity
 - Grok
+- Leo (video and image generation)
+- OpenAI Media (self-hosted OpenAI-compatible image/video pools)
 
 The selected concrete platform is used for account selection, user platform
 quota checks, post-usage billing, ops error platform attribution, channel
@@ -38,7 +40,8 @@ Each route belongs to one composite group and contains:
 - `upstream_model`: model identifier sent upstream. If omitted, the public
   model is reused.
 - `endpoint`: `any`, `messages`, `count_tokens`, `responses`,
-  `chat_completions`, `embeddings`, `images`, or `gemini`.
+  `chat_completions`, `embeddings`, `images`, or `gemini`. Video requests use
+  the `any` route because their legacy endpoint is `/v1/videos/generations`.
 - `priority`: lower values win after match specificity.
 - `enabled`: disabled routes are ignored by runtime resolution but remain
   visible to admins.
@@ -103,7 +106,10 @@ keys per provider.
    | `all/grok` | `responses` | `grok` | `grok-4.3` |
 
 5. Configure channel pricing and model mapping under the concrete platforms
-   named in each route. Composite routing does not create pricing records.
+   named in each route. Composite routing does not create pricing records. Leo
+   media routes must explicitly target `leo` because names such as
+   `gemini-omni-flash` and `grok-imagine-1.5` can also refer to other provider
+   families.
 6. Create a subscription payment plan for the composite group.
 
 The same composite group can also rely on built-in detection for standard model
@@ -111,12 +117,71 @@ names such as `gpt-*`, `claude-*`, `gemini-*`, and `grok-*`. Explicit routes are
 recommended for bundled plan aliases because they make endpoint, provider, and
 upstream model attribution reviewable in the admin UI.
 
+## Leo + OpenAI Media In One Group
+
+The professional media group can contain both account types at the same time:
+
+| Account pool | Stored platform | Authentication | Upstream contract |
+| --- | --- | --- | --- |
+| Existing LeoStudio accounts | `leo` | API key + `/v1` Base URL | Existing Leo video contract |
+| New self-hosted media pools | `openai_media` | API key + `/v1` Base URL | OpenAI-compatible images/videos |
+
+Example account credentials for a new pool:
+
+```json
+{
+  "platform": "openai_media",
+  "type": "apikey",
+  "credentials": {
+    "base_url": "https://pool-a.example.com/v1",
+    "api_key": "YOUR_UPSTREAM_API_KEY",
+    "model_mapping": {
+      "seedance-2.0": "seedance-2.0"
+    }
+  }
+}
+```
+
+Add explicit routes to the same composite group, for example:
+
+| Public model | Endpoint | Target platform |
+| --- | --- | --- |
+| `seedance-2.0` | `any` | `leo` |
+| `happy-horse-1.1` | `any` | `openai_media` |
+
+The client keeps the existing OpenAI-compatible endpoint and request body. The
+target platform controls account selection and billing; it does not alter the
+public API key or require a client migration.
+
 ## Limits
 
 Composite routes choose a concrete provider and upstream model; they do not
 create synthetic model metadata, pricing, or upstream capability records by
 themselves. Keep channel pricing/model mapping configured for the concrete
 provider platforms that the routes target.
+
+Legacy Leo clients remain compatible when their API key is moved to a
+composite group. The existing `/v1/videos/generations`, `/v1/videos/jobs/*`,
+and `/v1/videos/uploads` request and response contracts remain unchanged for
+Leo-routed models. Leo async job IDs are generated with the `vidjob_` prefix;
+when a client polls a generic legacy status or content path, that prefix sends
+the lookup back to the Leo job service. Unprefixed external request IDs retain
+the existing external media lookup path (currently Grok); a new asynchronous
+provider must register its task-ID binding before being enabled in this group.
+
+For a professional video/image composite group, keep the customer's old
+`Authorization` header and endpoint paths. Add explicit routes for every
+ambiguous media model, for example `seedance-2.0` -> `leo` and
+`grok-imagine-1.5` -> `grok`; the public model name and request body do not need
+to change on the client side.
+
+LeoStudio accounts remain in this same composite group with
+`platform=leo`. New self-hosted media pools use `platform=openai_media` and
+the same API-key fields (`base_url`, `api_key`, and `model_mapping`). Add both
+route targets to the group; do not migrate or rename the existing LeoStudio
+accounts. A route targeting `leo` selects only the original LeoStudio pool,
+while a route targeting `openai_media` selects only the new OpenAI-compatible
+pool.
 
 This PR intentionally does not implement:
 

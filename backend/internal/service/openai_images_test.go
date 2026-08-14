@@ -478,6 +478,13 @@ func TestAccountSupportsOpenAIImageCapability_LeoAPIKeySupportsNative(t *testing
 	require.True(t, account.SupportsOpenAIImageCapability(OpenAIImagesCapabilityNative))
 }
 
+func TestAccountSupportsOpenAIImageCapability_OpenAIMediaAPIKeySupportsNative(t *testing.T) {
+	account := &Account{Platform: PlatformOpenAIMedia, Type: AccountTypeAPIKey}
+
+	require.True(t, account.SupportsOpenAIImageCapability(OpenAIImagesCapabilityBasic))
+	require.True(t, account.SupportsOpenAIImageCapability(OpenAIImagesCapabilityNative))
+}
+
 func TestAccountSupportsOpenAIImageCapability_EmptyRequirementDoesNotRejectGrok(t *testing.T) {
 	account := &Account{
 		Platform: PlatformGrok,

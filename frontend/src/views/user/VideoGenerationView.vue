@@ -835,7 +835,7 @@ const imageModes = [
   { value: 'url' as const, label: 'video.imageRemote' },
 ]
 
-const leoKeys = computed(() => keys.value.filter((key) => key.status === 'active' && (key.group?.platform === 'leo' || key.group?.platform === 'video') && key.group?.allow_image_generation === true))
+const leoKeys = computed(() => keys.value.filter((key) => key.status === 'active' && ['leo', 'openai_media', 'video', 'composite'].includes(key.group?.platform || '') && key.group?.allow_image_generation === true))
 const selectedKey = computed(() => leoKeys.value.find((key) => key.id === selectedKeyId.value) || null)
 const effectiveApiKey = computed(() => apiKeyMode.value === 'custom' ? customApiKey.value.trim() : selectedKey.value?.key || '')
 const currentModelCapability = computed(() => videoModelCapabilities[model.value])

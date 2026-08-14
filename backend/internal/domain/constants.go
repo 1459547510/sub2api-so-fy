@@ -24,6 +24,9 @@ const (
 	PlatformAntigravity = "antigravity"
 	PlatformGrok        = "grok"
 	PlatformLeo         = "leo"
+	// PlatformOpenAIMedia identifies self-hosted media pools that expose the
+	// OpenAI-compatible images/videos API without being LeoStudio accounts.
+	PlatformOpenAIMedia = "openai_media"
 	PlatformComposite   = "composite"
 )
 

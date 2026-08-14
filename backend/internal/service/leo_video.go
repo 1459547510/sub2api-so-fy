@@ -31,7 +31,7 @@ const PublicVideoPlatform = "video"
 var publicVideoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio|leo)\b`)
 
 func PublicPlatformID(platform string) string {
-	if platform == PlatformLeo {
+	if IsMediaPlatform(platform) {
 		return PublicVideoPlatform
 	}
 	return platform
@@ -174,7 +174,7 @@ func (s *OpenAIGatewayService) ForwardLeoVideo(
 	body []byte,
 ) (*OpenAIForwardResult, error) {
 	startTime := time.Now()
-	if account == nil || !account.IsLeo() {
+	if account == nil || !account.IsMediaAPIAccount() {
 		return nil, fmt.Errorf("leo account is required")
 	}
 	requestInfo, err := ParseLeoVideoRequest(body)

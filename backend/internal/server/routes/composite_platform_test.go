@@ -194,6 +194,55 @@ func TestCompositeTargetPlatformMiddlewareUsesExplicitRouteForMultipartImages(t 
 	require.Equal(t, http.StatusNoContent, w.Code)
 }
 
+func TestCompositeTargetPlatformMiddlewareUsesExplicitLeoRoute(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	resolver := service.NewCompositeRouteResolver(compositeRouteRepoStub{
+		routes: []service.CompositeModelRoute{
+			{
+				ID:             1,
+				GroupID:        1,
+				PublicModel:    "seedance-2.0",
+				MatchType:      service.CompositeRouteMatchExact,
+				TargetPlatform: service.PlatformLeo,
+				UpstreamModel:  "seedance-2.0-fast",
+				Endpoint:       service.CompositeRouteEndpointAny,
+				Priority:       100,
+				Enabled:        true,
+			},
+		},
+	})
+	router.Use(gin.HandlerFunc(servermiddleware.APIKeyAuthMiddleware(func(c *gin.Context) {
+		groupID := int64(1)
+		c.Set(string(servermiddleware.ContextKeyAPIKey), &service.APIKey{
+			GroupID: &groupID,
+			Group:   &service.Group{ID: groupID, Platform: service.PlatformComposite},
+		})
+		c.Next()
+	})))
+	router.Use(compositeTargetPlatformMiddleware(resolver))
+	router.POST("/v1/videos/generations", func(c *gin.Context) {
+		platform, ok := service.ResolvedTargetPlatformFromContext(c.Request.Context())
+		require.True(t, ok)
+		require.Equal(t, service.PlatformLeo, platform)
+		upstreamModel, ok := service.ResolvedUpstreamModelFromContext(c.Request.Context())
+		require.True(t, ok)
+		require.Equal(t, "seedance-2.0-fast", upstreamModel)
+		body, err := io.ReadAll(c.Request.Body)
+		require.NoError(t, err)
+		require.JSONEq(t, `{"model":"seedance-2.0-fast","prompt":"waves"}`, string(body))
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/videos/generations", strings.NewReader(`{"model":"seedance-2.0","prompt":"waves"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+}
+
 func TestCompositeGeminiTargetPlatformMiddlewareUsesPathRoute(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

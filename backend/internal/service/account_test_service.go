@@ -289,7 +289,7 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 		return s.testOpenAIAccountConnection(c, account, modelID, prompt, normalizeAccountTestMode(mode))
 	}
 
-	if account.IsLeo() {
+	if account.IsMediaAPIAccount() {
 		return s.testLeoAccountConnection(c, account)
 	}
 

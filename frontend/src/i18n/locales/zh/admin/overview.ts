@@ -884,6 +884,7 @@ export default {
         antigravity: 'Antigravity',
         grok: 'Grok',
         leo: 'Leo',
+        openai_media: 'OpenAI 媒体',
         composite: 'Composite',
       },
       saving: '保存中...',
@@ -989,7 +990,7 @@ export default {
         title: '视频生成计费',
         leoDescription: 'Leo 视频按实际输出时长计费，480p、720p、1080p 三档每秒单价必须全部手动填写。',
         allowVideoGeneration: '允许当前分组生成视频',
-        leoPricesRequired: 'Leo 分组必须填写 480p、720p、1080p 三档非负视频单价',
+        leoPricesRequired: '视频媒体分组必须填写 480p、720p、1080p 三档非负视频单价',
         description:
           '配置 Grok 视频生成的每秒单价（USD/秒），留空则使用默认每秒价（grok-imagine-video：480p $0.05/s、720p $0.07/s；video-1.5：480p $0.08/s、720p $0.14/s、1080p $0.25/s）',
         modelOverridesTitle: '按模型覆盖视频价格',

@@ -285,7 +285,7 @@ func (s *VideoJobBillingService) SettleCompleted(ctx context.Context, job *Video
 	if err := s.UsageRecorder.RecordUsage(ctx, &OpenAIRecordUsageInput{
 		Result: usageResult, APIKey: apiKey, User: user, Account: account, Subscription: subscription,
 		InboundEndpoint: "/v1/videos/generations", UpstreamEndpoint: "/v1/videos/generations",
-		RequestPayloadHash: job.RequestHash, QuotaPlatform: PlatformLeo, CostOverride: cost,
+		RequestPayloadHash: job.RequestHash, QuotaPlatform: account.Platform, CostOverride: cost,
 		APIKeyService:      s.APIKeyService,
 		ChannelUsageFields: videoJobSnapshotChannelUsageFields(snapshot, job),
 	}); err != nil {
@@ -344,7 +344,11 @@ func (s *VideoJobBillingService) loadUsageContext(ctx context.Context, job *Vide
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	group := &Group{ID: job.GroupID, Platform: PlatformLeo, RateMultiplier: snapshot.RateMultiplier,
+	platform := PlatformLeo
+	if account != nil && IsMediaPlatform(account.Platform) {
+		platform = account.Platform
+	}
+	group := &Group{ID: job.GroupID, Platform: platform, RateMultiplier: snapshot.RateMultiplier,
 		VideoPrice480P: float64Pointer(snapshot.Price480P), VideoPrice720P: float64Pointer(snapshot.Price720P), VideoPrice1080P: float64Pointer(snapshot.Price1080P)}
 	var subscription *UserSubscription
 	if snapshot.BillingType == BillingTypeSubscription {

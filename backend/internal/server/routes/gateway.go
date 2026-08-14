@@ -57,7 +57,7 @@ func RegisterGatewayRoutes(
 		return getGroupPlatform(c) == service.PlatformOpenAI
 	}
 	rejectLeoUnsupported := func(c *gin.Context, capability string) bool {
-		if getGroupPlatform(c) != service.PlatformLeo {
+		if !service.IsMediaPlatform(getGroupPlatform(c)) {
 			return false
 		}
 		service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
@@ -98,7 +98,7 @@ func RegisterGatewayRoutes(
 			h.OpenAIGateway.Images(c)
 		case service.PlatformGrok:
 			h.OpenAIGateway.GrokImages(c)
-		case service.PlatformLeo:
+		case service.PlatformLeo, service.PlatformOpenAIMedia:
 			h.OpenAIGateway.Images(c)
 		default:
 			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
@@ -114,7 +114,7 @@ func RegisterGatewayRoutes(
 		switch getGroupPlatform(c) {
 		case service.PlatformGrok:
 			h.OpenAIGateway.GrokVideoGeneration(c)
-		case service.PlatformLeo:
+		case service.PlatformLeo, service.PlatformOpenAIMedia:
 			h.OpenAIGateway.LeoVideoGeneration(c)
 		default:
 			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
@@ -127,10 +127,19 @@ func RegisterGatewayRoutes(
 		}
 	}
 	videoStatusHandler := func(c *gin.Context) {
-		// Video status requests do not carry a model, so composite groups cannot
-		// be resolved by compositeTargetPlatformMiddleware. Route them through
-		// the Grok handler and let scheduler/account selection enforce capacity.
-		if getGroupPlatform(c) == service.PlatformGrok || getGroupPlatform(c) == service.PlatformComposite {
+		// Legacy Leo async jobs use a local vidjob_ ID and are persisted before
+		// the response is returned. They have no model on lookup, so use the ID
+		// shape to keep composite-group polling on the Leo job service.
+		platform := getGroupPlatform(c)
+		requestID := videoLookupRequestID(c)
+		if (platform == service.PlatformComposite || service.IsOpenAIMediaPlatform(platform)) && isLeoVideoJobID(requestID) {
+			h.OpenAIGateway.LeoVideoJob(c)
+			return
+		}
+		// Unprefixed external media IDs retain the existing external lookup path;
+		// provider-specific ID bindings must be registered before adding another
+		// asynchronous media provider to a composite group.
+		if platform == service.PlatformGrok || platform == service.PlatformComposite {
 			h.OpenAIGateway.GrokVideoStatus(c)
 			return
 		}
@@ -143,10 +152,16 @@ func RegisterGatewayRoutes(
 		})
 	}
 	videoContentHandler := func(c *gin.Context) {
-		// Video content requests do not carry a model, so composite groups cannot
-		// be resolved by compositeTargetPlatformMiddleware. Route them through
-		// the Grok handler just like video status lookups.
-		if getGroupPlatform(c) == service.PlatformGrok || getGroupPlatform(c) == service.PlatformComposite {
+		platform := getGroupPlatform(c)
+		requestID := videoLookupRequestID(c)
+		if (platform == service.PlatformComposite || service.IsOpenAIMediaPlatform(platform)) && isLeoVideoJobID(requestID) {
+			h.OpenAIGateway.LeoVideoJobContent(c)
+			return
+		}
+		// Unprefixed external media IDs retain the existing external lookup path;
+		// provider-specific ID bindings must be registered before adding another
+		// asynchronous media provider to a composite group.
+		if platform == service.PlatformGrok || platform == service.PlatformComposite {
 			h.OpenAIGateway.GrokVideoContent(c)
 			return
 		}
@@ -176,7 +191,8 @@ func RegisterGatewayRoutes(
 	}
 	leoVideoOnly := func(next gin.HandlerFunc) gin.HandlerFunc {
 		return func(c *gin.Context) {
-			if getGroupPlatform(c) != service.PlatformLeo {
+			platform := getGroupPlatform(c)
+			if !service.IsMediaPlatform(platform) && platform != service.PlatformComposite {
 				service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
 				c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"type": "not_found_error", "message": "Videos API is not supported for this platform"}})
 				return
@@ -591,6 +607,20 @@ func getGroupPlatform(c *gin.Context) string {
 		}
 	}
 	return apiKey.Group.Platform
+}
+
+func videoLookupRequestID(c *gin.Context) string {
+	if c == nil {
+		return ""
+	}
+	if requestID := strings.TrimSpace(c.Param("request_id")); requestID != "" {
+		return requestID
+	}
+	return strings.TrimSpace(c.Param("job_id"))
+}
+
+func isLeoVideoJobID(requestID string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(requestID)), "vidjob_")
 }
 
 func compositeTargetPlatformMiddleware(resolver *service.CompositeRouteResolver) gin.HandlerFunc {

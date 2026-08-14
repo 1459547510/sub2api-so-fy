@@ -272,7 +272,7 @@ func (a *Account) IsGrokOAuth() bool {
 }
 
 func (a *Account) IsOpenAICompatible() bool {
-	return a != nil && (a.Platform == PlatformOpenAI || a.Platform == PlatformGrok || a.Platform == PlatformLeo)
+	return a != nil && (a.Platform == PlatformOpenAI || a.Platform == PlatformGrok || IsMediaPlatform(a.Platform))
 }
 
 func (a *Account) GeminiOAuthType() string {
@@ -810,7 +810,7 @@ func (a *Account) IsModelSupported(requestedModel string) bool {
 	}
 	// This platform publishes its live model catalog. Keep explicit mappings for
 	// aliases, but do not let an older saved mapping block newly synced models.
-	if a.IsLeo() {
+	if IsMediaPlatform(a.Platform) {
 		return true
 	}
 	mapping := a.GetModelMapping()
@@ -1647,13 +1647,13 @@ func (a *Account) SupportsOpenAIImageCapability(capability OpenAIImagesCapabilit
 	if capability == "" {
 		return true
 	}
-	if !a.IsOpenAI() && !a.IsLeo() {
+	if !a.IsOpenAI() && !IsMediaPlatform(a.Platform) {
 		return false
 	}
 	switch capability {
 	case OpenAIImagesCapabilityBasic, OpenAIImagesCapabilityNative:
 		return (a.IsOpenAI() && (a.Type == AccountTypeOAuth || a.Type == AccountTypeAPIKey)) ||
-			(a.IsLeo() && a.Type == AccountTypeAPIKey)
+			(IsMediaPlatform(a.Platform) && a.Type == AccountTypeAPIKey)
 	default:
 		return true
 	}

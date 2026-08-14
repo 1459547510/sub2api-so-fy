@@ -162,7 +162,7 @@ const labelClass = computed(() => {
   if (props.platform === 'grok') {
     return `${base} bg-zinc-300/70 text-zinc-800 dark:bg-zinc-700/60 dark:text-zinc-200`
   }
-  if (props.platform === 'leo' || props.platform === 'video') {
+  if (props.platform === 'leo' || props.platform === 'openai_media' || props.platform === 'video') {
     return `${base} bg-teal-200/70 text-teal-800 dark:bg-teal-800/50 dark:text-teal-200`
   }
   if (props.platform === 'composite') {
@@ -203,7 +203,7 @@ const badgeClass = computed(() => {
       ? 'bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100'
       : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
   }
-  if (props.platform === 'leo' || props.platform === 'video') {
+  if (props.platform === 'leo' || props.platform === 'openai_media' || props.platform === 'video') {
     return isSubscription.value
       ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200'
       : 'bg-cyan-50 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200'

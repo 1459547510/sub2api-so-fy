@@ -308,6 +308,7 @@ export default {
         antigravity: 'Antigravity',
         grok: 'Grok',
         leo: 'Leo',
+        openai_media: 'OpenAI 媒体',
       },
       types: {
         oauth: 'OAuth',

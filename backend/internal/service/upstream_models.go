@@ -163,7 +163,7 @@ func (s *AccountTestService) FetchUpstreamSupportedModelDetails(ctx context.Cont
 	if len(models) == 0 {
 		return nil, newUpstreamModelSyncUpstreamError("Upstream returned no supported models", nil)
 	}
-	if account.IsLeo() {
+	if account.IsMediaAPIAccount() {
 		publicModels := models[:0]
 		seenPublicIDs := make(map[string]struct{}, len(models))
 		for _, model := range models {
@@ -214,7 +214,7 @@ func (s *AccountTestService) buildUpstreamModelsRequest(ctx context.Context, acc
 		return s.buildAntigravityAPIKeyModelsRequest(ctx, account)
 	case account.IsGrok():
 		return s.buildGrokUpstreamModelsRequest(ctx, account)
-	case account.IsLeo():
+	case account.IsMediaAPIAccount():
 		return s.buildLeoUpstreamModelsRequest(ctx, account)
 	case account.IsOpenAI():
 		return s.buildOpenAIUpstreamModelsRequest(ctx, account)

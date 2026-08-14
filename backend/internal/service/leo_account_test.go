@@ -48,6 +48,7 @@ func TestValidateLeoAccountCredentials(t *testing.T) {
 	}
 
 	require.NoError(t, ValidateLeoAccountCredentials(PlatformLeo, AccountTypeAPIKey, valid))
+	require.NoError(t, ValidateLeoAccountCredentials(PlatformOpenAIMedia, AccountTypeAPIKey, valid))
 	require.Error(t, ValidateLeoAccountCredentials(PlatformLeo, AccountTypeOAuth, valid))
 	require.Error(t, ValidateLeoAccountCredentials(PlatformLeo, AccountTypeAPIKey, map[string]any{}))
 	require.Error(t, ValidateLeoAccountCredentials(PlatformLeo, AccountTypeAPIKey, map[string]any{
@@ -80,6 +81,24 @@ func TestLeoAccountContract(t *testing.T) {
 	healthURL, err := BuildLeoHealthURL(account.GetLeoBaseURL())
 	require.NoError(t, err)
 	require.Equal(t, "http://leostudio:8000/health", healthURL)
+}
+
+func TestOpenAIMediaAccountContract(t *testing.T) {
+	account := &Account{
+		Platform: PlatformOpenAIMedia,
+		Type:     AccountTypeAPIKey,
+		Credentials: map[string]any{
+			"base_url": "https://pool-a.example.com/v1",
+			"api_key":  "media-secret",
+		},
+	}
+
+	require.False(t, account.IsLeo())
+	require.True(t, account.IsOpenAIMedia())
+	require.True(t, account.IsMediaAPIAccount())
+	require.True(t, account.IsOpenAICompatible())
+	require.Equal(t, "media-secret", account.GetLeoAPIKey())
+	require.Equal(t, "https://pool-a.example.com/v1", account.GetLeoBaseURL())
 }
 
 func TestAdminServiceCreateAccountRejectsInvalidLeoCredentials(t *testing.T) {

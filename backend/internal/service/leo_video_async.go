@@ -65,7 +65,7 @@ func PrefersLeoRespondAsync(header http.Header) bool {
 }
 
 func (s *OpenAIGatewayService) CreateLeoAsyncVideo(ctx context.Context, account *Account, body []byte) (*LeoAsyncAccepted, error) {
-	if account == nil || !account.IsLeo() {
+	if account == nil || !account.IsMediaAPIAccount() {
 		return nil, fmt.Errorf("leo account is required")
 	}
 	request, err := ParseLeoVideoRequest(body)
@@ -105,7 +105,7 @@ func (s *OpenAIGatewayService) CancelLeoAsyncVideo(ctx context.Context, account 
 }
 
 func (s *OpenAIGatewayService) readLeoAsyncVideo(ctx context.Context, account *Account, method string, upstreamJobID int64) (*LeoAsyncJob, error) {
-	if account == nil || !account.IsLeo() {
+	if account == nil || !account.IsMediaAPIAccount() {
 		return nil, fmt.Errorf("leo account is required")
 	}
 	if upstreamJobID <= 0 {

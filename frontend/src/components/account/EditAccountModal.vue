@@ -33,8 +33,8 @@
           <input
             v-model="editBaseUrl"
             type="text"
-            :required="account.platform === 'leo'"
-            :data-testid="account.platform === 'leo' ? 'leo-base-url' : undefined"
+            :required="account.platform === 'leo' || account.platform === 'openai_media'"
+            :data-testid="account.platform === 'leo' ? 'leo-base-url' : account.platform === 'openai_media' ? 'openai-media-base-url' : undefined"
             class="input"
             :placeholder="
               account.platform === 'openai'
@@ -47,6 +47,8 @@
                       ? 'https://api.x.ai/v1'
                       : account.platform === 'leo'
                         ? 'http://leostudio:8000/v1'
+                        : account.platform === 'openai_media'
+                          ? 'https://pool-a.example.com/v1'
                         : 'https://api.anthropic.com'
             "
           />
@@ -62,7 +64,7 @@
           <input
             v-model="editApiKey"
             type="password"
-            :data-testid="account.platform === 'leo' ? 'leo-api-key' : undefined"
+            :data-testid="account.platform === 'leo' ? 'leo-api-key' : account.platform === 'openai_media' ? 'openai-media-api-key' : undefined"
             class="input font-mono"
             autocomplete="new-password"
             data-1p-ignore
@@ -79,6 +81,8 @@
                       ? 'xai-...'
                       : account.platform === 'leo'
                         ? 'leo-api-key'
+                        : account.platform === 'openai_media'
+                          ? 'media-api-key'
                         : 'sk-ant-...'
             "
           />
@@ -102,7 +106,7 @@
             <!-- Mode Toggle -->
             <div class="mb-4 flex gap-2">
               <button
-                v-if="account.platform !== 'leo'"
+                v-if="account.platform !== 'leo' && account.platform !== 'openai_media'"
                 type="button"
                 @click="modelRestrictionMode = 'whitelist'"
                 :class="[
@@ -2828,7 +2832,7 @@ const baseUrlHint = computed(() => {
   if (props.account.platform === 'openai') return t('admin.accounts.openai.baseUrlHint')
   if (props.account.platform === 'gemini') return t('admin.accounts.gemini.baseUrlHint')
   if (props.account.platform === 'grok') return ''
-  if (props.account.platform === 'leo') return t('admin.accounts.leo.baseUrlHint')
+  if (props.account.platform === 'leo' || props.account.platform === 'openai_media') return t('admin.accounts.leo.baseUrlHint')
   return t('admin.accounts.baseUrlHint')
 })
 
@@ -3296,7 +3300,7 @@ const defaultBaseUrl = computed(() => {
   if (props.account?.platform === 'openai') return 'https://api.openai.com'
   if (props.account?.platform === 'gemini') return 'https://generativelanguage.googleapis.com'
   if (props.account?.platform === 'grok') return 'https://api.x.ai/v1'
-  if (props.account?.platform === 'leo') return ''
+  if (props.account?.platform === 'leo' || props.account?.platform === 'openai_media') return ''
   return 'https://api.anthropic.com'
 })
 
@@ -3654,7 +3658,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
           ? 'https://generativelanguage.googleapis.com'
           : newAccount.platform === 'grok'
             ? 'https://api.x.ai/v1'
-            : newAccount.platform === 'leo'
+            : newAccount.platform === 'leo' || newAccount.platform === 'openai_media'
               ? ''
               : 'https://api.anthropic.com'
     editBaseUrl.value = (credentials.base_url as string) || platformDefaultUrl
@@ -3727,7 +3731,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
           ? 'https://generativelanguage.googleapis.com'
           : newAccount.platform === 'grok'
             ? 'https://api.x.ai/v1'
-            : newAccount.platform === 'leo'
+            : newAccount.platform === 'leo' || newAccount.platform === 'openai_media'
               ? ''
               : 'https://api.anthropic.com'
     editBaseUrl.value = platformDefaultUrl
@@ -4319,7 +4323,7 @@ const handleSubmit = async () => {
     if (props.account.type === 'apikey') {
       const currentCredentials = (props.account.credentials as Record<string, unknown>) || {}
       const newBaseUrl = editBaseUrl.value.trim() || defaultBaseUrl.value
-      if (props.account.platform === 'leo' && !newBaseUrl) {
+      if ((props.account.platform === 'leo' || props.account.platform === 'openai_media') && !newBaseUrl) {
         appStore.showError(t('admin.accounts.leo.baseUrlRequired'))
         return
       }
@@ -4348,7 +4352,7 @@ const handleSubmit = async () => {
       // Add model mapping if configured（OpenAI 开启自动透传时保留现有映射，不再编辑）
       if (shouldApplyModelMapping) {
         const modelMapping = buildModelRestrictionMapping()
-        if (props.account.platform === 'leo' && !modelMapping) {
+        if ((props.account.platform === 'leo' || props.account.platform === 'openai_media') && !modelMapping) {
           appStore.showError(t('admin.accounts.leo.modelMappingRequired'))
           return
         }

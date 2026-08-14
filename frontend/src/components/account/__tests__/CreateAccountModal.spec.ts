@@ -376,4 +376,38 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
       },
     })
   })
+
+  it('creates an OpenAI Media API key account without entering an OAuth flow', async () => {
+    const wrapper = mountModal()
+
+    await wrapper.get('[data-testid="platform-openai-media"]').trigger('click')
+    await flushPromises()
+
+    const baseUrl = wrapper.get<HTMLInputElement>('[data-testid="openai-media-base-url"]')
+    const apiKey = wrapper.get<HTMLInputElement>('[data-testid="openai-media-api-key"]')
+    expect(baseUrl.attributes('required')).toBeDefined()
+    expect(apiKey.attributes('type')).toBe('password')
+    expect(wrapper.text()).not.toContain('OAuth')
+
+    await wrapper.get('form#create-account-form input[type="text"]').setValue('Media pool')
+    await baseUrl.setValue('https://pool-a.example.com/v1')
+    await apiKey.setValue('media-secret')
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(createAccountMock).toHaveBeenCalledTimes(1)
+    expect(createAccountMock.mock.calls[0]?.[0]).toMatchObject({
+      platform: 'openai_media',
+      type: 'apikey',
+      credentials: {
+        base_url: 'https://pool-a.example.com/v1',
+        api_key: 'media-secret',
+        model_mapping: {
+          'seedance-2.0': 'seedance-2.0',
+          'seedance-2.0-fast': 'seedance-2.0-fast',
+          'seedance-2.0-mini': 'seedance-2.0-mini',
+        },
+      },
+    })
+  })
 })

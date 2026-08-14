@@ -145,7 +145,7 @@ export function createSyncedPricingEntries(
   models: string[],
   modelDetails: SyncPricingModelDetail[] = [],
 ): PricingFormEntry[] {
-  if (platform === 'leo') {
+  if (platform === 'leo' || platform === 'openai_media') {
     const kinds = new Map(modelDetails.map(detail => [detail.id.trim().toLowerCase(), detail.kind]))
     return models.map(model => {
       const normalizedModel = model.trim().toLowerCase()
@@ -338,6 +338,7 @@ export function getPlatformTagClass(platform: string): string {
     case 'antigravity': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
     case 'grok': return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
     case 'leo': return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300'
+    case 'openai_media': return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
     default: return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
   }
 }
@@ -351,6 +352,7 @@ export function getPlatformTextClass(platform: string): string {
     case 'antigravity': return 'text-purple-700 dark:text-purple-400'
     case 'grok': return 'text-slate-700 dark:text-slate-300'
     case 'leo': return 'text-teal-700 dark:text-teal-300'
+    case 'openai_media': return 'text-cyan-700 dark:text-cyan-300'
     default: return ''
   }
 }

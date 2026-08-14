@@ -497,7 +497,7 @@ func validateOpenAIImagesModel(model string) error {
 
 func validateOpenAIImagesModelForPlatform(model, platform string) error {
 	model = strings.TrimSpace(model)
-	if isOpenAIImageGenerationModel(model) || (platform == PlatformLeo && model != "") {
+	if isOpenAIImageGenerationModel(model) || (IsMediaPlatform(platform) && model != "") {
 		return nil
 	}
 	if model == "" {
@@ -507,7 +507,7 @@ func validateOpenAIImagesModelForPlatform(model, platform string) error {
 }
 
 func validateOpenAIImagesModelForAccount(model string, account *Account) error {
-	if account != nil && account.IsLeo() && strings.TrimSpace(model) != "" {
+	if account != nil && account.IsMediaAPIAccount() && strings.TrimSpace(model) != "" {
 		return nil
 	}
 	return validateOpenAIImagesModel(model)
@@ -651,7 +651,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	defer releaseUpstreamCtx()
 
 	var token string
-	if account.IsLeo() {
+	if account.IsMediaAPIAccount() {
 		token = account.GetLeoAPIKey()
 		if token == "" {
 			return nil, errors.New("api_key not found in credentials")
@@ -799,7 +799,7 @@ func (s *OpenAIGatewayService) buildOpenAIImagesRequest(
 		targetURL = openAIImagesEditsURL
 	}
 	baseURL := account.GetOpenAIBaseURL()
-	if account.IsLeo() {
+	if account.IsMediaAPIAccount() {
 		baseURL = account.GetLeoBaseURL()
 	}
 	if baseURL != "" {

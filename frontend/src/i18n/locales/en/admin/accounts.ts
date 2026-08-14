@@ -105,6 +105,7 @@ export default {
         antigravity: 'Antigravity',
         grok: 'Grok',
         leo: 'Leo',
+        openai_media: 'OpenAI Media',
       },
       types: {
         oauth: 'OAuth',

@@ -60,15 +60,31 @@ func (a *Account) IsLeo() bool {
 	return a != nil && a.Platform == PlatformLeo
 }
 
+func IsOpenAIMediaPlatform(platform string) bool {
+	return strings.EqualFold(strings.TrimSpace(platform), PlatformOpenAIMedia)
+}
+
+func IsMediaPlatform(platform string) bool {
+	return strings.EqualFold(strings.TrimSpace(platform), PlatformLeo) || IsOpenAIMediaPlatform(platform)
+}
+
+func (a *Account) IsOpenAIMedia() bool {
+	return a != nil && IsOpenAIMediaPlatform(a.Platform)
+}
+
+func (a *Account) IsMediaAPIAccount() bool {
+	return a != nil && IsMediaPlatform(a.Platform) && a.Type == AccountTypeAPIKey
+}
+
 func (a *Account) GetLeoAPIKey() string {
-	if !a.IsLeo() || a.Type != AccountTypeAPIKey {
+	if !a.IsMediaAPIAccount() {
 		return ""
 	}
 	return strings.TrimSpace(a.GetCredential("api_key"))
 }
 
 func (a *Account) GetLeoBaseURL() string {
-	if !a.IsLeo() {
+	if a == nil || !IsMediaPlatform(a.Platform) {
 		return ""
 	}
 	baseURL, err := NormalizeLeoBaseURL(a.GetCredential("base_url"))
@@ -114,7 +130,7 @@ func BuildLeoHealthURL(baseURL string) (string, error) {
 }
 
 func ValidateLeoAccountCredentials(platform, accountType string, credentials map[string]any) error {
-	if platform != PlatformLeo {
+	if !IsMediaPlatform(platform) {
 		return nil
 	}
 	if accountType != AccountTypeAPIKey {
