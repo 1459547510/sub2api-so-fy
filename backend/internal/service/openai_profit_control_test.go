@@ -267,7 +267,9 @@ func TestValidateProfitControlConfig(t *testing.T) {
 		require.NoError(t, ValidateProfitControlConfig(platform, true, 0, 0))
 	}
 
-	require.Error(t, ValidateProfitControlConfig(PlatformComposite, true, 0.3, 0))
+	for _, platform := range []string{PlatformLeo, PlatformOpenAIMedia, PlatformComposite} {
+		require.Error(t, ValidateProfitControlConfig(platform, true, 0.3, 0))
+	}
 	require.Error(t, ValidateProfitControlConfig(PlatformOpenAI, true, -0.1, 0))
 	require.Error(t, ValidateProfitControlConfig(PlatformOpenAI, true, 1.0, 0))
 	require.Error(t, ValidateProfitControlConfig(PlatformOpenAI, true, 0, 1.0))
@@ -275,11 +277,13 @@ func TestValidateProfitControlConfig(t *testing.T) {
 }
 
 func TestNormalizeProfitControlConfig(t *testing.T) {
-	t.Run("unsupported platform resets everything", func(t *testing.T) {
-		enabled, margin, buffer := NormalizeProfitControlConfig(PlatformComposite, true, 0.3, 0.1)
-		require.False(t, enabled)
-		require.Zero(t, margin)
-		require.Zero(t, buffer)
+	t.Run("unsupported platforms reset everything", func(t *testing.T) {
+		for _, platform := range []string{PlatformLeo, PlatformOpenAIMedia, PlatformComposite} {
+			enabled, margin, buffer := NormalizeProfitControlConfig(platform, true, 0.3, 0.1)
+			require.False(t, enabled)
+			require.Zero(t, margin)
+			require.Zero(t, buffer)
+		}
 	})
 
 	t.Run("all five platforms retain configuration", func(t *testing.T) {

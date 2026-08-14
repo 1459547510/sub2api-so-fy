@@ -99,11 +99,13 @@ describe("validateProfitControlFormState", () => {
     for (const platform of ["openai", "anthropic", "gemini", "grok", "antigravity"]) {
       expect(validateProfitControlFormState(formState({ platform }))).toBeNull();
     }
-    expect(
-      validateProfitControlFormState(
-        formState({ platform: "composite", profit_min_margin_percent: 200 }),
-      ),
-    ).toBeNull();
+    for (const platform of ["leo", "openai_media", "composite"]) {
+      expect(
+        validateProfitControlFormState(
+          formState({ platform, profit_min_margin_percent: 200 }),
+        ),
+      ).toBeNull();
+    }
   });
 
   it("treats empty inputs as zero", () => {

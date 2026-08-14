@@ -6344,3 +6344,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/VideoGenerationView.vue`: permits media-enabled composite keys.
 - `progress.md`: records this task and test evidence.
 - Rollback: after committing, use `git revert <task-commit>`; do not remove the pre-existing `.superpowers/` directory or unrelated progress history.
+
+## 2026-08-14 - Task: Harden composite media release validation
+### What was done
+- Restored the established five-platform profit-control boundary so Leo, OpenAI Media, and composite groups cannot persist or activate unsupported token-profit settings.
+- Updated platform-quota tests for the new seven-platform contract and added explicit regression coverage for unsupported media/composite profit control.
+- Kept the composite media routing, account scheduling, quota support, and migration behavior unchanged.
+
+### Testing
+- `go test -p 1 ./... -count=1`: passed for all backend packages after the correction.
+- Full frontend Vitest suite: passed 230 test files and 1623 tests.
+- Targeted profit-control and quota suites: passed 3 frontend files / 37 tests plus the backend profit-control tests.
+- `go vet ./...`: passed.
+- `npm run build`: passed; Vite transformed 1031 modules with only pre-existing chunking and Browserslist warnings.
+- `git diff --check`: passed; migration constraint names match the existing PostgreSQL migration chain.
+
+### Notes
+- `backend/internal/service/group.go`: removes unsupported media and composite platforms from the profit-control gate.
+- `backend/internal/service/openai_profit_control_test.go`: locks the unsupported-platform validation and normalization contract.
+- `frontend/src/api/__tests__/settings.authSourceDefaults.spec.ts`: updates normalized default quota expectations to seven platforms.
+- `frontend/src/components/admin/user/__tests__/UserPlatformQuotaModal.spec.ts`: updates rendered input and submitted payload counts to seven platforms.
+- `frontend/src/views/admin/__tests__/groupsProfitControl.spec.ts`: confirms media and composite groups remain outside frontend profit control.
+- `progress.md`: records the release blocker, correction, validation evidence, and rollback point.
+- Roll back this correction with `git revert <task-commit>` after committing; source baseline before the correction is `14e63464adfdf58e08c719771f10a077a243748e`. Preserve `.superpowers/`.
