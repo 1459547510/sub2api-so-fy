@@ -6367,3 +6367,18 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/admin/__tests__/groupsProfitControl.spec.ts`: confirms media and composite groups remain outside frontend profit control.
 - `progress.md`: records the release blocker, correction, validation evidence, and rollback point.
 - Roll back this correction with `git revert <task-commit>` after committing; source baseline before the correction is `14e63464adfdf58e08c719771f10a077a243748e`. Preserve `.superpowers/`.
+
+## 2026-08-14 - Task: Release composite media support as v0.1.176-fy.3
+### What was done
+- Published annotated tag `v0.1.176-fy.3` from validated commit `a507c6e59c7301ce845a9d9744095cf59bc6731c`.
+- Confirmed GitHub Release publication and public Linux amd64 package availability.
+
+### Testing
+- Release page, Linux archive, and `checksums.txt` all returned HTTP `200`.
+- `sub2api_0.1.176-fy.3_linux_amd64.tar.gz` is 37,469,962 bytes.
+- Archive SHA-256 `c71088fdd436c3352b86d2dad101d3380cf264e761b0384a7ad80326fa49a258` exactly matched `checksums.txt`.
+- `tar -tzf` confirmed the archive contains only `sub2api`.
+
+### Notes
+- `progress.md`: records the final Release URL, commit, artifact integrity, and rollback point.
+- Roll back source behavior with `git revert a507c6e59c7301ce845a9d9744095cf59bc6731c` and publish a follow-up Release. To withdraw this binary, remove GitHub Release `v0.1.176-fy.3` and its remote tag; the previous deployable Release is `v0.1.176-fy.2`.
