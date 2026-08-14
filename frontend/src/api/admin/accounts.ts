@@ -545,6 +545,7 @@ export interface SyncUpstreamModelsResult {
 export interface UpstreamModelDetail {
   id: string
   name?: string
+  kind?: 'video' | 'image'
 }
 
 /**

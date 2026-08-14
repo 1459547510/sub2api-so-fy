@@ -963,6 +963,7 @@ export default {
         description: 'Text, frames, image references, video references, and audio references use the same endpoint. Video and audio URLs must be reachable by the video service; audio_reference must be paired with an image_reference or video_reference_base.',
       },
       models: {
+        seedance25: 'Supports 480p/720p for 4-30 seconds at 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9. Up to 30 image, 10 video, and 10 audio references are supported.',
         title: 'Per-model request examples',
         description: 'Each model below has a copy-ready curl request. Use only the resolutions, durations, aspect ratios, and reference inputs listed for that model; media_url values come from the upload endpoint.',
         seedance20: 'Supports 480p/720p/1080p for 4-15 seconds; 1080p is limited to 12 seconds. This example is text-to-video.',
@@ -987,6 +988,13 @@ export default {
         veo31Lite: 'Supports 720p or 1080p for 4, 6, or 8 seconds at 16:9 or 9:16. Start/end frames and generated audio are supported.',
       },
       matrix: {
+        seedance25: {
+          resolution: '480p, 720p',
+          duration: '4-30s, default 8s',
+          aspectRatio: '16:9, 9:16, 1:1, 4:3, 3:4, 21:9',
+          promptLimit: '5,000 characters',
+          references: '1 start frame, 1 end frame, 30 images, 10 videos, 10 audio references totaling at most 30.2s',
+        },
         title: 'Per-model parameter matrix',
         description: 'These are the ranges enforced by the server. Resolution, duration, and aspect ratio must be a supported combination from the same row; reference inputs are model-specific.',
         model: 'Model',

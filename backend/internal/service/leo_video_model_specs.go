@@ -60,6 +60,27 @@ var defaultLeoVideoModelSpec = leoVideoModelSpec{
 	framesExcludeOtherRef: true,
 }
 
+var leoSeedance25ModelSpec = leoVideoModelSpec{
+	resolutions:       []string{"480p", "720p"},
+	defaultResolution: "720p",
+	aspects: map[string][]string{
+		"480p": {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9"},
+		"720p": {"16:9", "9:16", "1:1", "4:3", "3:4", "21:9"},
+	},
+	minDuration:           4,
+	maxDuration:           30,
+	defaultDuration:       8,
+	maxPromptLength:       5000,
+	maxStartFrames:        1,
+	maxEndFrames:          1,
+	maxImageRefs:          30,
+	maxVideoRefs:          10,
+	maxAudioRefs:          10,
+	maxAudioRefSeconds:    30.2,
+	audioRefRequiresMedia: true,
+	supportsAudio:         true,
+}
+
 var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 	"seedance-2.0": {
 		resolutions:       []string{"480p", "720p", "1080p"},
@@ -126,6 +147,8 @@ var leoVideoModelSpecs = map[string]leoVideoModelSpec{
 		supportsAudio:         true,
 		framesExcludeOtherRef: true,
 	},
+	"bytedance/seedance-2.5": leoSeedance25ModelSpec,
+	"seedance-2.5":           leoSeedance25ModelSpec,
 	"happy-horse-1.1": {
 		resolutions:       []string{"720p", "1080p"},
 		defaultResolution: "1080p",

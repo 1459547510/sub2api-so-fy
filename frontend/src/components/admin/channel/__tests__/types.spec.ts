@@ -129,7 +129,7 @@ describe('video pricing', () => {
       createPricingFormEntry(['seedance-2.0'], 'video'),
       createPricingFormEntry(['seedance-2.0-fast'], 'video'),
       createPricingFormEntry(['seedance-2.0-mini'], 'video'),
-    ])).toBe('happy-horse-1.1')
+    ])).toBe('bytedance/seedance-2.5')
   })
 
   it('creates a Mini pricing entry with only its supported 720p tier', () => {
@@ -169,6 +169,8 @@ describe('video pricing', () => {
 
   it('creates native pricing tiers for the latest Leo models', () => {
     const expected: Record<string, string[]> = {
+      'bytedance/seedance-2.5': ['480p', '720p'],
+      'seedance-2.5': ['480p', '720p'],
       'hailuo-03': ['1440p'],
       'gemini-omni-flash': ['720p'],
       'kling-2.1': ['1080p'],
@@ -196,6 +198,22 @@ describe('video pricing', () => {
       [['seedance-2.0-fast'], 'video'],
     ])
     expect(createSyncedPricingEntries('openai', ['gpt-a', 'gpt-b'])).toHaveLength(1)
+  })
+
+  it('uses synchronized Leo model kinds for image and video pricing', () => {
+    const entries = createSyncedPricingEntries(
+      'leo',
+      ['seedance-2.0', 'recraft-v4'],
+      [
+        { id: 'seedance-2.0', kind: 'video' },
+        { id: 'recraft-v4', kind: 'image' },
+      ],
+    )
+
+    expect(entries.map(entry => [entry.models[0], entry.billing_mode])).toEqual([
+      ['seedance-2.0', 'video'],
+      ['recraft-v4', 'image'],
+    ])
   })
 
   it('requires one model and all three non-negative prices', () => {

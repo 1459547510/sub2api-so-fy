@@ -168,9 +168,16 @@ export async function getModelDefaultPricing(model: string): Promise<ModelDefaul
 
 export interface SyncPricingModelsResult {
   models: string[]
+  model_details?: SyncPricingModelDetail[]
 }
 
-/** Fetch the latest model names for a platform (Leo uses its video registry). */
+export interface SyncPricingModelDetail {
+  id: string
+  name?: string
+  kind?: 'video' | 'image'
+}
+
+/** Fetch the latest priceable model catalog for a platform. */
 export async function syncPricingModels(platform: string): Promise<SyncPricingModelsResult> {
   const { data } = await apiClient.get<SyncPricingModelsResult>('/admin/channels/pricing/sync-models', {
     params: { platform }

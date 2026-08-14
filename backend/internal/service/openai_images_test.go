@@ -471,6 +471,13 @@ func TestAccountSupportsOpenAIImageCapability_OAuthSupportsNative(t *testing.T) 
 	require.True(t, account.SupportsOpenAIImageCapability(OpenAIImagesCapabilityNative))
 }
 
+func TestAccountSupportsOpenAIImageCapability_LeoAPIKeySupportsNative(t *testing.T) {
+	account := &Account{Platform: PlatformLeo, Type: AccountTypeAPIKey}
+
+	require.True(t, account.SupportsOpenAIImageCapability(OpenAIImagesCapabilityBasic))
+	require.True(t, account.SupportsOpenAIImageCapability(OpenAIImagesCapabilityNative))
+}
+
 func TestAccountSupportsOpenAIImageCapability_EmptyRequirementDoesNotRejectGrok(t *testing.T) {
 	account := &Account{
 		Platform: PlatformGrok,
@@ -1289,6 +1296,60 @@ func TestOpenAIGatewayServiceForwardImages_APIKeyGenerationUsesConfiguredV1BaseU
 	require.Equal(t, "gpt-image-2", gjson.GetBytes(upstream.lastBody, "model").String())
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, "aGVsbG8=", gjson.Get(rec.Body.String(), "data.0.b64_json").String())
+}
+
+func TestOpenAIGatewayServiceForwardImages_LeoGenerationUsesConfiguredBaseURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"Image Model A","prompt":"draw a cat","n":4,"aspect_ratio":"16:9","image_urls":["https://example.com/reference.png"]}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(WithOpenAIImagesPlatform(req.Context(), PlatformLeo))
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(`{"created":1710000007,"data":[{"url":"https://media.example/result.png"}]}`)),
+	}}
+	svc := &OpenAIGatewayService{cfg: &config.Config{}, httpUpstream: upstream}
+	parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+	require.NoError(t, err)
+
+	account := &Account{
+		ID:       61,
+		Name:     "image-account",
+		Platform: PlatformLeo,
+		Type:     AccountTypeAPIKey,
+		Credentials: map[string]any{
+			"api_key":  "image-key",
+			"base_url": "https://image.example/v1",
+		},
+	}
+
+	result, err := svc.ForwardImages(context.Background(), c, account, body, parsed, "")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, "https://image.example/v1/images/generations", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer image-key", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, "Image Model A", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.Equal(t, int64(4), gjson.GetBytes(upstream.lastBody, "n").Int())
+	require.Equal(t, "16:9", gjson.GetBytes(upstream.lastBody, "aspect_ratio").String())
+	require.Equal(t, "https://example.com/reference.png", gjson.GetBytes(upstream.lastBody, "image_urls.0").String())
+}
+
+func TestOpenAIGatewayServiceForwardImages_LeoRejectsEditsBeforeUpstream(t *testing.T) {
+	upstream := &httpUpstreamRecorder{}
+	svc := &OpenAIGatewayService{cfg: &config.Config{}, httpUpstream: upstream}
+	account := &Account{Platform: PlatformLeo, Type: AccountTypeAPIKey}
+
+	result, err := svc.ForwardImages(context.Background(), nil, account, nil, &OpenAIImagesRequest{Endpoint: openAIImagesEditsEndpoint}, "")
+
+	require.Nil(t, result)
+	require.ErrorContains(t, err, "image edits are not supported")
+	require.Nil(t, upstream.lastReq)
 }
 
 func TestOpenAIGatewayServiceForwardImages_APIKeyStreamJSONResponseBillsImage(t *testing.T) {

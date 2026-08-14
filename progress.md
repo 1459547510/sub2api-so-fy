@@ -6134,3 +6134,59 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the pushed merge commit, Release workflow result, public asset availability, checksum, archive content, and rollback point.
 - Deploying this Release runs `221_group_model_pricing.sql` during startup; existing group long-context pricing remains enabled by default.
 - Rollback source behavior with `git revert -m 1 dc5188088bc6e7f30477a611bbd60c0ec7743bad` and publish a follow-up release. Leave the additive group columns in place for binary rollback; withdraw this Release only after removing GitHub Release `v0.1.176-fy.1` and deleting its remote tag. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-14 - Task: Synchronize Leo image models and Seedance 2.5 capabilities
+### What was done
+- Changed Leo channel pricing synchronization to read the live authenticated model catalog, classify known video models separately from dynamic image models, remove raw UUID entries, and create one unsaved pricing row per newly discovered model so administrators only need to enter prices and save.
+- Added Leo image-generation routing through the existing OpenAI-compatible image endpoint, including API-key authentication, configured base URL handling, dynamic public model names, reference-image fields, `n` task splitting through the existing account scheduler, and an explicit platform-neutral rejection for unsupported image edits.
+- Added both Seedance 2.5 public model IDs with aligned 480p/720p, 4-30 second, aspect-ratio, media-reference, generated-audio, and per-resolution pricing constraints across server validation, channel pricing, the video page, and the customer API documentation.
+- Kept future image-model additions catalog-driven; future video models still require a local capability specification before they can be exposed as video pricing entries.
+
+### Testing
+- `go test ./internal/service ./internal/handler ./internal/handler/admin`: passed.
+- `go test ./internal/service -run "(SelectAccountWithSchedulerForImages|FetchUpstreamSupportedModels|Leo|OpenAIImages|VideoBillingResolution)"`: passed after the final model de-duplication and scheduler signature changes.
+- `go test -tags unit ./internal/handler/admin -run "SyncPricingModels"`: passed.
+- `go test ./cmd/server -run "^$"`: passed, confirming final dependency injection and server assembly compile.
+- `pnpm.cmd exec vitest run src/components/admin/channel/__tests__/types.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts`: passed 50 tests; the final pricing-classification adjustment was rechecked with all 18 channel type tests passing.
+- `pnpm.cmd run typecheck`: passed on the final TypeScript state.
+- `pnpm.cmd run build`: passed; Vite transformed 1031 modules and completed the production build with only pre-existing chunking warnings.
+- `git diff --check`: passed. Customer video pages and localized API documentation contain none of `LeoStudio`, `Leonardo`, `UUID`, `upstream_job_id`, or `account_id`.
+
+### Notes
+- `backend/cmd/server/wire_gen.go`: injects the account repository and account-test service into the channel handler.
+- `backend/internal/handler/admin/account_handler_available_models_test.go`: verifies public image names replace raw UUIDs and carry media kinds.
+- `backend/internal/handler/admin/channel_handler.go`: fetches the live Leo catalog for channel pricing and falls back to the local video catalog when no live account succeeds.
+- `backend/internal/handler/admin/channel_handler_test.go`: verifies live image/video catalog synchronization and classification.
+- `backend/internal/handler/gateway_handler.go`: includes the latest Leo video IDs in gateway model-list fallbacks.
+- `backend/internal/handler/openai_images.go`: selects Leo image accounts and returns platform-neutral client errors.
+- `backend/internal/handler/openai_images_split.go`: preserves Leo platform routing for every split `n` task.
+- `backend/internal/server/routes/gateway.go`: enables the image-generation route for Leo groups.
+- `backend/internal/service/account.go`: allows live-catalog Leo models through stale account mappings and enables Leo API-key image capability.
+- `backend/internal/service/leo_account.go`: registers both Seedance 2.5 public IDs and generalizes the account mapping validation message.
+- `backend/internal/service/leo_account_test.go`: verifies Seedance 2.5 appears in the default Leo model candidates.
+- `backend/internal/service/leo_video_model_specs.go`: defines the Seedance 2.5 server-side capability contract.
+- `backend/internal/service/leo_video_model_specs_test.go`: verifies accepted and rejected Seedance 2.5 parameter combinations.
+- `backend/internal/service/openai_account_scheduler.go`: routes image selection to the required Leo platform while retaining existing account-pool scheduling.
+- `backend/internal/service/openai_images.go`: forwards Leo image requests with the configured Bearer key/base URL and rejects unsupported edits before upstream access.
+- `backend/internal/service/openai_images_test.go`: verifies Leo image capability, request forwarding, reference fields, `n`, authentication, and edit rejection.
+- `backend/internal/service/upstream_models.go`: adds media kinds, public-name replacement, UUID filtering, and case-insensitive public model de-duplication.
+- `backend/internal/service/upstream_models_test.go`: verifies mixed legacy/current catalog entries become a de-duplicated public image/video catalog.
+- `backend/internal/service/video_billing_resolution.go`: restricts Seedance 2.5 pricing to 480p and 720p.
+- `backend/internal/service/video_billing_resolution_test.go`: verifies both Seedance 2.5 aliases use the correct price tiers.
+- `docs/LEO_MODEL_SYNC.md`: documents live catalog synchronization, automatic image pricing rows, and the remaining explicit-spec rule for new video models.
+- `docs/LEO_VIDEO_MODEL_SPECS.md`: documents the Seedance 2.5 parameter and media-reference limits.
+- `frontend/src/api/admin/accounts.ts`: adds media-kind metadata to synchronized account models.
+- `frontend/src/api/admin/channels.ts`: exposes channel model-detail metadata to the pricing form.
+- `frontend/src/components/account/CreateAccountModal.vue`: adds both Seedance 2.5 aliases to new Leo account mappings.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: verifies Seedance 2.5 price tiers/order and dynamic image/video price-row classification.
+- `frontend/src/components/admin/channel/types.ts`: creates video or image pricing rows from synchronized model kinds.
+- `frontend/src/constants/channel.ts`: registers both Seedance 2.5 public IDs in the frontend video catalog.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds customer-facing English Seedance 2.5 constraints without internal identifiers.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds customer-facing Chinese Seedance 2.5 constraints without internal identifiers.
+- `frontend/src/views/admin/ChannelsView.vue`: passes synchronized model metadata into automatic pricing-row creation.
+- `frontend/src/views/user/VideoApiDocsView.vue`: adds both Seedance 2.5 aliases to the customer parameter matrix and examples.
+- `frontend/src/views/user/VideoGenerationView.vue`: limits Seedance 2.5 controls to its supported resolution, duration, ratio, and media combinations.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies the complete model list and blocks internal identifiers in rendered documentation.
+- `frontend/src/views/user/__tests__/VideoGenerationView.spec.ts`: verifies Seedance 2.5 options on the generation page.
+- `progress.md`: records this implementation, verification evidence, changed-file inventory, and rollback point.
+- Rollback point: source baseline `9b329d435aa18fa48be5aadc32166f83fa8f8e55`. After this task is committed, use `git revert <task-commit>`; preserve the pre-existing `docs/LEO_VIDEO_CHANNEL.md`, earlier `progress.md` history, and `.superpowers/` content.

@@ -3,12 +3,16 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -433,6 +437,18 @@ func setupSyncPricingModelsRouter(pricingSvc *service.PricingService) *gin.Engin
 	return router
 }
 
+type syncPricingAccountRepo struct {
+	service.AccountRepository
+	accounts []service.Account
+}
+
+func (r *syncPricingAccountRepo) ListSchedulableByPlatform(_ context.Context, platform string) ([]service.Account, error) {
+	if platform != service.PlatformLeo {
+		return nil, nil
+	}
+	return append([]service.Account(nil), r.accounts...), nil
+}
+
 func TestSyncPricingModels_MissingPlatform(t *testing.T) {
 	svc := service.NewPricingService(nil, nil)
 	router := setupSyncPricingModelsRouter(svc)
@@ -497,4 +513,51 @@ func TestSyncPricingModels_LeoReturnsCopyOfLatestVideoModels(t *testing.T) {
 	require.Equal(t, service.LeoDefaultVideoModelIDs, body.Data.Models)
 	body.Data.Models[0] = "mutated"
 	require.Equal(t, "seedance-2.0", service.LeoDefaultVideoModelIDs[0])
+}
+
+func TestSyncPricingModels_LeoUsesLiveVideoAndImageCatalog(t *testing.T) {
+	pricingSvc := service.NewPricingService(nil, nil)
+	accountRepo := &syncPricingAccountRepo{accounts: []service.Account{{
+		ID:       47,
+		Platform: service.PlatformLeo,
+		Type:     service.AccountTypeAPIKey,
+		Credentials: map[string]any{
+			"api_key":  "image-key",
+			"base_url": "https://image.example/v1",
+		},
+	}}}
+	upstream := &syncUpstreamHTTPUpstream{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"Image Model A"},{"id":"seedance-2.5"}]}`)),
+	}}
+	accountTest := service.NewAccountTestService(
+		nil, nil, nil, nil, nil, upstream,
+		&config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: false}}},
+		nil,
+	)
+	handler := &ChannelHandler{
+		pricingService: pricingSvc,
+		accountRepo:    accountRepo,
+		accountTest:    accountTest,
+	}
+	router := gin.New()
+	router.GET("/channels/pricing/sync-models", handler.SyncPricingModels)
+
+	req := httptest.NewRequest(http.MethodGet, "/channels/pricing/sync-models?platform=leo", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body struct {
+		Data struct {
+			Models       []string                `json:"models"`
+			ModelDetails []service.UpstreamModel `json:"model_details"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	require.Equal(t, []string{"Image Model A", "seedance-2.5"}, body.Data.Models)
+	require.Equal(t, []service.UpstreamModel{
+		{ID: "Image Model A", Name: "Image Model A", Kind: service.UpstreamModelKindImage},
+		{ID: "seedance-2.5", Name: "seedance-2.5", Kind: service.UpstreamModelKindVideo},
+	}, body.Data.ModelDetails)
 }

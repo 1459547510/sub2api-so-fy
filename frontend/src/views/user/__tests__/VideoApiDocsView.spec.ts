@@ -32,10 +32,10 @@ describe('VideoApiDocsView', () => {
     }
     expect(text).toContain('video.apiDocs.matrix.title')
     expect(text).toContain('video.apiDocs.uploadMediaFormat')
-    expect(wrapper.findAll('#model-matrix tbody tr')).toHaveLength(20)
+    expect(wrapper.findAll('#model-matrix tbody tr')).toHaveLength(22)
     const modelExampleHeadings = wrapper.findAll('#model-examples h3').map((heading) => heading.text())
-    expect(modelExampleHeadings).toHaveLength(20)
-    expect(new Set(modelExampleHeadings).size).toBe(20)
+    expect(modelExampleHeadings).toHaveLength(22)
+    expect(new Set(modelExampleHeadings).size).toBe(22)
 
     const examples = wrapper.findAllComponents(ApiCodeBlock).map((component) => component.props('code'))
     expect(examples.some((code) => code.includes('Prefer: respond-async'))).toBe(true)
@@ -48,7 +48,7 @@ describe('VideoApiDocsView', () => {
     expect(examples.some((code) => code.includes('"model": "happy-horse-1.1"') && code.includes('prompt_enhance'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "grok-imagine-1.5"') && code.includes('start_frame_url'))).toBe(true)
     for (const model of [
-      'seedance-2.0', 'seedance-2.0-fast', 'seedance-2.0-mini', 'happy-horse-1.1', 'grok-imagine-1.5', 'ltx-2.3-pro', 'ltx-2.3-fast',
+      'seedance-2.0', 'seedance-2.0-fast', 'seedance-2.0-mini', 'bytedance/seedance-2.5', 'seedance-2.5', 'happy-horse-1.1', 'grok-imagine-1.5', 'ltx-2.3-pro', 'ltx-2.3-fast',
       'hailuo-03', 'gemini-omni-flash', 'kling-2.1', 'kling-2.5', 'kling-2.5-turbo-standard', 'kling-2.6', 'kling-video-o-1',
       'kling-3.0', 'kling-3.0-turbo', 'kling-video-o-3', 'veo-3.1-generate-001', 'veo-3.1-fast-generate-001', 'veo-3.1-lite',
     ]) {

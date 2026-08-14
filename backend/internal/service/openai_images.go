@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -216,7 +217,7 @@ func (s *OpenAIGatewayService) ParseOpenAIImagesRequest(c *gin.Context, body []b
 	}
 
 	applyOpenAIImagesDefaults(req)
-	if err := validateOpenAIImagesModel(req.Model); err != nil {
+	if err := validateOpenAIImagesModelForPlatform(req.Model, openAIImagesPlatform(c.Request.Context())); err != nil {
 		return nil, err
 	}
 	req.SizeTier = normalizeOpenAIImageSizeTier(req.Size)
@@ -466,6 +467,17 @@ func isOpenAIImageGenerationModel(model string) bool {
 	return IsGPTImageGenerationModel(model) || isGrokImageGenerationModel(model)
 }
 
+type openAIImagesPlatformContextKey struct{}
+
+func WithOpenAIImagesPlatform(ctx context.Context, platform string) context.Context {
+	return context.WithValue(ctx, openAIImagesPlatformContextKey{}, strings.ToLower(strings.TrimSpace(platform)))
+}
+
+func openAIImagesPlatform(ctx context.Context) string {
+	platform, _ := ctx.Value(openAIImagesPlatformContextKey{}).(string)
+	return platform
+}
+
 // IsGPTImageGenerationModel identifies the GPT native image-generation model family.
 func IsGPTImageGenerationModel(model string) bool {
 	model = strings.ToLower(strings.TrimSpace(model))
@@ -480,14 +492,25 @@ func isGrokImageGenerationModel(model string) bool {
 }
 
 func validateOpenAIImagesModel(model string) error {
+	return validateOpenAIImagesModelForPlatform(model, "")
+}
+
+func validateOpenAIImagesModelForPlatform(model, platform string) error {
 	model = strings.TrimSpace(model)
-	if isOpenAIImageGenerationModel(model) {
+	if isOpenAIImageGenerationModel(model) || (platform == PlatformLeo && model != "") {
 		return nil
 	}
 	if model == "" {
 		return fmt.Errorf("images endpoint requires an image model")
 	}
 	return fmt.Errorf("images endpoint requires an image model, got %q", model)
+}
+
+func validateOpenAIImagesModelForAccount(model string, account *Account) error {
+	if account != nil && account.IsLeo() && strings.TrimSpace(model) != "" {
+		return nil
+	}
+	return validateOpenAIImagesModel(model)
 }
 
 func normalizeOpenAIImagesEndpointPath(path string) string {
@@ -567,6 +590,9 @@ func (s *OpenAIGatewayService) ForwardImages(
 	if parsed == nil {
 		return nil, fmt.Errorf("parsed images request is required")
 	}
+	if account != nil && account.IsLeo() && parsed.IsEdits() {
+		return nil, fmt.Errorf("image edits are not supported for this platform")
+	}
 	switch account.Type {
 	case AccountTypeAPIKey:
 		return s.forwardOpenAIImagesAPIKey(ctx, c, account, body, parsed, channelMappedModel)
@@ -590,11 +616,11 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	if mapped := strings.TrimSpace(channelMappedModel); mapped != "" {
 		requestModel = mapped
 	}
-	if err := validateOpenAIImagesModel(requestModel); err != nil {
+	if err := validateOpenAIImagesModelForAccount(requestModel, account); err != nil {
 		return nil, err
 	}
 	upstreamModel := account.GetMappedModel(requestModel)
-	if err := validateOpenAIImagesModel(upstreamModel); err != nil {
+	if err := validateOpenAIImagesModelForAccount(upstreamModel, account); err != nil {
 		return nil, err
 	}
 	logger.LegacyPrintf(
@@ -624,9 +650,17 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
 	defer releaseUpstreamCtx()
 
-	token, _, err := s.GetAccessToken(upstreamCtx, account)
-	if err != nil {
-		return nil, err
+	var token string
+	if account.IsLeo() {
+		token = account.GetLeoAPIKey()
+		if token == "" {
+			return nil, errors.New("api_key not found in credentials")
+		}
+	} else {
+		token, _, err = s.GetAccessToken(upstreamCtx, account)
+		if err != nil {
+			return nil, err
+		}
 	}
 	upstreamReq, err := s.buildOpenAIImagesRequest(upstreamCtx, c, account, forwardBody, forwardContentType, token, parsed.Endpoint)
 	if err != nil {
@@ -765,6 +799,9 @@ func (s *OpenAIGatewayService) buildOpenAIImagesRequest(
 		targetURL = openAIImagesEditsURL
 	}
 	baseURL := account.GetOpenAIBaseURL()
+	if account.IsLeo() {
+		baseURL = account.GetLeoBaseURL()
+	}
 	if baseURL != "" {
 		validatedURL, err := s.validateUpstreamBaseURL(baseURL)
 		if err != nil {

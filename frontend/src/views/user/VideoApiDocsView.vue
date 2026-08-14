@@ -259,6 +259,22 @@ const modelMatrixRows = [
     references: 'video.apiDocs.matrix.seedance20Mini.references',
   },
   {
+    model: 'bytedance/seedance-2.5',
+    resolution: 'video.apiDocs.matrix.seedance25.resolution',
+    duration: 'video.apiDocs.matrix.seedance25.duration',
+    aspectRatio: 'video.apiDocs.matrix.seedance25.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.seedance25.promptLimit',
+    references: 'video.apiDocs.matrix.seedance25.references',
+  },
+  {
+    model: 'seedance-2.5',
+    resolution: 'video.apiDocs.matrix.seedance25.resolution',
+    duration: 'video.apiDocs.matrix.seedance25.duration',
+    aspectRatio: 'video.apiDocs.matrix.seedance25.aspectRatio',
+    promptLimit: 'video.apiDocs.matrix.seedance25.promptLimit',
+    references: 'video.apiDocs.matrix.seedance25.references',
+  },
+  {
     model: 'happy-horse-1.1',
     resolution: 'video.apiDocs.matrix.happyHorse.resolution',
     duration: 'video.apiDocs.matrix.happyHorse.duration',
@@ -600,6 +616,30 @@ const modelExamples = [
   "duration": 8,
   "aspect_ratio": "16:9",
   "audio": false
+}`),
+  },
+  {
+    model: 'bytedance/seedance-2.5',
+    description: 'video.apiDocs.models.seedance25',
+    code: modelRequestExample(`{
+  "model": "bytedance/seedance-2.5",
+  "prompt": "A wide tracking shot across a futuristic coastal city",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "21:9",
+  "audio": true
+}`),
+  },
+  {
+    model: 'seedance-2.5',
+    description: 'video.apiDocs.models.seedance25',
+    code: modelRequestExample(`{
+  "model": "seedance-2.5",
+  "prompt": "A wide tracking shot across a futuristic coastal city",
+  "resolution": "720p",
+  "duration": 8,
+  "aspect_ratio": "21:9",
+  "audio": true
 }`),
   },
   {

@@ -88,7 +88,7 @@ func TestAccountHandlerSyncUpstreamModelsReturnsDisplayNames(t *testing.T) {
 	}
 	upstream := &syncUpstreamHTTPUpstream{resp: &http.Response{
 		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"11111111-1111-1111-1111-111111111111","name":"Leonardo Vision XL"},{"id":"seedance-2.0","name":"Seedance 2.0"}]}`)),
+		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"11111111-1111-1111-1111-111111111111","name":"Image Model A"},{"id":"seedance-2.0","name":"Seedance 2.0"}]}`)),
 	}}
 	router := setupSyncUpstreamModelsRouter(svc, upstream)
 
@@ -104,10 +104,10 @@ func TestAccountHandlerSyncUpstreamModelsReturnsDisplayNames(t *testing.T) {
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
-	require.Equal(t, []string{"11111111-1111-1111-1111-111111111111", "seedance-2.0"}, envelope.Data.Models)
+	require.Equal(t, []string{"Image Model A", "seedance-2.0"}, envelope.Data.Models)
 	require.Equal(t, []service.UpstreamModel{
-		{ID: "11111111-1111-1111-1111-111111111111", Name: "Leonardo Vision XL"},
-		{ID: "seedance-2.0", Name: "Seedance 2.0"},
+		{ID: "Image Model A", Name: "Image Model A", Kind: service.UpstreamModelKindImage},
+		{ID: "seedance-2.0", Name: "Seedance 2.0", Kind: service.UpstreamModelKindVideo},
 	}, envelope.Data.ModelDetails)
 }
 

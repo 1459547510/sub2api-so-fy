@@ -18,6 +18,8 @@ var LeoDefaultVideoModelIDs = []string{
 	"seedance-2.0",
 	"seedance-2.0-fast",
 	"seedance-2.0-mini",
+	"bytedance/seedance-2.5",
+	"seedance-2.5",
 	"happy-horse-1.1",
 	"grok-imagine-1.5",
 	LeoLTX23ProModelID,
@@ -131,7 +133,7 @@ func ValidateLeoAccountCredentials(platform, accountType string, credentials map
 	}
 	mapping, ok := credentials["model_mapping"].(map[string]any)
 	if !ok || len(mapping) == 0 {
-		return invalidLeoCredentials("model_mapping must contain at least one leo video model")
+		return invalidLeoCredentials("model_mapping must contain at least one model")
 	}
 	for from, rawTo := range mapping {
 		to, ok := rawTo.(string)

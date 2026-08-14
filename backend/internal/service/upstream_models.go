@@ -72,11 +72,17 @@ func newUpstreamModelSyncUpstreamError(message string, err error) error {
 	return &UpstreamModelSyncError{Kind: UpstreamModelSyncErrorUpstream, Message: message, Err: err}
 }
 
-// UpstreamModel describes a model ID and the optional upstream display name.
-// The ID remains the value used in account routing and generation requests.
+const (
+	UpstreamModelKindVideo = "video"
+	UpstreamModelKindImage = "image"
+)
+
+// UpstreamModel describes a model ID, display name, and optional media kind.
+// The ID remains the public value used in account routing and generation requests.
 type UpstreamModel struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	Kind string `json:"kind,omitempty"`
 }
 
 // FetchUpstreamSupportedModels keeps the original ID-only service contract for
@@ -157,8 +163,49 @@ func (s *AccountTestService) FetchUpstreamSupportedModelDetails(ctx context.Cont
 	if len(models) == 0 {
 		return nil, newUpstreamModelSyncUpstreamError("Upstream returned no supported models", nil)
 	}
+	if account.IsLeo() {
+		publicModels := models[:0]
+		seenPublicIDs := make(map[string]struct{}, len(models))
+		for _, model := range models {
+			model.ID = strings.TrimSpace(model.ID)
+			if leoVideoAssetIDPattern.MatchString(model.ID) {
+				model.ID = strings.TrimSpace(model.Name)
+			}
+			if model.ID == "" || leoVideoAssetIDPattern.MatchString(model.ID) {
+				continue
+			}
+			publicIDKey := strings.ToLower(model.ID)
+			if _, exists := seenPublicIDs[publicIDKey]; exists {
+				continue
+			}
+			seenPublicIDs[publicIDKey] = struct{}{}
+			model.Kind = strings.ToLower(strings.TrimSpace(model.Kind))
+			if model.Kind == UpstreamModelKindVideo || model.Kind == UpstreamModelKindImage {
+				// Keep the explicit upstream media kind.
+			} else if isLeoVideoModel(model.ID) {
+				model.Kind = UpstreamModelKindVideo
+			} else {
+				model.Kind = UpstreamModelKindImage
+			}
+			publicModels = append(publicModels, model)
+		}
+		models = publicModels
+	}
 
 	return models, nil
+}
+
+func isLeoVideoModel(model string) bool {
+	model = normalizeLeoVideoModelID(model)
+	if _, ok := leoVideoModelSpecs[model]; ok {
+		return true
+	}
+	for _, known := range LeoDefaultVideoModelIDs {
+		if model == known {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *AccountTestService) buildUpstreamModelsRequest(ctx context.Context, account *Account) (*http.Request, error) {
@@ -562,6 +609,7 @@ type upstreamModelEntry struct {
 	ModelIDSnake string          `json:"model_id"`
 	Name         string          `json:"name"`
 	DisplayName  string          `json:"display_name"`
+	Kind         string          `json:"kind"`
 	Meta         json.RawMessage `json:"_meta"`
 }
 
@@ -637,7 +685,7 @@ func buildUpstreamModelDetails(entries []upstreamModelEntry, selectID func(upstr
 		if existing, ok := byID[modelID]; ok && existing.Name != existing.ID {
 			continue
 		}
-		byID[modelID] = UpstreamModel{ID: modelID, Name: name}
+		byID[modelID] = UpstreamModel{ID: modelID, Name: name, Kind: entry.Kind}
 	}
 
 	models := make([]UpstreamModel, 0, len(byID))

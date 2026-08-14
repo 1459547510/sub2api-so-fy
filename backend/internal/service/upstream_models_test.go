@@ -371,14 +371,14 @@ func TestFetchUpstreamSupportedModelsParsesLeoResponse(t *testing.T) {
 	upstream := &httpUpstreamRecorder{resp: &http.Response{
 		StatusCode: http.StatusOK,
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
-		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"seedance-2.0"},{"id":"seedance-2.0"},{"id":"flux-dev"}]}`)),
+		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"11111111-1111-1111-1111-111111111111","name":"Image Model Legacy"},{"id":"Image Model Legacy"},{"id":"seedance-2.0"},{"id":"bytedance/seedance-2.5"},{"id":"Image Model Current"}]}`)),
 	}}
 	svc := &AccountTestService{
 		httpUpstream: upstream,
 		cfg:          upstreamModelSyncTestConfig(),
 	}
 
-	models, err := svc.FetchUpstreamSupportedModels(context.Background(), &Account{
+	details, err := svc.FetchUpstreamSupportedModelDetails(context.Background(), &Account{
 		ID:       1682,
 		Platform: PlatformLeo,
 		Type:     AccountTypeAPIKey,
@@ -388,7 +388,15 @@ func TestFetchUpstreamSupportedModelsParsesLeoResponse(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Equal(t, []string{"flux-dev", "seedance-2.0"}, models)
+	require.ElementsMatch(t, []UpstreamModel{
+		{ID: "Image Model Legacy", Name: "Image Model Legacy", Kind: UpstreamModelKindImage},
+		{ID: "Image Model Current", Name: "Image Model Current", Kind: UpstreamModelKindImage},
+		{ID: "bytedance/seedance-2.5", Name: "bytedance/seedance-2.5", Kind: UpstreamModelKindVideo},
+		{ID: "seedance-2.0", Name: "seedance-2.0", Kind: UpstreamModelKindVideo},
+	}, details)
+	for _, detail := range details {
+		require.False(t, leoVideoAssetIDPattern.MatchString(detail.ID))
+	}
 	require.Equal(t, "https://leo.example.com/v1/models", upstream.lastReq.URL.String())
 	require.Equal(t, "Bearer leo-key", upstream.lastReq.Header.Get("Authorization"))
 }

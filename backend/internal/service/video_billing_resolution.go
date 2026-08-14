@@ -24,6 +24,9 @@ var leoVideoPricingResolutions = []string{
 // shared capability table.
 func LeoVideoPricingResolutions(model string) []string {
 	model = strings.ToLower(strings.TrimSpace(model))
+	if model == "bytedance/seedance-2.5" || model == "seedance-2.5" {
+		return []string{VideoBillingResolution480P, VideoBillingResolution720P}
+	}
 	if model == "seedance-2.0-mini" {
 		return []string{VideoBillingResolution720P}
 	}

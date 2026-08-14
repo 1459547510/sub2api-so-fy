@@ -4316,6 +4316,8 @@ watch(
         { from: 'seedance-2.0', to: 'seedance-2.0' },
         { from: 'seedance-2.0-fast', to: 'seedance-2.0-fast' },
         { from: 'seedance-2.0-mini', to: 'seedance-2.0-mini' },
+        { from: 'bytedance/seedance-2.5', to: 'bytedance/seedance-2.5' },
+        { from: 'seedance-2.5', to: 'seedance-2.5' },
         { from: 'happy-horse-1.1', to: 'happy-horse-1.1' },
         { from: 'grok-imagine-1.5', to: 'grok-imagine-1.5' },
         { from: 'ltx-2.3-pro', to: 'ltxv-2.3-pro' },

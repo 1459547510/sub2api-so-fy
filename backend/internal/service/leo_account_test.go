@@ -101,6 +101,8 @@ func TestDefaultModelsListCandidateIDsLeo(t *testing.T) {
 		"seedance-2.0",
 		"seedance-2.0-fast",
 		"seedance-2.0-mini",
+		"bytedance/seedance-2.5",
+		"seedance-2.5",
 		"happy-horse-1.1",
 		"grok-imagine-1.5",
 		"ltx-2.3-pro",

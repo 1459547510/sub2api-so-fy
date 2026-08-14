@@ -68,6 +68,7 @@ func (h *OpenAIGatewayHandler) handleOpenAIImagesNSplit(
 				routingModel,
 				requestModel,
 				channelMapping.MappedModel,
+				effectiveAPIKeyPlatform(c, apiKey),
 				reqLog,
 			)
 			result.index = index
@@ -151,6 +152,7 @@ func (h *OpenAIGatewayHandler) runOpenAIImagesNSplitTask(
 	routingModel string,
 	requestModel string,
 	channelMappedModel string,
+	platform string,
 	reqLog *zap.Logger,
 ) splitOpenAIImageTaskResult {
 	child, recorder := newBufferedGatewayContext(parent)
@@ -177,6 +179,7 @@ func (h *OpenAIGatewayHandler) runOpenAIImagesNSplitTask(
 			routingModel,
 			failedAccountIDs,
 			childParsed.RequiredCapability,
+			platform,
 		)
 		if err != nil || selection == nil || selection.Account == nil {
 			if lastFailoverErr != nil {

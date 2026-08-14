@@ -808,6 +808,11 @@ func (a *Account) IsModelSupported(requestedModel string) bool {
 	if a.IsOpenAIPassthroughEnabled() {
 		return true
 	}
+	// This platform publishes its live model catalog. Keep explicit mappings for
+	// aliases, but do not let an older saved mapping block newly synced models.
+	if a.IsLeo() {
+		return true
+	}
 	mapping := a.GetModelMapping()
 	if len(mapping) == 0 {
 		if a.IsOpenAIOAuth() {
@@ -1642,12 +1647,13 @@ func (a *Account) SupportsOpenAIImageCapability(capability OpenAIImagesCapabilit
 	if capability == "" {
 		return true
 	}
-	if !a.IsOpenAI() {
+	if !a.IsOpenAI() && !a.IsLeo() {
 		return false
 	}
 	switch capability {
 	case OpenAIImagesCapabilityBasic, OpenAIImagesCapabilityNative:
-		return a.Type == AccountTypeOAuth || a.Type == AccountTypeAPIKey
+		return (a.IsOpenAI() && (a.Type == AccountTypeOAuth || a.Type == AccountTypeAPIKey)) ||
+			(a.IsLeo() && a.Type == AccountTypeAPIKey)
 	default:
 		return true
 	}

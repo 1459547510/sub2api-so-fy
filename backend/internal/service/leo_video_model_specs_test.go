@@ -117,6 +117,10 @@ func TestValidateLeoVideoRequestSupportsLatestModels(t *testing.T) {
 			name: "grok square resolution",
 			body: `{"model":"grok-imagine-1.5","prompt":"waves","resolution":"544p","aspect_ratio":"1:1","duration":15,"start_frame_url":"https://example.com/start.png"}`,
 		},
+		{
+			name: "seedance 2.5 with expanded references",
+			body: `{"model":"seedance-2.5","prompt":"waves","resolution":"480p","aspect_ratio":"21:9","duration":30,"image_urls":["https://example.com/1.png","https://example.com/2.png","https://example.com/3.png","https://example.com/4.png","https://example.com/5.png"],"guidances":{"video_reference_base":[{"video":{"url":"https://example.com/reference.mp4","type":"UPLOADED"}}]}}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -124,6 +128,18 @@ func TestValidateLeoVideoRequestSupportsLatestModels(t *testing.T) {
 			_, err := ValidateLeoVideoRequest([]byte(tt.body))
 			require.NoError(t, err)
 		})
+	}
+}
+
+func TestValidateLeoVideoRequestRejectsUnsupportedSeedance25Parameters(t *testing.T) {
+	for _, body := range []string{
+		`{"model":"bytedance/seedance-2.5","prompt":"waves","resolution":"1080p"}`,
+		`{"model":"seedance-2.5","prompt":"waves","duration":31}`,
+		`{"model":"seedance-2.5","prompt":"waves","aspect_ratio":"9:21"}`,
+		`{"model":"seedance-2.5","prompt":"waves","image_urls":["https://example.com/reference.png"],"guidances":{"audio_reference":[{"audio":{"id":"33333333-3333-3333-3333-333333333333","duration":20}},{"audio":{"id":"44444444-4444-4444-4444-444444444444","duration":11}}]}}`,
+	} {
+		_, err := ValidateLeoVideoRequest([]byte(body))
+		require.Error(t, err)
 	}
 }
 

@@ -1,7 +1,9 @@
 package admin
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -18,11 +20,13 @@ type ChannelHandler struct {
 	channelService *service.ChannelService
 	billingService *service.BillingService
 	pricingService *service.PricingService
+	accountRepo    service.AccountRepository
+	accountTest    *service.AccountTestService
 }
 
 // NewChannelHandler creates a new admin channel handler
-func NewChannelHandler(channelService *service.ChannelService, billingService *service.BillingService, pricingService *service.PricingService) *ChannelHandler {
-	return &ChannelHandler{channelService: channelService, billingService: billingService, pricingService: pricingService}
+func NewChannelHandler(channelService *service.ChannelService, billingService *service.BillingService, pricingService *service.PricingService, accountRepo service.AccountRepository, accountTest *service.AccountTestService) *ChannelHandler {
+	return &ChannelHandler{channelService: channelService, billingService: billingService, pricingService: pricingService, accountRepo: accountRepo, accountTest: accountTest}
 }
 
 // --- Request / Response types ---
@@ -529,7 +533,8 @@ func (h *ChannelHandler) SyncPricingModels(c *gin.Context) {
 	}
 
 	if platform == service.PlatformLeo {
-		response.Success(c, gin.H{"models": append([]string(nil), service.LeoDefaultVideoModelIDs...)})
+		details := h.syncLeoPricingModels(c)
+		response.Success(c, gin.H{"models": upstreamModelIDs(details), "model_details": details})
 		return
 	}
 
@@ -543,4 +548,34 @@ func (h *ChannelHandler) SyncPricingModels(c *gin.Context) {
 
 	models := h.pricingService.ListModelNamesByProvider(provider)
 	response.Success(c, gin.H{"models": models})
+}
+
+func (h *ChannelHandler) syncLeoPricingModels(c *gin.Context) []service.UpstreamModel {
+	if h.accountRepo != nil && h.accountTest != nil {
+		accounts, err := h.accountRepo.ListSchedulableByPlatform(c.Request.Context(), service.PlatformLeo)
+		if err == nil {
+			for i := range accounts {
+				details, fetchErr := h.accountTest.FetchUpstreamSupportedModelDetails(c.Request.Context(), &accounts[i])
+				if fetchErr == nil && len(details) > 0 {
+					return details
+				}
+				if fetchErr != nil {
+					var syncErr *service.UpstreamModelSyncError
+					if errors.As(fetchErr, &syncErr) {
+						slog.Warn("sync_leo_pricing_models_failed", "kind", syncErr.Kind)
+					} else {
+						slog.Warn("sync_leo_pricing_models_failed", "kind", "unknown")
+					}
+				}
+			}
+		} else {
+			slog.Warn("list_leo_pricing_accounts_failed")
+		}
+	}
+
+	details := make([]service.UpstreamModel, 0, len(service.LeoDefaultVideoModelIDs))
+	for _, model := range service.LeoDefaultVideoModelIDs {
+		details = append(details, service.UpstreamModel{ID: model, Name: model, Kind: service.UpstreamModelKindVideo})
+	}
+	return details
 }

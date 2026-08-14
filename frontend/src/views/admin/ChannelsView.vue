@@ -879,7 +879,7 @@ async function syncLatestModels(sectionIdx: number) {
       return
     }
     form.platforms[sectionIdx].model_pricing.push(
-      ...createSyncedPricingEntries(platform, newModels)
+      ...createSyncedPricingEntries(platform, newModels, result.model_details)
     )
     appStore.showSuccess(t('admin.channels.form.syncModelsSuccess', { count: newModels.length }))
   } catch (error) {

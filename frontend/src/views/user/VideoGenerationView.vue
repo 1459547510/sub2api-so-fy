@@ -411,6 +411,26 @@ const hdAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1'
 const videoReferenceMaxBytes = 100 * 1024 * 1024
 const audioReferenceMaxBytes = 15 * 1024 * 1024
 const imageReferenceMaxBytes = 10 * 1024 * 1024
+const seedance25Capability: VideoModelCapability = {
+  resolutions: ['480p', '720p'],
+  defaultResolution: '720p',
+  durations: Array.from({ length: 27 }, (_, index) => index + 4),
+  defaultDuration: 8,
+  aspectsByResolution: {
+    '480p': hdAspectRatioOptions,
+    '720p': hdAspectRatioOptions,
+  },
+  defaultAspectRatio: '16:9',
+  maxPromptLength: 5000,
+  maxStartFrames: 1,
+  maxEndFrames: 1,
+  maxImageRefs: 30,
+  maxVideoRefs: 10,
+  maxAudioRefs: 10,
+  maxAudioRefSeconds: 30.2,
+  audioRefRequiresMedia: true,
+  supportsAudio: true,
+}
 const videoModelCapabilities: Record<string, VideoModelCapability> = {
   'seedance-2.0': {
     resolutions: ['480p', '720p', '1080p'],
@@ -474,6 +494,8 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     supportsAudio: true,
     framesExcludeOtherRef: true,
   },
+  'bytedance/seedance-2.5': seedance25Capability,
+  'seedance-2.5': seedance25Capability,
   'happy-horse-1.1': {
     resolutions: ['720p', '1080p'],
     defaultResolution: '1080p',

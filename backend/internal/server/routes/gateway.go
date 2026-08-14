@@ -98,6 +98,8 @@ func RegisterGatewayRoutes(
 			h.OpenAIGateway.Images(c)
 		case service.PlatformGrok:
 			h.OpenAIGateway.GrokImages(c)
+		case service.PlatformLeo:
+			h.OpenAIGateway.Images(c)
 		default:
 			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
 			c.JSON(http.StatusNotFound, gin.H{

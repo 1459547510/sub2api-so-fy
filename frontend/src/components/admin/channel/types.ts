@@ -1,4 +1,4 @@
-import type { BillingMode, PricingInterval } from '@/api/admin/channels'
+import type { BillingMode, PricingInterval, SyncPricingModelDetail } from '@/api/admin/channels'
 import { LEO_VIDEO_MODELS, VIDEO_PRICING_RESOLUTIONS } from '@/constants/channel'
 
 type TranslateFn = (key: string, params?: Record<string, unknown>) => string
@@ -80,6 +80,7 @@ export function formIntervalsToAPI(intervals: IntervalFormEntry[]): PricingInter
 
 export function videoPricingResolutionsForModel(model?: string): readonly string[] {
   const normalizedModel = model?.trim().toLowerCase()
+  if (normalizedModel === 'bytedance/seedance-2.5' || normalizedModel === 'seedance-2.5') return ['480p', '720p']
   if (normalizedModel === 'seedance-2.0-mini') return ['720p']
   if (normalizedModel === 'happy-horse-1.1') return ['720p', '1080p']
   if (normalizedModel === 'grok-imagine-1.5') return ['400p', '544p', '720p', '960p']
@@ -139,9 +140,21 @@ export function getNextLeoVideoModel(entries: PricingFormEntry[]): string | unde
   return LEO_VIDEO_MODELS.find(model => !existingModels.has(model))
 }
 
-export function createSyncedPricingEntries(platform: string, models: string[]): PricingFormEntry[] {
+export function createSyncedPricingEntries(
+  platform: string,
+  models: string[],
+  modelDetails: SyncPricingModelDetail[] = [],
+): PricingFormEntry[] {
   if (platform === 'leo') {
-    return models.map(model => createPricingFormEntry([model], 'video'))
+    const kinds = new Map(modelDetails.map(detail => [detail.id.trim().toLowerCase(), detail.kind]))
+    return models.map(model => {
+      const normalizedModel = model.trim().toLowerCase()
+      const kind = kinds.get(normalizedModel)
+      const billingMode: BillingMode = kind === 'video' || (!kind && LEO_VIDEO_MODELS.some(known => known === normalizedModel))
+        ? 'video'
+        : 'image'
+      return createPricingFormEntry([model], billingMode)
+    })
   }
   return [createPricingFormEntry(models)]
 }

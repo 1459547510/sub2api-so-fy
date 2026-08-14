@@ -112,6 +112,17 @@ describe('VideoGenerationView', () => {
     expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9', '1:1', '9:16'])
   })
 
+  it('limits Seedance 2.5 to its published resolution, duration, and aspect options', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.5')
+
+    expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p'])
+    expect(wrapper.get('[data-testid="video-duration"]').findAll('option').map((option) => Number(option.attributes('value')))).toEqual(Array.from({ length: 27 }, (_, index) => index + 4))
+    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9', '9:16', '1:1', '4:3', '3:4', '21:9'])
+  })
+
   it('exposes Happy Horse and Grok capability-specific controls', async () => {
     const wrapper = mountView()
     await flushPromises()

@@ -15,6 +15,7 @@ use a supported resolution/aspect-ratio pair from the same row.
 | `seedance-2.0` | `480p`, `720p`, `1080p` | `4-15s`; default `8s`; `1080p` is `4-12s` | `480p`/`1080p`: `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`, `9:21`; `720p` excludes `9:21` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
 | `seedance-2.0-fast` | `480p`, `720p` | `4-15s`; default `8s` | `480p`: all seven Seedance ratios; `720p` excludes `9:21` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
 | `seedance-2.0-mini` | `480p`, `720p` | `4-15s`; default `8s` | Both resolutions: `16:9`, `1:1`, `9:16` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
+| `bytedance/seedance-2.5`, `seedance-2.5` | `480p`, `720p` | `4-30s`; default `8s` | Both resolutions: `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9` | 5000 | 1 start frame, 1 end frame, 30 images, 10 videos, 10 audio references totaling at most 30.2s |
 | `happy-horse-1.1` | `720p`, `1080p` | `3-15s`; default `5s` | Both resolutions: `16:9`, `4:3`, `1:1`, `3:4`, `9:16` | 2500 | 1 start frame or 9 images; no end frame/video/audio; `prompt_enhance` |
 | `grok-imagine-1.5` | `auto`, `400p`, `544p`, `720p`, `960p` | `3-15s`; default `6s` | `auto` with `auto`; `400p`/`720p`: `16:9`, `9:16`; `544p`/`960p`: `1:1` | 5000 | exactly 1 start frame; no end frame/image/video/audio |
 | `ltx-2.3-pro` | `1080p`, `1440p`, `2160p` | `6s`, `8s`, `10s`; default `6s` | `16:9` only | 5000 | 1 start frame, 1 end frame; no image/video/audio references; generated audio and `prompt_enhance` |
@@ -121,9 +122,11 @@ up to 15 MiB and 2-30 seconds per file.
   supports an end frame.
 - Reference-image mode and frame mode are mutually exclusive. A request may
   use either the start/end frame fields or reference images, but not both.
-- Seedance models allow up to four reference images, three reference videos,
-  and one reference audio item; reference audio must be paired with an image
-  or video reference.
+- Seedance 2.0 models allow up to four reference images, three reference
+  videos, and one reference audio item. Seedance 2.5 allows up to 30 images,
+  10 videos, and 10 audio references totaling at most 30.2 seconds. Reference
+  audio must be paired with an image or video
+  reference.
 - `hailuo-03` allows up to five images or three audio references totaling 15
   seconds. Its end frame requires a start frame, and frame mode excludes all
   image references.
@@ -169,8 +172,9 @@ request.
 - The form field is `image` (the legacy `file` field remains accepted).
 - The file must be a readable PNG, JPEG, or WebP image.
 - The size limit is 10 MiB per file.
-- A generation may contain at most four reference images for Seedance or nine
-  for Happy Horse. Grok and LTX do not accept reference-image guidance.
+- A generation may contain at most four reference images for Seedance 2.0,
+  30 for Seedance 2.5, or nine for Happy Horse. Grok and LTX do not accept
+  reference-image guidance.
 
 ### Reference videos
 
@@ -198,8 +202,9 @@ request.
   to three for Hailuo 03; Hailuo's combined duration limit is 15 seconds.
 - A reference audio item must be paired with at least one reference image or
   reference video. Generated output audio (`audio: true`) is a separate option.
-- Reference audio guidance is available to Seedance and Hailuo 03. Other
-  models reject audio-reference guidance.
+- Reference audio guidance is available to Seedance and Hailuo 03. Seedance
+  2.0 accepts one item, while Seedance 2.5 accepts up to 10 items totaling at
+  most 30.2 seconds. Other models reject audio-reference guidance.
 
 ## URL and request rules
 
