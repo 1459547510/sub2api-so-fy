@@ -46,7 +46,7 @@ Unit is USD/s. Always list configured resolutions; do not collapse even when val
 
 Display the raw configured USD amounts. Do not multiply by user exclusive rate, group `rate_multiplier`, image/video independent rates, or peak rate. Do not fetch `/groups/rates` for this page. Do not show multiplier text.
 
-A tier is configured when `Number(value)` is finite and `>= 0`. Numeric strings such as `"0.08"` count. `null`, missing, empty string, and non-numeric values are unconfigured. `0` is a real price.
+Treat `null`, `undefined`, and `""` as unconfigured before calling `Number()`. `Number(null)` and `Number("")` are `0` in JavaScript and must not count as a price. After that guard, a tier is configured when `Number(value)` is finite and `>= 0`. Numeric strings such as `"0.08"` count. `0` is a real price.
 
 ## Data
 
