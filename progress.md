@@ -6493,3 +6493,18 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/service/openai_codex_identity.go`: gives the explicit upstream fingerprint mode precedence over the legacy marker.
 - `backend/internal/service/openai_codex_fingerprint_mode_test.go`: covers the precedence rule.
 - Roll back source changes with `git revert 3d0eb9b8b 5e49596ae`; the previous deployable source tag is `v0.1.176-fy.4`. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-16 - Task: Verify published upstream merge release v0.1.177-fy.1
+### What was done
+- Confirmed the fork branch and release tag are pushed to GitHub.
+- Confirmed the public Linux amd64 release asset is downloadable and matches the published checksum.
+
+### Testing
+- Remote branch `codex/leo-video-channel`: confirmed at `54ceb0608c8d6e4966d4c25d40da69e315ac8e3d`.
+- Remote tag `v0.1.177-fy.1`: confirmed at `443a9231f3ff77969d0cba233909e739cdc5c593`.
+- Release asset download: HTTP `200`; `sub2api_0.1.177-fy.1_linux_amd64.tar.gz` size `37,515,014` bytes.
+- SHA-256: `dfed87c6975cd6cf883a718a89b02aa035e143fc66b1c9a315ec12e4920f0222`; matched `checksums.txt`.
+
+### Notes
+- `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
+- Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
