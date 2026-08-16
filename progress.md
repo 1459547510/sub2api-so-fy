@@ -6508,3 +6508,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
 - Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
+
+## 2026-08-16 - Task: Release media pricing page as v0.1.177-fy.2
+### What was done
+- Moved media prices out of the V2 video API docs into a third video-module tab at `/video-generation/pricing`.
+- Showed administrator-configured unit prices as per-model cards: image 1K/2K/4K with same-price collapse, video 480p/720p/1080p per second, no rate multipliers.
+- Prepared annotated tag `v0.1.177-fy.2` from the validated pricing-page commits.
+
+### Testing
+- `npx vitest run src/utils/__tests__/mediaPricing.spec.ts src/views/user/__tests__/VideoPricingView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/components/video/__tests__/VideoSectionTabs.spec.ts` (in `frontend`): passed, 4 files and 20 tests.
+
+### Notes
+- `frontend/src/utils/mediaPricing.ts`: builds group sections and cards from `/groups/available` plus optional plaza image names.
+- `frontend/src/views/user/VideoPricingView.vue`: renders the pricing tab.
+- `frontend/src/components/video/VideoSectionTabs.vue`: adds the Pricing tab.
+- `frontend/src/router/index.ts`: registers `/video-generation/pricing`.
+- `frontend/src/views/user/VideoApiDocsView.vue`: removes the in-docs pricing block.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.1..v0.1.177-fy.2` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.1`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.2` and its remote tag. Preserve unrelated `.superpowers/` content.
+
