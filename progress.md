@@ -6453,3 +6453,18 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/i18n/locales/en/dashboard.ts`: adds English V2 documentation and pricing copy.
 - `progress.md`: records this release preparation and verification evidence.
 - Roll back with `git revert <task-commit>`; the previous deployable source tag is `v0.1.176-fy.3`. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-16 - Task: Publish V2 media API pricing documentation as v0.1.176-fy.4
+### What was done
+- Pushed commit `5e98fd2bc06dc37f7099b326818657fed4b3c018` and annotated tag `v0.1.176-fy.4` to the fork repository.
+- GitHub Actions Release #78 completed successfully and published the Linux amd64 package and checksum file.
+
+### Testing
+- Release workflow: completed successfully at `https://github.com/1459547510/sub2api-so-fy/actions/runs/31918802057`.
+- Package download returned HTTP `200`; `sub2api_0.1.176-fy.4_linux_amd64.tar.gz` is 37,478,749 bytes.
+- Archive SHA-256 `e6c28c76fef8750908345fd569ad85dca09c8e2b4b428f01a1038c15160e6d33` matched the published `checksums.txt`.
+- `tar -tzf` confirmed the archive contains only `sub2api`.
+
+### Notes
+- Release page: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.176-fy.4`.
+- Roll back source behavior with `git revert 5e98fd2bc`; the previous deployable source tag is `v0.1.176-fy.3`. To withdraw the binary, remove Release `v0.1.176-fy.4` and its remote tag. Preserve unrelated `.superpowers/` content.
