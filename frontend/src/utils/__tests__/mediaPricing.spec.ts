@@ -4,6 +4,7 @@ import {
   imageTiers,
   keepMediaPricingGroup,
   buildVideoCards,
+  buildMediaPricingSections,
 } from '../mediaPricing'
 
 const emptyPrices = {
@@ -128,5 +129,72 @@ describe('buildVideoCards', () => {
       video_model_prices: { 'seedance-2.0': { '720p': 0.14 } },
     })
     expect(noFallback.map((card) => card.title)).toEqual(['seedance-2.0'])
+  })
+})
+
+describe('buildMediaPricingSections', () => {
+  it('keeps API group order, puts image cards before video cards, and sorts titles', () => {
+    const sections = buildMediaPricingSections(
+      [
+        {
+          id: 2,
+          name: 'Second',
+          platform: 'openai_media',
+          ...emptyPrices,
+          image_price_1k: 0.08,
+        },
+        {
+          id: 1,
+          name: 'First',
+          platform: 'leo',
+          ...emptyPrices,
+          video_price_720p: 0.14,
+          video_model_prices: {
+            'seedance-2.0-fast': { '720p': 0.1 },
+            'seedance-2.0': { '720p': 0.14 },
+          },
+        },
+      ],
+      [{
+        id: 2,
+        models: [
+          { name: 'gpt-image-2', pricing: { billing_mode: 'image' } },
+          { name: 'alpha-image', pricing: { billing_mode: 'image' } },
+          { name: 'token-model', pricing: { billing_mode: 'token' } },
+        ],
+      }],
+    )
+
+    expect(sections.map((section) => section.name)).toEqual(['Second', 'First'])
+    expect(sections[0].cards.map((card) => card.title)).toEqual(['alpha-image', 'gpt-image-2'])
+    expect(sections[1].cards.map((card) => card.title)).toEqual(['seedance-2.0', 'seedance-2.0-fast'])
+  })
+
+  it('falls back to the group name for image cards when plaza has no image models', () => {
+    const sections = buildMediaPricingSections(
+      [{ id: 3, name: 'Grok images', platform: 'grok', ...emptyPrices, image_price_1k: 0.02, image_price_2k: 0.02, image_price_4k: 0.02 }],
+      [],
+    )
+    expect(sections[0].cards).toEqual([{
+      key: 'image-fallback',
+      title: 'Grok images',
+      kind: 'image',
+      unit: 'per_image',
+      tiers: [{ label: null, value: 0.02 }],
+    }])
+  })
+
+  it('does not create image cards when the group has no image price', () => {
+    const sections = buildMediaPricingSections(
+      [{
+        id: 4,
+        name: 'Video only',
+        platform: 'leo',
+        ...emptyPrices,
+        video_model_prices: { 'seedance-2.0': { '720p': 0.14 } },
+      }],
+      [{ id: 4, models: [{ name: 'gpt-image-2', pricing: { billing_mode: 'image' } }] }],
+    )
+    expect(sections[0].cards.every((card) => card.kind === 'video')).toBe(true)
   })
 })

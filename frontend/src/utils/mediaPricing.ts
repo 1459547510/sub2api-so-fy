@@ -127,3 +127,67 @@ export function buildVideoCards(group: VideoPriceFields & { name: string }): Med
     tiers: flats,
   }]
 }
+
+export type PlazaImageSource = {
+  id: number
+  models: Array<{ name: string; pricing?: { billing_mode?: string } | null }>
+}
+
+export type MediaPricingGroup = VideoPriceFields & {
+  id: number
+  name: string
+  platform: string
+}
+
+export type MediaPriceGroupSection = {
+  id: number
+  name: string
+  cards: MediaPriceCard[]
+}
+
+export function buildImageCards(
+  group: MediaPricingGroup,
+  plazaGroups: PlazaImageSource[],
+): MediaPriceCard[] {
+  if (!hasConfiguredImagePrice(group)) return []
+  const tiers = imageTiers(group)
+  const names = (plazaGroups.find((item) => item.id === group.id)?.models ?? [])
+    .filter((model) => model.pricing?.billing_mode === 'image')
+    .map((model) => model.name)
+    .sort((a, b) => a.localeCompare(b))
+
+  if (names.length > 0) {
+    return names.map((name) => ({
+      key: `image:${name}`,
+      title: name,
+      kind: 'image',
+      unit: 'per_image',
+      tiers,
+    }))
+  }
+
+  return [{
+    key: 'image-fallback',
+    title: group.name,
+    kind: 'image',
+    unit: 'per_image',
+    tiers,
+  }]
+}
+
+export function buildMediaPricingSections(
+  groups: MediaPricingGroup[],
+  plazaGroups: PlazaImageSource[] = [],
+): MediaPriceGroupSection[] {
+  return groups
+    .filter(keepMediaPricingGroup)
+    .map((group) => ({
+      id: group.id,
+      name: group.name,
+      cards: [
+        ...buildImageCards(group, plazaGroups),
+        ...buildVideoCards(group),
+      ],
+    }))
+    .filter((section) => section.cards.length > 0)
+}
