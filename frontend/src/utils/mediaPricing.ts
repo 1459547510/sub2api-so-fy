@@ -21,10 +21,25 @@ export type ImagePriceFields = {
   image_price_4k: unknown
 }
 
+function collectConfiguredTiers<T extends { label: string }>(
+  items: ReadonlyArray<T>,
+  getValue: (item: T) => number | null,
+): MediaPriceTier[] {
+  const tiers: MediaPriceTier[] = []
+  for (const item of items) {
+    const value = getValue(item)
+    if (value !== null) {
+      tiers.push({ label: item.label, value })
+    }
+  }
+  return tiers
+}
+
 export function imageTiers(group: ImagePriceFields): MediaPriceTier[] {
-  const configured = IMAGE_TIER_FIELDS
-    .map((tier) => ({ label: tier.label, value: configuredPrice(group[tier.field]) }))
-    .filter((tier): tier is { label: string; value: number } => tier.value !== null)
+  const configured = collectConfiguredTiers(
+    IMAGE_TIER_FIELDS,
+    (tier) => configuredPrice(group[tier.field]),
+  )
 
   if (configured.length >= 2 && configured.every((tier) => tier.value === configured[0].value)) {
     return [{ label: null, value: configured[0].value }]
@@ -66,9 +81,10 @@ export function hasConfiguredImagePrice(group: ImagePriceFields): boolean {
 }
 
 export function flatVideoTiers(group: VideoPriceFields): MediaPriceTier[] {
-  return VIDEO_RESOLUTIONS
-    .map((tier) => ({ label: tier.label, value: configuredPrice(group[tier.field]) }))
-    .filter((tier): tier is { label: string; value: number } => tier.value !== null)
+  return collectConfiguredTiers(
+    VIDEO_RESOLUTIONS,
+    (tier) => configuredPrice(group[tier.field]),
+  )
 }
 
 function modelOverridePrice(
@@ -107,13 +123,11 @@ export function buildVideoCards(group: VideoPriceFields & { name: string }): Med
       title: model,
       kind: 'video',
       unit: 'per_second',
-      tiers: VIDEO_RESOLUTIONS
-        .map((tier) => ({
-          label: tier.label,
-          value: modelOverridePrice(group.video_model_prices?.[model], tier.label)
-            ?? configuredPrice(group[tier.field]),
-        }))
-        .filter((tier): tier is { label: string; value: number } => tier.value !== null),
+      tiers: collectConfiguredTiers(
+        VIDEO_RESOLUTIONS,
+        (tier) => modelOverridePrice(group.video_model_prices?.[model], tier.label)
+          ?? configuredPrice(group[tier.field]),
+      ),
     }))
   }
 

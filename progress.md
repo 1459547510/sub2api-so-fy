@@ -6514,12 +6514,14 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Moved media prices out of the V2 video API docs into a third video-module tab at `/video-generation/pricing`.
 - Showed administrator-configured unit prices as per-model cards: image 1K/2K/4K with same-price collapse, video 480p/720p/1080p per second, no rate multipliers.
 - Prepared annotated tag `v0.1.177-fy.2` from the validated pricing-page commits.
+- Fixed `vue-tsc` type predicates in media pricing helpers after the first tag build failed.
 
 ### Testing
 - `npx vitest run src/utils/__tests__/mediaPricing.spec.ts src/views/user/__tests__/VideoPricingView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/components/video/__tests__/VideoSectionTabs.spec.ts` (in `frontend`): passed, 4 files and 20 tests.
+- `npx vue-tsc --noEmit` (in `frontend`): passed.
 
 ### Notes
-- `frontend/src/utils/mediaPricing.ts`: builds group sections and cards from `/groups/available` plus optional plaza image names.
+- `frontend/src/utils/mediaPricing.ts`: builds group sections and cards from `/groups/available` plus optional plaza image names; collects configured tiers without type predicates so `vue-tsc` accepts the helpers.
 - `frontend/src/views/user/VideoPricingView.vue`: renders the pricing tab.
 - `frontend/src/components/video/VideoSectionTabs.vue`: adds the Pricing tab.
 - `frontend/src/router/index.ts`: registers `/video-generation/pricing`.
