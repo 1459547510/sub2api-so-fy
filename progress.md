@@ -6559,4 +6559,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/VideoPricingView.vue`: loads groups, plaza, and channels; a failed refresh keeps previously loaded model names.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.2..v0.1.177-fy.3` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.2`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.3` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-16 - Task: Verify published dynamic pricing release v0.1.177-fy.3
+### What was done
+- Confirmed the fork branch and release tag are pushed to GitHub.
+- Confirmed the public Linux amd64 release asset is downloadable and matches the published checksum.
+
+### Testing
+- Remote branch `codex/leo-video-channel`: confirmed at `857f228f62e02f29cffc234305e075afb4b0973c`.
+- Remote tag `v0.1.177-fy.3`: confirmed at `532faa4e60c627e7ed9f045b9d8a8bff17a70973`.
+- Release asset download: HTTP `200`; `sub2api_0.1.177-fy.3_linux_amd64.tar.gz` size `37,517,341` bytes.
+- SHA-256: `f0c58f123ca29ac4d915838e0e1e0f55b44a34ea47e42fe8f737608ce9315790`; matched `checksums.txt`.
+- Archive listing: `tar -tzf` contains only `sub2api`.
+
+### Notes
+- `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
+- Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
+
+
 
