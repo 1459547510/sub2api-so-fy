@@ -6468,3 +6468,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - Release page: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.176-fy.4`.
 - Roll back source behavior with `git revert 5e98fd2bc`; the previous deployable source tag is `v0.1.176-fy.3`. To withdraw the binary, remove Release `v0.1.176-fy.4` and its remote tag. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-16 - Task: Merge upstream v0.1.177 and prepare FY release v0.1.177-fy.1
+### What was done
+- Merged upstream `v0.1.177` into the fork with merge commit `5e49596ae`.
+- Resolved the two merge conflicts while retaining the fork GitHub Token environment binding, upstream `TZ` configuration support, and the fork video cost override path.
+- Added compatibility precedence so explicit upstream `codex_fingerprint_mode` is not overwritten by the legacy fingerprint marker; committed as `3d0eb9b8b`.
+- Prepared tag `v0.1.177-fy.1` for the fork release.
+
+### Testing
+- `go test -p 1 ./... -count=1`: passed.
+- `go vet ./...`: passed.
+- `npm.cmd exec -- vitest run`: passed, 231 test files and 1626 tests.
+- `npm.cmd run build`: passed; Vite transformed 1031 modules with existing chunk-size and Browserslist warnings only.
+- Linux amd64 production build with `CGO_ENABLED=0`, `GOOS=linux`, `GOARCH=amd64`, and `-tags embed`: passed.
+- Targeted and full `internal/service` regression tests passed after the fingerprint compatibility fix.
+- `git diff --check`: passed.
+
+### Notes
+- `5e49596ae`: merge commit for upstream `v0.1.177`.
+- `3d0eb9b8b`: compatibility fix for explicit Codex fingerprint modes.
+- `backend/internal/config/config.go`: retains both GitHub Token and `TZ` environment handling after merge.
+- `backend/internal/service/openai_gateway_usage.go`: retains video cost overrides while using the upstream long-context gate.
+- `backend/internal/service/openai_codex_identity.go`: gives the explicit upstream fingerprint mode precedence over the legacy marker.
+- `backend/internal/service/openai_codex_fingerprint_mode_test.go`: covers the precedence rule.
+- Roll back source changes with `git revert 3d0eb9b8b 5e49596ae`; the previous deployable source tag is `v0.1.176-fy.4`. Preserve unrelated `.superpowers/` content.
