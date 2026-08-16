@@ -47,3 +47,16 @@ func TestMarkOpenAICodexLegacyFingerprintOnlyMarksUnversionedOAuthAccounts(t *te
 	MarkOpenAICodexLegacyFingerprint(apiKey)
 	require.Empty(t, apiKey.Extra)
 }
+
+func TestOpenAICodexFingerprintUsesV1DefersToExplicitCodexMode(t *testing.T) {
+	account := &Account{
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+		Extra: map[string]any{
+			openAICodexFingerprintModeExtraKey: openAICodexFingerprintModeV1,
+			codexFingerprintModeExtraKey:       string(codexFingerprintSession),
+		},
+	}
+
+	require.False(t, openAICodexFingerprintUsesV1(account))
+}

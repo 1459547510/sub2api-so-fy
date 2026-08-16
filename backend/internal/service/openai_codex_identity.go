@@ -36,6 +36,12 @@ func openAICodexFingerprintUsesV1(account *Account) bool {
 	if account == nil || !account.IsOpenAIOAuth() {
 		return false
 	}
+	// The newer codex_fingerprint_mode is authoritative when present. This
+	// prevents the legacy v1 marker from overwriting its explicit opt-in/off
+	// behavior at the final outbound-header boundary.
+	if strings.TrimSpace(account.GetExtraString(codexFingerprintModeExtraKey)) != "" {
+		return false
+	}
 	mode := strings.TrimSpace(account.GetExtraString(openAICodexFingerprintModeExtraKey))
 	if mode == "" {
 		return true
