@@ -6382,3 +6382,74 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - `progress.md`: records the final Release URL, commit, artifact integrity, and rollback point.
 - Roll back source behavior with `git revert a507c6e59c7301ce845a9d9744095cf59bc6731c` and publish a follow-up Release. To withdraw this binary, remove GitHub Release `v0.1.176-fy.3` and its remote tag; the previous deployable Release is `v0.1.176-fy.2`.
+
+## 2026-08-14 - Task: Update customer Web API integration documentation to V2
+### What was done
+- Updated the customer Web documentation route `/video-generation/api-docs` to present a V2 unified video/image API.
+- Documented V1 compatibility, dynamic model discovery through `/v1/models`, OpenAI image generation/editing, asynchronous video creation, media upload, job lifecycle, errors, retries, and reference media examples.
+- Replaced hard-coded service-specific model examples with public placeholder model IDs so custom compatible models can be added without changing the client contract.
+- Added the standalone Chinese V2 integration document and linked it from the existing V1 guide.
+
+### Testing
+- `pnpm.cmd exec vitest run src/views/user/__tests__/VideoApiDocsView.spec.ts`: passed.
+- `pnpm.cmd run typecheck`: passed.
+- `pnpm.cmd run build`: passed; Vite emitted only existing chunk-size and dynamic-import warnings.
+- `git diff --check`: passed.
+- Customer-facing term scan: passed; no internal service, account, route, or implementation terms found in the V2 page or document.
+- Canonical route scan against `backend/internal/server/routes/gateway.go`: passed for all documented endpoints.
+
+### Notes
+- `.gitignore`: allows the new customer V2 document to be versioned.
+- `frontend/src/views/user/VideoApiDocsView.vue`: renders the V2 Web documentation and generic media examples.
+- `frontend/src/router/index.ts`: uses the V2 title and description for the documentation route metadata.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies V2 image/video endpoints and internal-term redaction.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese V2 documentation copy.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English V2 documentation copy.
+- `docs/WEB_API_INTEGRATION_V2_CN.md`: adds the customer-facing Chinese V2 integration document.
+- `docs/SEEDANCE_API_CLIENT_GUIDE_CN.md`: links the V1 guide to the V2 compatibility document.
+- Roll back this documentation task with `git revert <task-commit>` after committing; before commit, revert only the listed files and preserve unrelated `.superpowers/` changes.
+
+## 2026-08-14 - Task: Make V2 documentation model pricing dynamic
+### What was done
+- Added a current model pricing section to the V2 Web documentation page.
+- Loaded prices from the authenticated user's available groups and model catalog, including image tiers and video model/resolution prices.
+- Added manual refresh, update time, permission filtering, and a 60-second refresh interval so administrator pricing changes are reflected without maintaining a second static price list.
+- Documented the dynamic pricing behavior in the standalone Chinese V2 integration guide.
+
+### Testing
+- `npm.cmd exec -- vue-tsc --noEmit`: passed.
+- `npm.cmd exec -- vitest run src/views/user/__tests__/VideoApiDocsView.spec.ts`: passed, 2 tests.
+- `git diff --check`: passed.
+- `pnpm.cmd run typecheck` could not start in the restricted environment because pnpm attempted to `lstat C:\Users\feiyu`; the equivalent `npm.cmd exec -- vue-tsc --noEmit` check passed.
+
+### Notes
+- `frontend/src/views/user/VideoApiDocsView.vue`: renders and refreshes the current user-visible model price list.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: mocks pricing APIs and verifies dynamic model/group pricing rendering.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese pricing labels and states.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English pricing labels and states.
+- `docs/WEB_API_INTEGRATION_V2_CN.md`: documents dynamic pricing behavior and billing caveats.
+- Roll back this task with `git revert <task-commit>` after committing; before commit, revert only the listed files and preserve unrelated `.superpowers/` changes.
+
+## 2026-08-14 - Task: Finalize customer V2 pricing documentation for release
+### What was done
+- Removed the remaining implementation-oriented wording from the customer V2 documentation so customers only see the public API contract and model pricing.
+- Kept dynamic pricing limited to the authenticated user's visible media groups and model catalog; no account, routing, or service-source values are rendered.
+- Prepared release `v0.1.176-fy.4` from the validated V2 documentation and pricing changes.
+
+### Testing
+- `npm.cmd run build`: passed; Vite transformed 1031 modules and emitted only existing chunk-size, Browserslist, and dynamic-import warnings.
+- `npm.cmd exec -- vue-tsc --noEmit`: passed.
+- `npm.cmd exec -- vitest run src/views/user/__tests__/VideoApiDocsView.spec.ts`: passed, 2 tests.
+- Customer-facing forbidden-term scan for the standalone V2 document: passed.
+- `git diff --check`: passed.
+
+### Notes
+- `.gitignore`: allows the standalone V2 customer document to be versioned.
+- `docs/WEB_API_INTEGRATION_V2_CN.md`: documents the V2 public contract and dynamic model prices without internal implementation wording.
+- `frontend/src/views/user/VideoApiDocsView.vue`: renders the public V2 contract and authenticated dynamic pricing while filtering non-media data before rendering.
+- `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`: verifies V2 endpoints, pricing, and rendered-term redaction.
+- `frontend/src/router/index.ts`: makes the V2 document the public documentation route metadata.
+- `frontend/src/i18n/locales/zh/dashboard.ts`: adds Chinese V2 documentation and pricing copy.
+- `frontend/src/i18n/locales/en/dashboard.ts`: adds English V2 documentation and pricing copy.
+- `progress.md`: records this release preparation and verification evidence.
+- Roll back with `git revert <task-commit>`; the previous deployable source tag is `v0.1.176-fy.3`. Preserve unrelated `.superpowers/` content.

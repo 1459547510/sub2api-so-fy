@@ -256,9 +256,9 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresAdmin: false,
-      title: 'Video API Documentation',
-      titleKey: 'video.apiDocs.title',
-      descriptionKey: 'video.apiDocs.description'
+      title: 'Video and Image API Integration',
+      titleKey: 'video.apiDocs.v2.title',
+      descriptionKey: 'video.apiDocs.v2.description'
     }
   },
   {

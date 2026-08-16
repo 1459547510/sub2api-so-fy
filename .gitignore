@@ -150,6 +150,7 @@ docs/*
 !docs/OPENAI_CYBER_POLICY_ACCOUNT_FILTER.md
 !docs/OPENAI_REASONING_ALIAS_COMPAT.md
 !docs/GROUP_MODEL_PRICING_V176.md
+!docs/WEB_API_INTEGRATION_V2_CN.md
 !docs/对接二开文档.md
 !docs/legal/
 !docs/legal/*.md
