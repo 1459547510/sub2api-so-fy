@@ -6528,3 +6528,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/user/VideoApiDocsView.vue`: removes the in-docs pricing block.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.1..v0.1.177-fy.2` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.1`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.2` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-16 - Task: Verify published media pricing release v0.1.177-fy.2
+### What was done
+- Confirmed the fork branch and release tag are pushed to GitHub.
+- Confirmed the public Linux amd64 release asset is downloadable and matches the published checksum.
+
+### Testing
+- Remote branch `codex/leo-video-channel`: confirmed at `881608b700336b2395a5baad0897ec5c8a6e2cc1`.
+- Remote tag `v0.1.177-fy.2`: confirmed at `50b8f04c08228e33213fa58a8d530cd7a27b0a4f`.
+- Release asset download: HTTP `200`; `sub2api_0.1.177-fy.2_linux_amd64.tar.gz` size `37,516,541` bytes.
+- SHA-256: `4f19d71b44fe12ea9134b03ff10a1159db999627a7051752c5b0edeb84c79160`; matched `checksums.txt`.
+- Archive listing: `tar -tzf` contains only `sub2api`.
+
+### Notes
+- `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
+- Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
+
