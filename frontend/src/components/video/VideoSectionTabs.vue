@@ -29,5 +29,6 @@ const route = useRoute()
 const tabs = [
   { name: 'VideoGeneration', to: '/video-generation', label: 'video.tabs.workbench', icon: 'play' as const },
   { name: 'VideoApiDocs', to: '/video-generation/api-docs', label: 'video.tabs.apiDocs', icon: 'book' as const },
+  { name: 'VideoPricing', to: '/video-generation/pricing', label: 'video.tabs.pricing', icon: 'dollar' as const },
 ]
 </script>

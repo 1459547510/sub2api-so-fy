@@ -926,6 +926,21 @@ export default {
       label: 'Video generation pages',
       workbench: 'Generation workbench',
       apiDocs: 'API documentation',
+      pricing: 'Pricing',
+    },
+    pricing: {
+      eyebrow: 'Prices visible to this account',
+      title: 'Model pricing',
+      description: 'Prices come from the media groups visible to this account and show the administrator-configured unit prices.',
+      source: 'Prices are shown in USD and do not include any rate multiplier.',
+      refresh: 'Refresh prices',
+      loading: 'Loading current prices...',
+      unavailable: 'Current prices are temporarily unavailable. Try refreshing later.',
+      empty: 'No media group or model price is available for this account.',
+      image: 'Image',
+      video: 'Video',
+      perImage: 'per image',
+      perSecond: 'per second',
     },
     apiDocs: {
       v2: {

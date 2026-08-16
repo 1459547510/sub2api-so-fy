@@ -262,6 +262,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/video-generation/pricing',
+    name: 'VideoPricing',
+    component: () => import('@/views/user/VideoPricingView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Model pricing',
+      titleKey: 'video.pricing.title',
+      descriptionKey: 'video.pricing.description'
+    }
+  },
+  {
     path: '/usage',
     name: 'Usage',
     component: () => import('@/views/user/UsageView.vue'),

@@ -8,15 +8,16 @@ vi.mock('vue-i18n', () => ({
 }))
 
 describe('VideoSectionTabs', () => {
-  it('links the workbench and API docs and marks the active tab', async () => {
+  it('links the workbench, API docs, and pricing tabs and marks the active tab', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
         { path: '/video-generation', name: 'VideoGeneration', component: { template: '<div />' } },
         { path: '/video-generation/api-docs', name: 'VideoApiDocs', component: { template: '<div />' } },
+        { path: '/video-generation/pricing', name: 'VideoPricing', component: { template: '<div />' } },
       ],
     })
-    await router.push('/video-generation/api-docs')
+    await router.push('/video-generation/pricing')
     await router.isReady()
 
     const wrapper = mount(VideoSectionTabs, {
@@ -30,8 +31,8 @@ describe('VideoSectionTabs', () => {
     expect(links.map((link) => link.attributes('href'))).toEqual([
       '/video-generation',
       '/video-generation/api-docs',
+      '/video-generation/pricing',
     ])
-    expect(links[0].attributes('aria-selected')).toBe('false')
-    expect(links[1].attributes('aria-selected')).toBe('true')
+    expect(links.map((link) => link.attributes('aria-selected'))).toEqual(['false', 'false', 'true'])
   })
 })

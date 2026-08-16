@@ -931,6 +931,21 @@ export default {
       label: '视频生成页面',
       workbench: '生成工作台',
       apiDocs: 'API 对接文档',
+      pricing: '价格',
+    },
+    pricing: {
+      eyebrow: '当前账号可见价格',
+      title: '模型计费',
+      description: '价格来自当前账号可见的媒体分组，展示管理员配置的原价。',
+      source: '价格以美元显示，不包含任何倍率。',
+      refresh: '刷新价格',
+      loading: '正在加载当前价格...',
+      unavailable: '当前价格暂时不可用，请稍后刷新。',
+      empty: '当前账号没有可用的媒体分组或模型价格。',
+      image: '图片',
+      video: '视频',
+      perImage: '按张',
+      perSecond: '按秒',
     },
     apiDocs: {
       v2: {
