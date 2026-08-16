@@ -109,7 +109,6 @@ async function loadPricing() {
   if (groupsResult.status === 'fulfilled') {
     groups.value = groupsResult.value
   } else {
-    groups.value = []
     groupsFailed.value = true
   }
   plazaGroups.value = plazaResult.status === 'fulfilled' ? plazaResult.value.groups : []

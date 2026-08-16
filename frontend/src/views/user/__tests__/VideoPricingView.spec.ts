@@ -93,4 +93,26 @@ describe('VideoPricingView', () => {
 
     expect(wrapper.text()).toContain('video.pricing.empty')
   })
+
+  it('keeps previous price cards when refresh fails', async () => {
+    groupsApi.getAvailable.mockResolvedValueOnce([{
+      id: 7,
+      name: 'Video image group',
+      platform: 'composite',
+      video_price_720p: 0.14,
+      video_model_prices: { 'seedance-2.0': { '720p': 0.14 } },
+    }])
+    groupsApi.getAvailable.mockRejectedValueOnce(new Error('groups down'))
+    modelPlazaApi.getModelPlaza.mockResolvedValue({ groups: [] })
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('seedance-2.0')
+
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('seedance-2.0')
+  })
 })
