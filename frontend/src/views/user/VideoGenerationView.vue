@@ -74,7 +74,7 @@
             <div class="grid grid-cols-2 gap-3">
               <label class="block">
                 <span class="input-label">{{ t('video.model') }}</span>
-                <select v-model="model" class="input" :disabled="submitting || uploading" data-testid="video-model">
+                <select v-model="model" class="input" :disabled="submitting || uploading || loadingModels || !modelOptions.length" data-testid="video-model">
                   <option v-for="option in modelOptions" :key="option" :value="option">{{ option }}</option>
                 </select>
               </label>
@@ -324,6 +324,7 @@ import {
   cancelVideoJob,
   createVideoJob,
   downloadVideoOutput,
+  listGatewayModels,
   listVideoJobs,
   uploadVideoInput,
   type VideoGenerationRequest,
@@ -362,6 +363,8 @@ const referenceAudioFiles = ref<File[]>([])
 const referenceAudioPreviewUrls = ref<string[]>([])
 const referenceAudioDurations = ref<number[]>([])
 const loadingKeys = ref(false)
+const loadingModels = ref(false)
+const keyModelIds = ref<string[]>([])
 const loadingJobs = ref(false)
 const submitting = ref(false)
 const uploading = ref(false)
@@ -828,7 +831,44 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     supportsAudio: true,
   },
 }
-const modelOptions = Object.keys(videoModelCapabilities)
+const defaultVideoCapability: VideoModelCapability = {
+  resolutions: ['480p', '720p', '1080p'],
+  defaultResolution: '720p',
+  durations: allDurationOptions,
+  defaultDuration: 8,
+  aspectsByResolution: {
+    '480p': allAspectRatioOptions,
+    '720p': hdAspectRatioOptions,
+    '1080p': allAspectRatioOptions,
+  },
+  defaultAspectRatio: '16:9',
+  maxPromptLength: 5000,
+  maxStartFrames: 1,
+  maxEndFrames: 1,
+  maxImageRefs: 4,
+  maxVideoRefs: 3,
+  maxAudioRefs: 1,
+  supportsAudio: true,
+}
+
+function isLikelyImageModel(id: string) {
+  return /gpt-image|dall-e|imagen|grok-imagine-image|grok-imagine-edit|^grok-imagine$/i.test(id)
+}
+
+function isLikelyVideoModel(id: string) {
+  return /seedance|kling|veo|hailuo|ltx|grok-imagine-\d|happy-horse|gemini-omni|luma|runway|pika|sora/i.test(id)
+}
+
+function isWorkbenchVideoModel(id: string) {
+  if (isLikelyImageModel(id)) return false
+  return Boolean(videoModelCapabilities[id]) || isLikelyVideoModel(id)
+}
+
+function capabilityFor(modelValue: string) {
+  if (videoModelCapabilities[modelValue]) return videoModelCapabilities[modelValue]
+  if (isWorkbenchVideoModel(modelValue)) return defaultVideoCapability
+  return undefined
+}
 const imageModes = [
   { value: 'none' as const, label: 'video.imageNone' },
   { value: 'local' as const, label: 'video.imageLocal' },
@@ -838,7 +878,8 @@ const imageModes = [
 const leoKeys = computed(() => keys.value.filter((key) => key.status === 'active' && ['leo', 'openai_media', 'video', 'composite'].includes(key.group?.platform || '') && key.group?.allow_image_generation === true))
 const selectedKey = computed(() => leoKeys.value.find((key) => key.id === selectedKeyId.value) || null)
 const effectiveApiKey = computed(() => apiKeyMode.value === 'custom' ? customApiKey.value.trim() : selectedKey.value?.key || '')
-const currentModelCapability = computed(() => videoModelCapabilities[model.value])
+const modelOptions = computed(() => keyModelIds.value.filter(isWorkbenchVideoModel).sort((a, b) => a.localeCompare(b)))
+const currentModelCapability = computed(() => capabilityFor(model.value))
 const resolutionOptions = computed(() => currentModelCapability.value?.resolutions || [])
 const durationOptions = computed(() => supportedDurations(currentModelCapability.value, resolution.value))
 const aspectRatioOptions = computed(() => currentModelCapability.value?.aspectsByResolution[resolution.value] || [])
@@ -1461,8 +1502,47 @@ function defaultAspectRatioFor(capability: VideoModelCapability, resolutionValue
   return supported.includes(capability.defaultAspectRatio) ? capability.defaultAspectRatio : (supported[0] || capability.defaultAspectRatio)
 }
 
+let modelsRequest = 0
+let customKeyModelsTimer: ReturnType<typeof setTimeout> | null = null
+
+async function loadKeyModels() {
+  const apiKey = effectiveApiKey.value
+  const request = ++modelsRequest
+  if (!apiKey) {
+    keyModelIds.value = []
+    loadingModels.value = false
+    return
+  }
+  loadingModels.value = true
+  try {
+    const ids = await listGatewayModels(apiKey)
+    if (request !== modelsRequest) return
+    keyModelIds.value = ids
+    if (!modelOptions.value.includes(model.value)) {
+      model.value = modelOptions.value[0] || model.value
+    }
+  } catch (error) {
+    if (request !== modelsRequest) return
+    keyModelIds.value = []
+    appStore.showError(errorMessage(error))
+  } finally {
+    if (request === modelsRequest) loadingModels.value = false
+  }
+}
+
+function scheduleLoadKeyModels() {
+  if (customKeyModelsTimer) clearTimeout(customKeyModelsTimer)
+  if (apiKeyMode.value === 'custom' && effectiveApiKey.value) {
+    customKeyModelsTimer = setTimeout(() => {
+      void loadKeyModels()
+    }, 400)
+    return
+  }
+  void loadKeyModels()
+}
+
 function supportsModelParameters(modelValue: string, resolutionValue: VideoResolution, durationValue: number, aspectRatioValue: VideoAspectRatio) {
-  const capability = videoModelCapabilities[modelValue]
+  const capability = capabilityFor(modelValue)
   return Boolean(
     capability &&
     capability.resolutions.includes(resolutionValue) &&
@@ -1499,6 +1579,9 @@ watch(apiKeyMode, () => {
 watch(customApiKey, () => {
   if (apiKeyMode.value === 'custom') resetKeyScopedState()
 })
+watch(effectiveApiKey, () => {
+  scheduleLoadKeyModels()
+})
 watch(activeJobs, updatePolling)
 watch([effectiveApiKey, () => selectedJob.value?.job_id, () => selectedJob.value?.status], () => void loadSelectedVideo())
 
@@ -1508,6 +1591,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   videoOutputRequest++
+  modelsRequest++
+  if (customKeyModelsTimer) clearTimeout(customKeyModelsTimer)
   stopPolling()
   clearSelectedVideo()
   clearImageInputs()

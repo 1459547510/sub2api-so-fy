@@ -931,7 +931,7 @@ export default {
     pricing: {
       eyebrow: 'Prices visible to this account',
       title: 'Model pricing',
-      description: 'Model names come from the channels and model plaza visible to this account. Prices are the administrator-configured unit prices on those groups.',
+      description: 'Each model uses the administrator-configured unit price from that model’s channel pricing. Group per-model overrides win over a group-wide fallback.',
       source: 'Prices are shown in USD and do not include any rate multiplier.',
       refresh: 'Refresh prices',
       loading: 'Loading current prices...',

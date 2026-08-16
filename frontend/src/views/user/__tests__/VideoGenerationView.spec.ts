@@ -6,6 +6,7 @@ import {
   cancelVideoJob,
   createVideoJob,
   downloadVideoOutput,
+  listGatewayModels,
   listVideoJobs,
   uploadVideoInput,
 } from '@/api/videoGeneration'
@@ -20,9 +21,34 @@ vi.mock('@/api/videoGeneration', () => ({
   cancelVideoJob: vi.fn(),
   createVideoJob: vi.fn(),
   downloadVideoOutput: vi.fn(),
+  listGatewayModels: vi.fn(),
   listVideoJobs: vi.fn(),
   uploadVideoInput: vi.fn(),
 }))
+
+const allWorkbenchModels = [
+  'seedance-2.0',
+  'seedance-2.0-fast',
+  'seedance-2.0-mini',
+  'seedance-2.5',
+  'happy-horse-1.1',
+  'grok-imagine-1.5',
+  'ltx-2.3-pro',
+  'ltx-2.3-fast',
+  'hailuo-03',
+  'gemini-omni-flash',
+  'kling-2.1',
+  'kling-2.5',
+  'kling-2.5-turbo-standard',
+  'kling-2.6',
+  'kling-video-o-1',
+  'kling-3.0',
+  'kling-3.0-turbo',
+  'kling-video-o-3',
+  'veo-3.1-generate-001',
+  'veo-3.1-fast-generate-001',
+  'veo-3.1-lite',
+]
 
 vi.mock('@/stores/app', () => ({
   useAppStore: () => appStoreMocks,
@@ -70,10 +96,79 @@ describe('VideoGenerationView', () => {
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
     vi.mocked(keysAPI.list).mockResolvedValue({ items: [leoKey, grokKey] } as any)
     vi.mocked(listVideoJobs).mockResolvedValue({ data: [] })
+    vi.mocked(listGatewayModels).mockResolvedValue(allWorkbenchModels)
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
+  })
+
+  it('hides Grok Imagine image IDs and MiniMax chat IDs from the workbench list', async () => {
+    vi.mocked(listGatewayModels).mockResolvedValue([
+      'grok-imagine-1.5',
+      'grok-imagine-image',
+      'grok-imagine-image-quality',
+      'grok-imagine',
+      'minimax-m3',
+    ])
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="video-model"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['grok-imagine-1.5'])
+  })
+
+  it('loads workbench models from the selected key /v1/models list', async () => {
+    vi.mocked(listGatewayModels).mockResolvedValue(['seedance-2.0', 'kling-3.0', 'gpt-image-2', 'gpt-4o'])
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(listGatewayModels).toHaveBeenCalledWith('sub2-leo-key')
+    const options = wrapper.get('[data-testid="video-model"]').findAll('option').map((option) => option.attributes('value'))
+    expect(options).toEqual(['kling-3.0', 'seedance-2.0'])
+  })
+
+  it('reloads workbench models when the saved key changes', async () => {
+    const otherKey = {
+      id: 3,
+      name: 'Leo other',
+      key: 'sub2-other-key',
+      status: 'active',
+      group: { platform: 'leo', allow_image_generation: true },
+    }
+    vi.mocked(keysAPI.list).mockResolvedValue({ items: [leoKey, otherKey] } as any)
+    vi.mocked(listGatewayModels).mockImplementation(async (apiKey: string) => (
+      apiKey === 'sub2-other-key' ? ['kling-3.0'] : ['seedance-2.0', 'gpt-image-2']
+    ))
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.get('[data-testid="video-model"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['seedance-2.0'])
+
+    await wrapper.get('[data-testid="video-api-key"]').setValue(3)
+    await flushPromises()
+
+    expect(listGatewayModels).toHaveBeenCalledWith('sub2-other-key')
+    expect(wrapper.get('[data-testid="video-model"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['kling-3.0'])
+    expect((wrapper.get('[data-testid="video-model"]').element as HTMLSelectElement).value).toBe('kling-3.0')
+  })
+
+  it('loads workbench models from a custom key after debounce', async () => {
+    vi.useFakeTimers()
+    const wrapper = mountView()
+    await flushPromises()
+    expect(listGatewayModels).toHaveBeenCalledWith('sub2-leo-key')
+
+    vi.mocked(listGatewayModels).mockResolvedValue(['hailuo-03', 'gpt-image-2'])
+    await wrapper.get('[data-testid="key-mode-custom"]').trigger('click')
+    await wrapper.get('[data-testid="video-custom-api-key"]').setValue('custom-sub2-key')
+    expect(listGatewayModels).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+
+    expect(listGatewayModels).toHaveBeenCalledWith('custom-sub2-key')
+    expect(wrapper.get('[data-testid="video-model"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['hailuo-03'])
+    vi.useRealTimers()
   })
 
   it('only shows active Leo keys in the workbench selector', async () => {

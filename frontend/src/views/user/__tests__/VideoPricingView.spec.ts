@@ -124,7 +124,49 @@ describe('VideoPricingView', () => {
     expect(wrapper.text()).toContain('seedance-2.0')
   })
 
-  it('renders channel-supported video models with group unit prices', async () => {
+  it('renders a mixed Leo catalog without collapsing to group flat prices', async () => {
+    groupsApi.getAvailable.mockResolvedValueOnce([{
+      id: 7,
+      name: '视频图片分组',
+      platform: 'composite',
+      image_price_1k: 0.08,
+      image_price_2k: 0.12,
+      video_price_480p: 0.12,
+      video_price_720p: 0.17,
+      video_price_1080p: 0.6,
+    }])
+    modelPlazaApi.getModelPlaza.mockResolvedValueOnce({
+      groups: [{ id: 7, models: [{ name: 'gpt-image-2', pricing: { billing_mode: 'image' } }] }],
+    })
+    channelsApi.getAvailable.mockResolvedValueOnce([{
+      name: 'Leo',
+      platforms: [{
+        groups: [{ id: 7 }],
+        supported_models: [
+          { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video', intervals: [{ tier_label: '480p', per_request_price: 0.11 }, { tier_label: '720p', per_request_price: 0.19 }, { tier_label: '1080p', per_request_price: 0.41 }] } },
+          { name: 'hailuo-03', platform: 'leo', pricing: { billing_mode: 'video', intervals: [{ tier_label: '1440p', per_request_price: 0.45 }] } },
+          { name: 'kling-3.0', platform: 'leo', pricing: { billing_mode: 'video', intervals: [{ tier_label: '720p', per_request_price: 0.33 }, { tier_label: '2160p', per_request_price: 1.6 }] } },
+        ],
+      }],
+    }])
+
+    const wrapper = mountPage()
+    await flushPromises()
+    const text = wrapper.text()
+
+    expect(text).toContain('gpt-image-2')
+    expect(text).toContain('$0.08')
+    expect(text).toContain('$0.11')
+    expect(text).toContain('$0.19')
+    expect(text).toContain('$0.45')
+    expect(text).toContain('$0.33')
+    expect(text).toContain('$1.6')
+    expect(wrapper.get('[data-testid="price-card-video:seedance-2.0"]').text()).not.toContain('$0.17')
+    expect(wrapper.get('[data-testid="price-card-video:hailuo-03"]').text()).toContain('1440p')
+    expect(wrapper.get('[data-testid="price-card-video:kling-3.0"]').text()).not.toContain('$0.19')
+  })
+
+  it('renders each channel video model with its own interval prices', async () => {
     groupsApi.getAvailable.mockResolvedValueOnce([{
       id: 7,
       name: '视频图片分组',
@@ -139,8 +181,28 @@ describe('VideoPricingView', () => {
       platforms: [{
         groups: [{ id: 7 }],
         supported_models: [
-          { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video' } },
-          { name: 'kling-3.0', platform: 'leo' },
+          {
+            name: 'seedance-2.0',
+            platform: 'leo',
+            pricing: {
+              billing_mode: 'video',
+              intervals: [
+                { tier_label: '480p', per_request_price: 0.11 },
+                { tier_label: '720p', per_request_price: 0.19 },
+              ],
+            },
+          },
+          {
+            name: 'kling-3.0',
+            platform: 'leo',
+            pricing: {
+              billing_mode: 'video',
+              intervals: [
+                { tier_label: '720p', per_request_price: 0.33 },
+                { tier_label: '1080p', per_request_price: 0.88 },
+              ],
+            },
+          },
         ],
       }],
     }])
@@ -148,8 +210,10 @@ describe('VideoPricingView', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="price-card-video:seedance-2.0"]').text()).toContain('seedance-2.0')
-    expect(wrapper.get('[data-testid="price-card-video:kling-3.0"]').text()).toContain('$0.17')
+    expect(wrapper.get('[data-testid="price-card-video:seedance-2.0"]').text()).toContain('$0.19')
+    expect(wrapper.get('[data-testid="price-card-video:seedance-2.0"]').text()).not.toContain('$0.17')
+    expect(wrapper.get('[data-testid="price-card-video:kling-3.0"]').text()).toContain('$0.33')
+    expect(wrapper.get('[data-testid="price-card-video:kling-3.0"]').text()).not.toContain('$0.19')
     expect(wrapper.find('[data-testid="price-card-video-fallback"]').exists()).toBe(false)
   })
 })

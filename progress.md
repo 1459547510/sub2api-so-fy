@@ -6575,5 +6575,22 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
 - Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
 
+## 2026-08-16 - Task: Release per-model channel prices as v0.1.177-fy.4
+### What was done
+- Pricing cards now use each model's channel/plaza video intervals instead of copying group flat 480p/720p/1080p onto every name.
+- Grok workbench IDs map onto group `video_model_prices` families; unpriced catalog names no longer become identical fake cards.
+- Generation workbench loads video models from the selected key via `GET /v1/models`.
+- Prepared annotated tag `v0.1.177-fy.4` from the validated pricing and workbench commits.
+
+### Testing
+- `npx vitest run src/utils/__tests__/mediaPricing.spec.ts src/views/user/__tests__/VideoPricingView.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts` (in `frontend`): passed, 3 files and 62 tests.
+- Realistic Leo catalog check: seedance / mini / kling / hailuo / ltx / grok-imagine keep distinct interval prices; group flats do not leak onto video cards.
+- `npx vue-tsc --noEmit` (in `frontend`): passed.
+
+### Notes
+- `frontend/src/utils/mediaPricing.ts`: channel intervals first, then group family overrides, then a single group-name fallback.
+- `frontend/src/views/user/VideoGenerationView.vue`: saved keys fetch immediately; custom keys debounce 400ms; image/chat IDs stay out of the video dropdown.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.3..v0.1.177-fy.4` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.3`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.4` and its remote tag. Preserve unrelated `.superpowers/` content.
+
 
 

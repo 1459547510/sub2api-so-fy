@@ -936,7 +936,7 @@ export default {
     pricing: {
       eyebrow: '当前账号可见价格',
       title: '模型计费',
-      description: '模型来自当前账号可见的渠道和模型广场，价格取自分组里管理员配置的原价。',
+      description: '每个模型使用渠道里管理员配置的单价；分组里的按模型覆盖价优先于分组统一价。',
       source: '价格以美元显示，不包含任何倍率。',
       refresh: '刷新价格',
       loading: '正在加载当前价格...',

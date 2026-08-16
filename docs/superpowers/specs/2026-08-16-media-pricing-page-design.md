@@ -37,9 +37,9 @@ Read `image_price_1k`, `image_price_2k`, `image_price_4k`.
 
 Unit is USD/s. Always list configured resolutions; do not collapse even when values match.
 
-- Display only 480p / 720p / 1080p. Ignore other resolution keys.
-- Prefer `video_model_prices[model][resolution]` for those three.
-- Fall back to `video_price_480p` / `video_price_720p` / `video_price_1080p`.
+- Prefer the model’s channel/plaza video intervals. Display those `tier_label`s, not only 480p / 720p / 1080p.
+- If the model has no intervals, prefer `video_model_prices` for the model ID or its Grok price family.
+- Fall back to `video_price_480p` / `video_price_720p` / `video_price_1080p` only on that override path, or on a single group-name fallback card.
 - Omit unconfigured resolutions.
 
 ### Price math
@@ -53,12 +53,12 @@ Treat `null`, `undefined`, and `""` as unconfigured before calling `Number()`. `
 No new backend endpoint.
 
 1. `GET /groups/available` is the only price source. Keep a group if its platform is `leo`, `openai_media`, `video`, `composite`, or `grok`, and it has at least one configured media price: any `image_price_*`, any flat `video_price_*`, or any `video_model_prices` entry with a configured 480p / 720p / 1080p override. Nested model prices count; a group with only `video_model_prices` is kept.
-2. Model names are dynamic. Union `GET /model-plaza` models for the group with `GET /channels/available` models whose section includes that group. Ignore plaza/channel token, per-request, and official prices. Do not hard-code a frontend model catalog.
+2. Model names are dynamic. Union `GET /model-plaza` models for the group with `GET /channels/available` models whose section includes that group. When the same name appears twice, keep the copy that still has interval prices. Ignore token, official LiteLLM, and non-media per-request prices. Do not hard-code a frontend model catalog.
 3. Video cards for a group:
-   - Keep a `video_model_prices` key only when it has at least one configured 480p / 720p / 1080p override. Empty or all-null keys do not become cards.
-   - Also create a card for each dynamic model that is video-billed, or whose platform is a media platform and is not image-billed.
-   - Each card lists 480p / 720p / 1080p. A resolution uses the override if configured, otherwise the matching flat `video_price_*`. Omit a dynamic/override model that still has no configured tier.
-   - If that union is empty and the group has at least one configured flat video price, render one fallback video card using only the flat prices.
+   - Prefer that model’s channel/plaza `pricing.intervals` (`tier_label` + `per_request_price`). Show the resolutions actually configured for the model, including 400p / 544p / 960p / 1440p / 2160p. Do not copy group flat 480p / 720p / 1080p onto every catalog name.
+   - If the model has no intervals, use `video_model_prices` for the model ID or its Grok price family (`grok-imagine-1.5` → `grok-imagine-video-1.5`). Fill missing 480p / 720p / 1080p from group flats only on that override path.
+   - Keep a `video_model_prices` key only when it has at least one configured 480p / 720p / 1080p override, and only if no visible model already maps to that family.
+   - If no per-model video card exists and the group has at least one configured flat video price, render one fallback video card using only the flat prices.
 4. Image cards for a group:
    - Only if the group has at least one configured image price.
    - If plaza or available channels return image-billed models for that group, one card per such model, all using the group image prices.

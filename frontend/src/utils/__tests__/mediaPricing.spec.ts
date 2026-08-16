@@ -132,7 +132,7 @@ describe('buildVideoCards', () => {
     expect(noFallback.map((card) => card.title)).toEqual(['seedance-2.0'])
   })
 
-  it('uses visible channel and plaza models instead of a hardcoded catalog', () => {
+  it('uses each model’s channel interval prices instead of the group flat rates', () => {
     const cards = buildVideoCards({
       name: '视频图片分组',
       ...emptyPrices,
@@ -140,20 +140,108 @@ describe('buildVideoCards', () => {
       video_price_720p: 0.17,
       video_price_1080p: 0.6,
     }, [
-      { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video' } },
-      { name: 'kling-3.0', platform: 'leo' },
+      {
+        name: 'seedance-2.0',
+        platform: 'leo',
+        pricing: {
+          billing_mode: 'video',
+          intervals: [
+            { tier_label: '480p', per_request_price: 0.11 },
+            { tier_label: '720p', per_request_price: 0.19 },
+            { tier_label: '1080p', per_request_price: 0.41 },
+          ],
+        },
+      },
+      {
+        name: 'kling-3.0',
+        platform: 'leo',
+        pricing: {
+          billing_mode: 'video',
+          intervals: [
+            { tier_label: '720p', per_request_price: 0.33 },
+            { tier_label: '1080p', per_request_price: 0.88 },
+            { tier_label: '2160p', per_request_price: 1.6 },
+          ],
+        },
+      },
       { name: 'gpt-image-2', platform: 'openai_media', pricing: { billing_mode: 'image' } },
     ])
     expect(cards.map((card) => card.title)).toEqual(['kling-3.0', 'seedance-2.0'])
     expect(cards[0].tiers).toEqual([
-      { label: '480p', value: 0.12 },
-      { label: '720p', value: 0.17 },
-      { label: '1080p', value: 0.6 },
+      { label: '720p', value: 0.33 },
+      { label: '1080p', value: 0.88 },
+      { label: '2160p', value: 1.6 },
     ])
+    expect(cards[1].tiers).toEqual([
+      { label: '480p', value: 0.11 },
+      { label: '720p', value: 0.19 },
+      { label: '1080p', value: 0.41 },
+    ])
+  })
+
+  it('maps Grok Imagine workbench IDs onto group video family overrides', () => {
+    const cards = buildVideoCards({
+      name: 'Grok media',
+      ...emptyPrices,
+      video_price_720p: 0.07,
+      video_model_prices: {
+        'grok-imagine-video-1.5': { '480p': 0.08, '720p': 0.14, '1080p': 0.25 },
+      },
+    }, [{ name: 'grok-imagine-1.5', platform: 'grok', pricing: { billing_mode: 'video' } }])
+    expect(cards).toEqual([{
+      key: 'video:grok-imagine-1.5',
+      title: 'grok-imagine-1.5',
+      kind: 'video',
+      unit: 'per_second',
+      tiers: [
+        { label: '480p', value: 0.08 },
+        { label: '720p', value: 0.14 },
+        { label: '1080p', value: 0.25 },
+      ],
+    }])
+  })
+
+  it('does not stamp group flat prices onto catalog models that have no per-model price', () => {
+    const cards = buildVideoCards({
+      name: 'Leo group',
+      ...emptyPrices,
+      video_price_720p: 0.17,
+    }, [
+      { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video' } },
+      { name: 'kling-3.0', platform: 'leo' },
+    ])
+    expect(cards).toEqual([{
+      key: 'video-fallback',
+      title: 'Leo group',
+      kind: 'video',
+      unit: 'per_second',
+      tiers: [{ label: '720p', value: 0.17 }],
+    }])
   })
 })
 
 describe('collectGroupModels', () => {
+  it('prefers the copy that still has per-model interval prices', () => {
+    const models = collectGroupModels(
+      7,
+      [{ id: 7, models: [{ name: 'seedance-2.0', pricing: { billing_mode: 'video' } }] }],
+      [{
+        platforms: [{
+          groups: [{ id: 7 }],
+          supported_models: [{
+            name: 'seedance-2.0',
+            platform: 'leo',
+            pricing: {
+              billing_mode: 'video',
+              intervals: [{ tier_label: '720p', per_request_price: 0.19 }],
+            },
+          }],
+        }],
+      }],
+    )
+    expect(models[0].pricing?.intervals).toEqual([{ tier_label: '720p', per_request_price: 0.19 }])
+  })
+
   it('unions plaza and available-channel models for the group', () => {
     const models = collectGroupModels(
       7,
@@ -238,26 +326,147 @@ describe('buildMediaPricingSections', () => {
     expect(sections[0].cards.every((card) => card.kind === 'video')).toBe(true)
   })
 
-  it('expands available-channel models onto a group that only has flat video prices', () => {
+  it('keeps distinct per-model prices for a realistic Leo catalog', () => {
     const sections = buildMediaPricingSections(
       [{
         id: 7,
         name: '视频图片分组',
         platform: 'composite',
         ...emptyPrices,
+        image_price_1k: 0.08,
+        image_price_2k: 0.12,
+        video_price_480p: 0.12,
         video_price_720p: 0.17,
+        video_price_1080p: 0.6,
+      }],
+      [{
+        id: 7,
+        models: [{ name: 'gpt-image-2', pricing: { billing_mode: 'image' } }],
+      }],
+      [{
+        platforms: [{
+          groups: [{ id: 7 }],
+          supported_models: [
+            {
+              name: 'seedance-2.0',
+              platform: 'leo',
+              pricing: {
+                billing_mode: 'video',
+                intervals: [
+                  { tier_label: '480p', per_request_price: 0.11 },
+                  { tier_label: '720p', per_request_price: 0.19 },
+                  { tier_label: '1080p', per_request_price: 0.41 },
+                ],
+              },
+            },
+            {
+              name: 'seedance-2.0-mini',
+              platform: 'leo',
+              pricing: {
+                billing_mode: 'video',
+                intervals: [{ tier_label: '720p', per_request_price: 0.06 }],
+              },
+            },
+            {
+              name: 'kling-3.0',
+              platform: 'leo',
+              pricing: {
+                billing_mode: 'video',
+                intervals: [
+                  { tier_label: '720p', per_request_price: 0.33 },
+                  { tier_label: '1080p', per_request_price: 0.88 },
+                  { tier_label: '2160p', per_request_price: 1.6 },
+                ],
+              },
+            },
+            {
+              name: 'hailuo-03',
+              platform: 'leo',
+              pricing: {
+                billing_mode: 'video',
+                intervals: [{ tier_label: '1440p', per_request_price: 0.45 }],
+              },
+            },
+            {
+              name: 'ltx-2.3-fast',
+              platform: 'leo',
+              pricing: {
+                billing_mode: 'video',
+                intervals: [
+                  { tier_label: '1080p', per_request_price: 0.06 },
+                  { tier_label: '1440p', per_request_price: 0.21 },
+                  { tier_label: '2160p', per_request_price: 0.24 },
+                ],
+              },
+            },
+            {
+              name: 'grok-imagine-1.5',
+              platform: 'leo',
+              pricing: {
+                billing_mode: 'video',
+                intervals: [
+                  { tier_label: '400p', per_request_price: 0.10 },
+                  { tier_label: '544p', per_request_price: 0.10 },
+                  { tier_label: '720p', per_request_price: 0.17 },
+                  { tier_label: '960p', per_request_price: 0.17 },
+                ],
+              },
+            },
+          ],
+        }],
+      }],
+    )
+
+    const lines = sections[0].cards.map((card) => (
+      `${card.kind} ${card.title} ${card.tiers.map((tier) => `${tier.label ?? 'flat'}=${tier.value}`).join(' ')}`
+    ))
+    expect(lines).toEqual([
+      'image gpt-image-2 1K=0.08 2K=0.12',
+      'video grok-imagine-1.5 400p=0.1 544p=0.1 720p=0.17 960p=0.17',
+      'video hailuo-03 1440p=0.45',
+      'video kling-3.0 720p=0.33 1080p=0.88 2160p=1.6',
+      'video ltx-2.3-fast 1080p=0.06 1440p=0.21 2160p=0.24',
+      'video seedance-2.0 480p=0.11 720p=0.19 1080p=0.41',
+      'video seedance-2.0-mini 720p=0.06',
+    ])
+    expect(lines.every((line) => !line.includes('0.12') || line.startsWith('image'))).toBe(true)
+    expect(new Set(sections[0].cards.filter((card) => card.kind === 'video').map((card) => (
+      card.tiers.map((tier) => tier.value).join(',')
+    ))).size).toBe(6)
+  })
+
+  it('keeps a media group that only has channel interval prices', () => {
+    const sections = buildMediaPricingSections(
+      [{
+        id: 7,
+        name: '视频图片分组',
+        platform: 'composite',
+        ...emptyPrices,
       }],
       [],
       [{
         platforms: [{
           groups: [{ id: 7 }],
           supported_models: [
-            { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video' } },
+            {
+              name: 'seedance-2.0',
+              platform: 'leo',
+              pricing: {
+                billing_mode: 'video',
+                intervals: [{ tier_label: '720p', per_request_price: 0.21 }],
+              },
+            },
             { name: 'gpt-4o', platform: 'openai', pricing: { billing_mode: 'token' } },
           ],
         }],
       }],
     )
-    expect(sections[0].cards.map((card) => card.title)).toEqual(['seedance-2.0'])
+    expect(sections[0].cards).toEqual([{
+      key: 'video:seedance-2.0',
+      title: 'seedance-2.0',
+      kind: 'video',
+      unit: 'per_second',
+      tiers: [{ label: '720p', value: 0.21 }],
+    }])
   })
 })

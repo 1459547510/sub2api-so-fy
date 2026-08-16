@@ -3,6 +3,7 @@ import {
   cancelVideoJob,
   createVideoJob,
   downloadVideoOutput,
+  listGatewayModels,
   listVideoJobs,
   uploadVideoInput,
 } from '@/api/videoGeneration'
@@ -101,5 +102,18 @@ describe('video generation API', () => {
     expect(url).toContain('/v1/videos/jobs/vidjob-1/content')
     expect(init.headers).toMatchObject({ Authorization: 'Bearer sub2-key' })
     expect(result.type).toBe('video/mp4')
+  })
+
+  it('lists gateway models with the selected API key', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      object: 'list',
+      data: [{ id: 'seedance-2.0' }, { id: 'gpt-image-2' }],
+    }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(listGatewayModels('sub2-key')).resolves.toEqual(['seedance-2.0', 'gpt-image-2'])
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/v1/models')
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer sub2-key' })
   })
 })

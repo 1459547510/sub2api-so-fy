@@ -59,8 +59,8 @@
               <div v-if="card.tiers.length === 1 && card.tiers[0].label == null" class="mt-3 text-2xl font-extrabold text-gray-900 dark:text-white">
                 ${{ formatUsd(card.tiers[0].value) }}
               </div>
-              <div v-else class="mt-3 grid grid-cols-3 gap-3">
-                <div v-for="tier in card.tiers" :key="tier.label ?? 'price'">
+              <div v-else class="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                <div v-for="tier in card.tiers" :key="tier.label ?? 'price'" class="min-w-[4.5rem]">
                   <div class="text-xs text-gray-500 dark:text-dark-400">{{ tier.label }}</div>
                   <div class="text-lg font-extrabold text-gray-900 dark:text-white">
                     ${{ formatUsd(tier.value) }}<span v-if="card.unit === 'per_second'" class="text-xs font-medium text-gray-500">/s</span>

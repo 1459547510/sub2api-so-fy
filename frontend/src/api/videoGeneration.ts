@@ -145,6 +145,18 @@ export async function downloadVideoOutput(apiKey: string, jobId: string): Promis
   return response.blob()
 }
 
+export async function listGatewayModels(apiKey: string): Promise<string[]> {
+  const response = await fetch(buildGatewayUrl('/v1/models'), {
+    headers: authHeaders(apiKey),
+  })
+  if (!response.ok) throw await parseVideoError(response)
+  const body = await response.json()
+  const data = Array.isArray(body?.data) ? body.data : []
+  return data
+    .map((item: { id?: string; ID?: string }) => String(item?.id || item?.ID || '').trim())
+    .filter(Boolean)
+}
+
 export async function cancelVideoJob(apiKey: string, jobId: string): Promise<VideoJob> {
   const response = await fetch(buildGatewayUrl(`/v1/videos/jobs/${encodeURIComponent(jobId)}`), {
     method: 'DELETE',
