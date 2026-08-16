@@ -28,15 +28,17 @@ Each card shows model name, type (image/video), and unit (per image / per second
 
 Read `image_price_1k`, `image_price_2k`, `image_price_4k`.
 
-- Configured tiers that share one value collapse to a single price. Do not list 1K/2K/4K.
-- Different values stay split by 1K / 2K / 4K.
+- If two or three configured tiers share one value, collapse to a single unlabeled price.
+- If only one tier is configured, show that price with its 1K / 2K / 4K label.
+- If configured values differ, split by 1K / 2K / 4K.
 - Omit unconfigured tiers. Do not render a dash.
 
 ### Video
 
 Unit is USD/s. Always list configured resolutions; do not collapse even when values match.
 
-- Prefer `video_model_prices[model][resolution]`.
+- Display only 480p / 720p / 1080p. Ignore other resolution keys.
+- Prefer `video_model_prices[model][resolution]` for those three.
 - Fall back to `video_price_480p` / `video_price_720p` / `video_price_1080p`.
 - Omit unconfigured resolutions.
 
@@ -44,24 +46,27 @@ Unit is USD/s. Always list configured resolutions; do not collapse even when val
 
 Display the raw configured USD amounts. Do not multiply by user exclusive rate, group `rate_multiplier`, image/video independent rates, or peak rate. Do not fetch `/groups/rates` for this page. Do not show multiplier text.
 
-A tier is configured when the value is a finite number `>= 0`. `null`, missing, empty string, and non-numeric values are unconfigured. `0` is a real price.
+A tier is configured when `Number(value)` is finite and `>= 0`. Numeric strings such as `"0.08"` count. `null`, missing, empty string, and non-numeric values are unconfigured. `0` is a real price.
 
 ## Data
 
 No new backend endpoint.
 
-1. `GET /groups/available` is the only price source. Keep a group if its platform is `leo`, `openai_media`, `video`, `composite`, or `grok`, and it has at least one configured image or video price field.
+1. `GET /groups/available` is the only price source. Keep a group if its platform is `leo`, `openai_media`, `video`, `composite`, or `grok`, and it has at least one configured media price: any `image_price_*`, any flat `video_price_*`, or any `video_model_prices` entry with a configured 480p / 720p / 1080p override. Nested model prices count; a group with only `video_model_prices` is kept.
 2. Optional `GET /model-plaza` supplies image model names only. Ignore plaza token, per-request, and official prices. Do not use plaza to decide video cards.
 3. Video cards for a group:
-   - One card per `video_model_prices` key that has at least one configured resolution.
-   - That card’s price for a resolution is the model override if configured, otherwise the group flat `video_price_*` for 480p / 720p / 1080p.
-   - If the group has no such keys but has at least one configured flat video price, render one fallback video card for the group (same idea as the image fallback).
+   - Keep a `video_model_prices` key only when it has at least one configured 480p / 720p / 1080p override. Empty or all-null keys do not become cards.
+   - Each kept card lists 480p / 720p / 1080p. A resolution uses the override if configured, otherwise the matching flat `video_price_*`.
+   - If no key is kept and the group has at least one configured flat video price, render one fallback video card using only the flat prices.
    - Do not expand the workbench catalog onto a group. Workbench IDs are not a second source of cards.
 4. Image cards for a group:
+   - Only if the group has at least one configured image price.
    - If plaza returns models for that group whose billing mode is image, one card per such model, all using the group image prices.
-   - Otherwise, if the group has at least one configured image price, render one fallback image card for the group.
+   - Otherwise render one fallback image card for the group.
+   - Do not render an image card that has no configured image tier.
 5. Fallback cards use the group name as the title, not a fake model ID.
-6. Load on mount. Refresh is manual. No 60-second polling.
+6. Keep API group order. Inside a group, image cards then video cards, each sorted by title.
+7. Load on mount. Refresh is manual. No 60-second polling.
 
 ## Out of scope
 
