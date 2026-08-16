@@ -18,7 +18,7 @@ Move media prices out of the V2 video/image API docs and into a third video-modu
 
 Title, one-line source note, and a refresh button. Then one section per visible media group. Inside a group: image cards first, then video cards.
 
-Empty, loading, and fetch-failure states stay on this page. If both group fetch and optional model-name fetch fail, show unavailable. If the user has no media group with any configured media price, show empty.
+Empty, loading, and fetch-failure states stay on this page. If `GET /groups/available` fails, show unavailable even when plaza succeeds. Plaza failure only drops image model names; it does not make the page unavailable. If the user has no media group with any configured media price, show empty.
 
 ## Cards
 
@@ -44,15 +44,24 @@ Unit is USD/s. Always list configured resolutions; do not collapse even when val
 
 Display the raw configured USD amounts. Do not multiply by user exclusive rate, group `rate_multiplier`, image/video independent rates, or peak rate. Do not fetch `/groups/rates` for this page. Do not show multiplier text.
 
+A tier is configured when the value is a finite number `>= 0`. `null`, missing, empty string, and non-numeric values are unconfigured. `0` is a real price.
+
 ## Data
 
 No new backend endpoint.
 
-1. `GET /groups/available` is the price source. Keep a group if its platform is `leo`, `openai_media`, `video`, `composite`, or `grok`, and it has at least one image or video price field.
-2. Optional `GET /model-plaza` supplies image model names only. Ignore plaza token, per-request, and official prices.
-3. Video model names are the union of `video_model_prices` keys and workbench catalog models that resolve at least one override or flat video price.
-4. Image model names are plaza models in that group whose billing mode is image. If plaza is missing or has no image models, render one image card for the group using the group image prices so the configured price is still visible.
-5. Load on mount. Refresh is manual. No 60-second polling.
+1. `GET /groups/available` is the only price source. Keep a group if its platform is `leo`, `openai_media`, `video`, `composite`, or `grok`, and it has at least one configured image or video price field.
+2. Optional `GET /model-plaza` supplies image model names only. Ignore plaza token, per-request, and official prices. Do not use plaza to decide video cards.
+3. Video cards for a group:
+   - One card per `video_model_prices` key that has at least one configured resolution.
+   - That card’s price for a resolution is the model override if configured, otherwise the group flat `video_price_*` for 480p / 720p / 1080p.
+   - If the group has no such keys but has at least one configured flat video price, render one fallback video card for the group (same idea as the image fallback).
+   - Do not expand the workbench catalog onto a group. Workbench IDs are not a second source of cards.
+4. Image cards for a group:
+   - If plaza returns models for that group whose billing mode is image, one card per such model, all using the group image prices.
+   - Otherwise, if the group has at least one configured image price, render one fallback image card for the group.
+5. Fallback cards use the group name as the title, not a fake model ID.
+6. Load on mount. Refresh is manual. No 60-second polling.
 
 ## Out of scope
 
@@ -64,5 +73,5 @@ No new backend endpoint.
 ## Tests
 
 - `VideoSectionTabs` includes the pricing route and marks it active.
-- New pricing view: collapse identical image tiers; keep video tiers split; omit empty tiers; show raw prices with no multiplier; one card per model; group sections; empty/error.
+- New pricing view: collapse identical image tiers; keep video tiers split; omit empty tiers; show raw prices with no multiplier; one card per `video_model_prices` key; plaza image models or group-name fallback cards; group-fetch failure is unavailable; empty when no configured media prices.
 - `VideoApiDocsView` no longer renders `#pricing` or loads pricing data.
