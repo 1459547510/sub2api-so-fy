@@ -6544,3 +6544,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
 - Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
 
+## 2026-08-16 - Task: Release dynamic media model cards as v0.1.177-fy.3
+### What was done
+- Stopped using a hardcoded workbench catalog on the pricing page.
+- Built per-model cards from the current account's `/model-plaza` and `/channels/available` lists, with group unit prices and optional `video_model_prices` overrides.
+- Prepared annotated tag `v0.1.177-fy.3` from the validated dynamic-pricing commits.
+
+### Testing
+- `npx vitest run src/utils/__tests__/mediaPricing.spec.ts src/views/user/__tests__/VideoPricingView.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/components/video/__tests__/VideoSectionTabs.spec.ts` (in `frontend`): passed, 4 files and 24 tests.
+- `npx vue-tsc --noEmit` (in `frontend`): passed.
+
+### Notes
+- `frontend/src/utils/mediaPricing.ts`: unions plaza and available-channel models per group; image vs video comes from billing mode or media platform.
+- `frontend/src/views/user/VideoPricingView.vue`: loads groups, plaza, and channels; a failed refresh keeps previously loaded model names.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.2..v0.1.177-fy.3` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.2`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.3` and its remote tag. Preserve unrelated `.superpowers/` content.
+
+

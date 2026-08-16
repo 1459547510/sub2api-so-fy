@@ -18,7 +18,7 @@ Move media prices out of the V2 video/image API docs and into a third video-modu
 
 Title, one-line source note, and a refresh button. Then one section per visible media group. Inside a group: image cards first, then video cards.
 
-Empty, loading, and fetch-failure states stay on this page. If `GET /groups/available` fails, show unavailable even when plaza succeeds. Plaza failure only drops image model names; it does not make the page unavailable. If the user has no media group with any configured media price, show empty.
+Empty, loading, and fetch-failure states stay on this page. If `GET /groups/available` fails, show unavailable even when plaza or channels succeed. Plaza or channels failure only drops those model names; it does not make the page unavailable. A failed refresh keeps previously loaded groups and model names. If the user has no media group with any configured media price, show empty.
 
 ## Cards
 
@@ -53,15 +53,15 @@ Treat `null`, `undefined`, and `""` as unconfigured before calling `Number()`. `
 No new backend endpoint.
 
 1. `GET /groups/available` is the only price source. Keep a group if its platform is `leo`, `openai_media`, `video`, `composite`, or `grok`, and it has at least one configured media price: any `image_price_*`, any flat `video_price_*`, or any `video_model_prices` entry with a configured 480p / 720p / 1080p override. Nested model prices count; a group with only `video_model_prices` is kept.
-2. Optional `GET /model-plaza` supplies image model names only. Ignore plaza token, per-request, and official prices. Do not use plaza to decide video cards.
+2. Model names are dynamic. Union `GET /model-plaza` models for the group with `GET /channels/available` models whose section includes that group. Ignore plaza/channel token, per-request, and official prices. Do not hard-code a frontend model catalog.
 3. Video cards for a group:
    - Keep a `video_model_prices` key only when it has at least one configured 480p / 720p / 1080p override. Empty or all-null keys do not become cards.
-   - Each kept card lists 480p / 720p / 1080p. A resolution uses the override if configured, otherwise the matching flat `video_price_*`.
-   - If no key is kept and the group has at least one configured flat video price, render one fallback video card using only the flat prices.
-   - Do not expand the workbench catalog onto a group. Workbench IDs are not a second source of cards.
+   - Also create a card for each dynamic model that is video-billed, or whose platform is a media platform and is not image-billed.
+   - Each card lists 480p / 720p / 1080p. A resolution uses the override if configured, otherwise the matching flat `video_price_*`. Omit a dynamic/override model that still has no configured tier.
+   - If that union is empty and the group has at least one configured flat video price, render one fallback video card using only the flat prices.
 4. Image cards for a group:
    - Only if the group has at least one configured image price.
-   - If plaza returns models for that group whose billing mode is image, one card per such model, all using the group image prices.
+   - If plaza or available channels return image-billed models for that group, one card per such model, all using the group image prices.
    - Otherwise render one fallback image card for the group.
    - Do not render an image card that has no configured image tier.
 5. Fallback cards use the group name as the title, not a fake model ID.
@@ -78,5 +78,5 @@ No new backend endpoint.
 ## Tests
 
 - `VideoSectionTabs` includes the pricing route and marks it active.
-- New pricing view: collapse identical image tiers; keep video tiers split; omit empty tiers; show raw prices with no multiplier; one card per `video_model_prices` key; plaza image models or group-name fallback cards; group-fetch failure is unavailable; empty when no configured media prices.
+- New pricing view: collapse identical image tiers; keep video tiers split; omit empty tiers; show raw prices with no multiplier; one card per dynamic plaza/channel/override model; image models or group-name fallback cards; group-fetch failure is unavailable; empty when no configured media prices.
 - `VideoApiDocsView` no longer renders `#pricing` or loads pricing data.

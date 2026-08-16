@@ -5,6 +5,7 @@ import {
   keepMediaPricingGroup,
   buildVideoCards,
   buildMediaPricingSections,
+  collectGroupModels,
 } from '../mediaPricing'
 
 const emptyPrices = {
@@ -107,7 +108,7 @@ describe('buildVideoCards', () => {
     ])
   })
 
-  it('uses a group-name fallback only when no override key is kept', () => {
+  it('uses a group-name fallback only when no model name can be resolved', () => {
     const fallback = buildVideoCards({
       name: 'Leo group',
       ...emptyPrices,
@@ -129,6 +130,45 @@ describe('buildVideoCards', () => {
       video_model_prices: { 'seedance-2.0': { '720p': 0.14 } },
     })
     expect(noFallback.map((card) => card.title)).toEqual(['seedance-2.0'])
+  })
+
+  it('uses visible channel and plaza models instead of a hardcoded catalog', () => {
+    const cards = buildVideoCards({
+      name: '视频图片分组',
+      ...emptyPrices,
+      video_price_480p: 0.12,
+      video_price_720p: 0.17,
+      video_price_1080p: 0.6,
+    }, [
+      { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video' } },
+      { name: 'kling-3.0', platform: 'leo' },
+      { name: 'gpt-image-2', platform: 'openai_media', pricing: { billing_mode: 'image' } },
+    ])
+    expect(cards.map((card) => card.title)).toEqual(['kling-3.0', 'seedance-2.0'])
+    expect(cards[0].tiers).toEqual([
+      { label: '480p', value: 0.12 },
+      { label: '720p', value: 0.17 },
+      { label: '1080p', value: 0.6 },
+    ])
+  })
+})
+
+describe('collectGroupModels', () => {
+  it('unions plaza and available-channel models for the group', () => {
+    const models = collectGroupModels(
+      7,
+      [{ id: 7, models: [{ name: 'seedance-2.0', pricing: { billing_mode: 'video' } }] }],
+      [{
+        platforms: [{
+          groups: [{ id: 7 }],
+          supported_models: [
+            { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video' } },
+            { name: 'kling-3.0', platform: 'leo' },
+          ],
+        }],
+      }],
+    )
+    expect(models.map((model) => model.name)).toEqual(['seedance-2.0', 'kling-3.0'])
   })
 })
 
@@ -196,5 +236,28 @@ describe('buildMediaPricingSections', () => {
       [{ id: 4, models: [{ name: 'gpt-image-2', pricing: { billing_mode: 'image' } }] }],
     )
     expect(sections[0].cards.every((card) => card.kind === 'video')).toBe(true)
+  })
+
+  it('expands available-channel models onto a group that only has flat video prices', () => {
+    const sections = buildMediaPricingSections(
+      [{
+        id: 7,
+        name: '视频图片分组',
+        platform: 'composite',
+        ...emptyPrices,
+        video_price_720p: 0.17,
+      }],
+      [],
+      [{
+        platforms: [{
+          groups: [{ id: 7 }],
+          supported_models: [
+            { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video' } },
+            { name: 'gpt-4o', platform: 'openai', pricing: { billing_mode: 'token' } },
+          ],
+        }],
+      }],
+    )
+    expect(sections[0].cards.map((card) => card.title)).toEqual(['seedance-2.0'])
   })
 })

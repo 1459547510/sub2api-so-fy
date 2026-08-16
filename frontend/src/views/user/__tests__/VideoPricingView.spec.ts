@@ -2,17 +2,21 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import VideoPricingView from '@/views/user/VideoPricingView.vue'
 
-const { groupsApi, modelPlazaApi } = vi.hoisted(() => ({
+const { groupsApi, modelPlazaApi, channelsApi } = vi.hoisted(() => ({
   groupsApi: {
     getAvailable: vi.fn(),
   },
   modelPlazaApi: {
     getModelPlaza: vi.fn(),
   },
+  channelsApi: {
+    getAvailable: vi.fn(),
+  },
 }))
 
 vi.mock('@/api/groups', () => ({ default: groupsApi }))
 vi.mock('@/api/modelPlaza', () => ({ default: modelPlazaApi }))
+vi.mock('@/api/channels', () => ({ default: channelsApi }))
 vi.mock('vue-i18n', async () => {
   const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
   return { ...actual, useI18n: () => ({ t: (key: string) => key }) }
@@ -55,6 +59,7 @@ describe('VideoPricingView', () => {
         models: [{ name: 'gpt-image-2', pricing: { billing_mode: 'image' } }],
       }],
     })
+    channelsApi.getAvailable.mockResolvedValueOnce([])
 
     const wrapper = mountPage()
     await flushPromises()
@@ -72,6 +77,7 @@ describe('VideoPricingView', () => {
   it('shows unavailable when groups fail even if plaza succeeds', async () => {
     groupsApi.getAvailable.mockRejectedValueOnce(new Error('groups down'))
     modelPlazaApi.getModelPlaza.mockResolvedValueOnce({ groups: [] })
+    channelsApi.getAvailable.mockResolvedValueOnce([])
 
     const wrapper = mountPage()
     await flushPromises()
@@ -87,6 +93,7 @@ describe('VideoPricingView', () => {
       image_price_1k: 0.08,
     }])
     modelPlazaApi.getModelPlaza.mockRejectedValueOnce(new Error('plaza off'))
+    channelsApi.getAvailable.mockResolvedValueOnce([])
 
     const wrapper = mountPage()
     await flushPromises()
@@ -104,6 +111,7 @@ describe('VideoPricingView', () => {
     }])
     groupsApi.getAvailable.mockRejectedValueOnce(new Error('groups down'))
     modelPlazaApi.getModelPlaza.mockResolvedValue({ groups: [] })
+    channelsApi.getAvailable.mockResolvedValue([])
 
     const wrapper = mountPage()
     await flushPromises()
@@ -114,5 +122,34 @@ describe('VideoPricingView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('seedance-2.0')
+  })
+
+  it('renders channel-supported video models with group unit prices', async () => {
+    groupsApi.getAvailable.mockResolvedValueOnce([{
+      id: 7,
+      name: '视频图片分组',
+      platform: 'composite',
+      video_price_480p: 0.12,
+      video_price_720p: 0.17,
+      video_price_1080p: 0.6,
+    }])
+    modelPlazaApi.getModelPlaza.mockRejectedValueOnce(new Error('plaza off'))
+    channelsApi.getAvailable.mockResolvedValueOnce([{
+      name: 'Leo',
+      platforms: [{
+        groups: [{ id: 7 }],
+        supported_models: [
+          { name: 'seedance-2.0', platform: 'leo', pricing: { billing_mode: 'video' } },
+          { name: 'kling-3.0', platform: 'leo' },
+        ],
+      }],
+    }])
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="price-card-video:seedance-2.0"]').text()).toContain('seedance-2.0')
+    expect(wrapper.get('[data-testid="price-card-video:kling-3.0"]').text()).toContain('$0.17')
+    expect(wrapper.find('[data-testid="price-card-video-fallback"]').exists()).toBe(false)
   })
 })

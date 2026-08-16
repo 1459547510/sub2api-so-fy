@@ -110,26 +110,103 @@ export function keepMediaPricingGroup(group: VideoPriceFields & { platform: stri
     || hasConfiguredVideoModelOverride(group)
 }
 
-export function buildVideoCards(group: VideoPriceFields & { name: string }): MediaPriceCard[] {
-  const keys = Object.keys(group.video_model_prices ?? {})
-    .filter((model) => VIDEO_RESOLUTIONS.some((tier) => (
-      modelOverridePrice(group.video_model_prices?.[model], tier.label) !== null
-    )))
-    .sort((a, b) => a.localeCompare(b))
+export type MediaModelRef = {
+  name: string
+  platform?: string
+  pricing?: { billing_mode?: string } | null
+}
 
-  if (keys.length > 0) {
-    return keys.map((model) => ({
-      key: `video:${model}`,
-      title: model,
-      kind: 'video',
-      unit: 'per_second',
-      tiers: collectConfiguredTiers(
-        VIDEO_RESOLUTIONS,
-        (tier) => modelOverridePrice(group.video_model_prices?.[model], tier.label)
-          ?? configuredPrice(group[tier.field]),
-      ),
-    }))
+export type PlazaImageSource = {
+  id: number
+  models: MediaModelRef[]
+}
+
+export type ChannelModelSource = {
+  platforms?: Array<{
+    groups?: Array<{ id: number }>
+    supported_models?: MediaModelRef[]
+  }>
+}
+
+export function isMediaImageModel(model: MediaModelRef): boolean {
+  return model.pricing?.billing_mode === 'image'
+}
+
+export function isMediaVideoModel(model: MediaModelRef): boolean {
+  if (model.pricing?.billing_mode === 'image') return false
+  if (model.pricing?.billing_mode === 'video') return true
+  return MEDIA_PRICING_PLATFORMS.has(model.platform ?? '')
+}
+
+export function collectGroupModels(
+  groupId: number,
+  plazaGroups: PlazaImageSource[] = [],
+  channels: ChannelModelSource[] = [],
+): MediaModelRef[] {
+  const collected: MediaModelRef[] = [
+    ...(plazaGroups.find((item) => item.id === groupId)?.models ?? []),
+  ]
+  for (const channel of channels) {
+    for (const section of channel.platforms ?? []) {
+      if (!(section.groups ?? []).some((item) => item.id === groupId)) continue
+      collected.push(...(section.supported_models ?? []))
+    }
   }
+
+  const byName = new Map<string, MediaModelRef>()
+  for (const model of collected) {
+    const name = model.name?.trim()
+    if (!name || byName.has(name)) continue
+    byName.set(name, model)
+  }
+  return [...byName.values()]
+}
+
+function overrideVideoModels(group: VideoPriceFields): string[] {
+  return Object.keys(group.video_model_prices ?? {}).filter((model) => (
+    VIDEO_RESOLUTIONS.some((tier) => (
+      modelOverridePrice(group.video_model_prices?.[model], tier.label) !== null
+    ))
+  ))
+}
+
+function uniqueSortedNames(names: Iterable<string>): string[] {
+  return [...new Set([...names].map((name) => name.trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b))
+}
+
+function videoCardForModel(
+  group: VideoPriceFields,
+  model: string,
+): MediaPriceCard | null {
+  const tiers = collectConfiguredTiers(
+    VIDEO_RESOLUTIONS,
+    (tier) => modelOverridePrice(group.video_model_prices?.[model], tier.label)
+      ?? configuredPrice(group[tier.field]),
+  )
+  if (tiers.length === 0) return null
+  return {
+    key: `video:${model}`,
+    title: model,
+    kind: 'video',
+    unit: 'per_second',
+    tiers,
+  }
+}
+
+export function buildVideoCards(
+  group: VideoPriceFields & { name: string },
+  models: MediaModelRef[] = [],
+): MediaPriceCard[] {
+  const names = uniqueSortedNames([
+    ...overrideVideoModels(group),
+    ...models.filter(isMediaVideoModel).map((model) => model.name),
+  ])
+  const cards = names
+    .map((model) => videoCardForModel(group, model))
+    .filter((card): card is MediaPriceCard => card !== null)
+
+  if (cards.length > 0) return cards
 
   const flats = flatVideoTiers(group)
   if (flats.length === 0) return []
@@ -140,11 +217,6 @@ export function buildVideoCards(group: VideoPriceFields & { name: string }): Med
     unit: 'per_second',
     tiers: flats,
   }]
-}
-
-export type PlazaImageSource = {
-  id: number
-  models: Array<{ name: string; pricing?: { billing_mode?: string } | null }>
 }
 
 export type MediaPricingGroup = VideoPriceFields & {
@@ -161,14 +233,11 @@ export type MediaPriceGroupSection = {
 
 export function buildImageCards(
   group: MediaPricingGroup,
-  plazaGroups: PlazaImageSource[],
+  models: MediaModelRef[] = [],
 ): MediaPriceCard[] {
   if (!hasConfiguredImagePrice(group)) return []
   const tiers = imageTiers(group)
-  const names = (plazaGroups.find((item) => item.id === group.id)?.models ?? [])
-    .filter((model) => model.pricing?.billing_mode === 'image')
-    .map((model) => model.name)
-    .sort((a, b) => a.localeCompare(b))
+  const names = uniqueSortedNames(models.filter(isMediaImageModel).map((model) => model.name))
 
   if (names.length > 0) {
     return names.map((name) => ({
@@ -192,16 +261,20 @@ export function buildImageCards(
 export function buildMediaPricingSections(
   groups: MediaPricingGroup[],
   plazaGroups: PlazaImageSource[] = [],
+  channels: ChannelModelSource[] = [],
 ): MediaPriceGroupSection[] {
   return groups
     .filter(keepMediaPricingGroup)
-    .map((group) => ({
-      id: group.id,
-      name: group.name,
-      cards: [
-        ...buildImageCards(group, plazaGroups),
-        ...buildVideoCards(group),
-      ],
-    }))
+    .map((group) => {
+      const models = collectGroupModels(group.id, plazaGroups, channels)
+      return {
+        id: group.id,
+        name: group.name,
+        cards: [
+          ...buildImageCards(group, models),
+          ...buildVideoCards(group, models),
+        ],
+      }
+    })
     .filter((section) => section.cards.length > 0)
 }

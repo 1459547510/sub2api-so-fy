@@ -82,6 +82,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import VideoSectionTabs from '@/components/video/VideoSectionTabs.vue'
 import userGroupsAPI from '@/api/groups'
+import userChannelsAPI, { type UserAvailableChannel } from '@/api/channels'
 import modelPlazaAPI, { type ModelPlazaGroup } from '@/api/modelPlaza'
 import type { Group } from '@/types'
 import { buildMediaPricingSections } from '@/utils/mediaPricing'
@@ -89,10 +90,11 @@ import { buildMediaPricingSections } from '@/utils/mediaPricing'
 const { t } = useI18n()
 const groups = ref<Group[]>([])
 const plazaGroups = ref<ModelPlazaGroup[]>([])
+const channels = ref<UserAvailableChannel[]>([])
 const loading = ref(false)
 const groupsFailed = ref(false)
 
-const sections = computed(() => buildMediaPricingSections(groups.value, plazaGroups.value))
+const sections = computed(() => buildMediaPricingSections(groups.value, plazaGroups.value, channels.value))
 const unavailable = computed(() => groupsFailed.value && sections.value.length === 0)
 
 function formatUsd(value: number): string {
@@ -102,16 +104,22 @@ function formatUsd(value: number): string {
 async function loadPricing() {
   loading.value = true
   groupsFailed.value = false
-  const [groupsResult, plazaResult] = await Promise.allSettled([
+  const [groupsResult, plazaResult, channelsResult] = await Promise.allSettled([
     userGroupsAPI.getAvailable(),
     modelPlazaAPI.getModelPlaza(),
+    userChannelsAPI.getAvailable(),
   ])
   if (groupsResult.status === 'fulfilled') {
     groups.value = groupsResult.value
   } else {
     groupsFailed.value = true
   }
-  plazaGroups.value = plazaResult.status === 'fulfilled' ? plazaResult.value.groups : []
+  if (plazaResult.status === 'fulfilled') {
+    plazaGroups.value = plazaResult.value.groups
+  }
+  if (channelsResult.status === 'fulfilled') {
+    channels.value = channelsResult.value
+  }
   loading.value = false
 }
 
