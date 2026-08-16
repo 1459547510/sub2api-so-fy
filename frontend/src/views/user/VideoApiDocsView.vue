@@ -73,55 +73,6 @@
             </div>
           </section>
 
-          <section id="pricing" class="scroll-mt-6 border-t border-gray-200 pt-10 dark:border-dark-700">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <SectionHeading :title="t('video.apiDocs.v2.pricing.title')" :description="t('video.apiDocs.v2.pricing.description')" />
-              <button
-                type="button"
-                class="btn btn-secondary inline-flex h-9 items-center gap-2 self-start px-3 sm:self-auto"
-                :disabled="pricingLoading"
-                :title="t('video.apiDocs.v2.pricing.refresh')"
-                @click="loadPricing"
-              >
-                <Icon name="refresh" size="sm" :class="pricingLoading ? 'animate-spin' : ''" />
-                <span>{{ t('video.apiDocs.v2.pricing.refresh') }}</span>
-              </button>
-            </div>
-            <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-dark-400">
-              <span>{{ t('video.apiDocs.v2.pricing.source') }}</span>
-              <span v-if="pricingUpdatedAt">{{ t('video.apiDocs.v2.pricing.updatedAt', { time: formatUpdatedAt(pricingUpdatedAt) }) }}</span>
-            </div>
-            <div v-if="pricingLoading && pricingRows.length === 0" class="mt-5 rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500 dark:border-dark-600 dark:text-dark-400">
-              {{ t('video.apiDocs.v2.pricing.loading') }}
-            </div>
-            <div v-else-if="pricingError && pricingRows.length === 0" class="mt-5 rounded-lg border border-red-200 bg-red-50 px-5 py-8 text-center text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
-              {{ t('video.apiDocs.v2.pricing.unavailable') }}
-            </div>
-            <div v-else-if="pricingRows.length === 0" class="mt-5 rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500 dark:border-dark-600 dark:text-dark-400">
-              {{ t('video.apiDocs.v2.pricing.empty') }}
-            </div>
-            <div v-else class="mt-5 overflow-x-auto rounded-lg border border-gray-200 dark:border-dark-700">
-              <table class="min-w-[720px] w-full text-left text-sm">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-dark-800 dark:text-dark-300">
-                  <tr>
-                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.v2.pricing.group') }}</th>
-                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.v2.pricing.model') }}</th>
-                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.v2.pricing.type') }}</th>
-                    <th class="px-4 py-3 font-medium">{{ t('video.apiDocs.v2.pricing.price') }}</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 bg-white dark:divide-dark-700 dark:bg-dark-900">
-                  <tr v-for="row in pricingRows" :key="row.key">
-                    <td class="px-4 py-3 text-gray-700 dark:text-dark-200">{{ row.group }}</td>
-                    <td class="px-4 py-3 font-mono text-xs text-gray-900 dark:text-white">{{ row.model }}</td>
-                    <td class="px-4 py-3 text-gray-600 dark:text-dark-300">{{ row.type }}</td>
-                    <td class="px-4 py-3 leading-6 text-gray-600 dark:text-dark-300">{{ row.price }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-
           <section id="image-api" class="scroll-mt-6 border-t border-gray-200 pt-10 dark:border-dark-700">
             <SectionHeading :title="t('video.apiDocs.v2.images.title')" :description="t('video.apiDocs.v2.images.description')" />
             <div class="mt-5 grid gap-4 lg:grid-cols-2">
@@ -293,17 +244,12 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ApiCodeBlock from '@/components/video/ApiCodeBlock.vue'
 import EndpointTitle from '@/components/video/EndpointTitle.vue'
-import Icon from '@/components/icons/Icon.vue'
 import SectionHeading from '@/components/video/SectionHeading.vue'
 import VideoSectionTabs from '@/components/video/VideoSectionTabs.vue'
 import { buildGatewayUrl } from '@/api/client'
-import userGroupsAPI from '@/api/groups'
-import modelPlazaAPI, { type ModelPlazaGroup, type PlazaModel } from '@/api/modelPlaza'
-import type { Group } from '@/types'
 
 const { t } = useI18n()
 
@@ -320,7 +266,6 @@ const navigation = [
   { href: '#quick-start', label: 'video.apiDocs.v2.nav.quick' },
   { href: '#compatibility', label: 'video.apiDocs.v2.nav.compatibility' },
   { href: '#model-discovery', label: 'video.apiDocs.v2.nav.discovery' },
-  { href: '#pricing', label: 'video.apiDocs.v2.nav.pricing' },
   { href: '#image-api', label: 'video.apiDocs.v2.nav.images' },
   { href: '#upload-media', label: 'video.apiDocs.v2.nav.upload' },
   { href: '#create-job', label: 'video.apiDocs.v2.nav.video' },
@@ -403,168 +348,6 @@ const errors = [
   { code: '429', description: 'video.apiDocs.v2.errors.rateLimit' },
   { code: '502', description: 'video.apiDocs.v2.errors.serviceUnavailable' },
 ]
-
-type PricingRow = {
-  key: string
-  group: string
-  model: string
-  type: string
-  price: string
-}
-
-const groups = ref<Group[]>([])
-const plazaGroups = ref<ModelPlazaGroup[]>([])
-const userGroupRates = ref<Record<number, number>>({})
-const groupsLoaded = ref(false)
-const pricingLoading = ref(false)
-const pricingError = ref(false)
-const pricingUpdatedAt = ref<Date | null>(null)
-let pricingRefreshTimer: ReturnType<typeof setInterval> | undefined
-
-const mediaPlatforms = new Set(['leo', 'openai_media', 'video', 'composite'])
-const isMediaGroup = (group: Pick<Group, 'platform'>) => mediaPlatforms.has(group.platform)
-const isMediaPlazaGroup = (group: Pick<ModelPlazaGroup, 'platform'>) => mediaPlatforms.has(group.platform)
-
-function trimPrice(value: number): string {
-  return String(Math.round(value * 1_000_000) / 1_000_000)
-}
-
-function effectiveRate(group: Group): number {
-  return userGroupRates.value[group.id] ?? group.rate_multiplier ?? 1
-}
-
-function imageRate(group: Group): number {
-  return group.image_rate_independent ? group.image_rate_multiplier : effectiveRate(group)
-}
-
-function videoRate(group: Group): number {
-  return group.video_rate_independent ? group.video_rate_multiplier : effectiveRate(group)
-}
-
-function formatUpdatedAt(value: Date): string {
-  return value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
-
-function modelType(model: PlazaModel): 'image' | 'video' {
-  return model.pricing?.billing_mode === 'image' ? 'image' : 'video'
-}
-
-function formatPlazaPrice(model: PlazaModel, group: ModelPlazaGroup): string {
-  const pricing = model.pricing
-  if (!pricing) return t('video.apiDocs.v2.pricing.notConfigured')
-  const rate = modelType(model) === 'image'
-    ? (group.image_rate_independent ? group.image_rate_multiplier : (group.user_rate_multiplier ?? group.rate_multiplier))
-    : (group.user_rate_multiplier ?? group.rate_multiplier)
-  if (pricing.billing_mode === 'image' || pricing.billing_mode === 'per_request') {
-    const tiers = (pricing.intervals ?? [])
-      .filter((interval) => interval.per_request_price != null)
-      .map((interval) => `${interval.tier_label || t('video.apiDocs.v2.pricing.perRequest')}: $${trimPrice((interval.per_request_price || 0) * rate)}`)
-    const base = pricing.per_request_price == null ? '' : `$${trimPrice(pricing.per_request_price * rate)}`
-    return tiers.length > 0 ? tiers.join(' / ') : (base || t('video.apiDocs.v2.pricing.notConfigured'))
-  }
-  const input = pricing.input_price == null ? '-' : `$${trimPrice(pricing.input_price * 1_000_000 * rate)}`
-  const output = pricing.output_price == null ? '-' : `$${trimPrice(pricing.output_price * 1_000_000 * rate)}`
-  return `${input} / ${output} ${t('video.apiDocs.v2.pricing.perMillionTokens')}`
-}
-
-function buildPricingRows(): PricingRow[] {
-  const rows: PricingRow[] = []
-  const availableGroupIDs = new Set(groups.value.filter(isMediaGroup).map((group) => group.id))
-  const seen = new Set<string>()
-
-  for (const plazaGroup of plazaGroups.value.filter(isMediaPlazaGroup)) {
-    if (groupsLoaded.value && !availableGroupIDs.has(plazaGroup.id)) continue
-    for (const model of plazaGroup.models) {
-      const type = modelType(model)
-      const key = `model:${plazaGroup.id}:${model.platform}:${model.name}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      rows.push({
-        key,
-        group: plazaGroup.name,
-        model: model.name,
-        type: type === 'image' ? t('video.apiDocs.v2.pricing.image') : t('video.apiDocs.v2.pricing.video'),
-        price: formatPlazaPrice(model, plazaGroup),
-      })
-    }
-  }
-
-  for (const group of groups.value.filter(isMediaGroup)) {
-    const imagePrices = [
-      ['1K', group.image_price_1k],
-      ['2K', group.image_price_2k],
-      ['4K', group.image_price_4k],
-    ].filter((entry): entry is [string, number] => entry[1] != null)
-    if (imagePrices.length > 0 && !rows.some((row) => row.key.startsWith(`model:${group.id}:`) && row.type === t('video.apiDocs.v2.pricing.image'))) {
-      rows.push({
-        key: `image:${group.id}`,
-        group: group.name,
-        model: t('video.apiDocs.v2.pricing.allImageModels'),
-        type: t('video.apiDocs.v2.pricing.image'),
-        price: imagePrices.map(([tier, value]) => `${tier}: $${trimPrice(value * imageRate(group))}`).join(' / '),
-      })
-    }
-
-    const modelPrices = Object.entries(group.video_model_prices ?? {})
-    if (modelPrices.length > 0) {
-      for (const [model, tiers] of modelPrices) {
-        rows.push({
-          key: `video:${group.id}:${model}`,
-          group: group.name,
-          model,
-          type: t('video.apiDocs.v2.pricing.video'),
-          price: Object.entries(tiers).map(([resolution, value]) => `${resolution}: $${trimPrice(value * videoRate(group))}/s`).join(' / '),
-        })
-      }
-    } else {
-      const flatPrices = [
-        ['480p', group.video_price_480p],
-        ['720p', group.video_price_720p],
-        ['1080p', group.video_price_1080p],
-      ].filter((entry): entry is [string, number] => entry[1] != null)
-      if (flatPrices.length > 0) {
-        rows.push({
-          key: `video:${group.id}:all`,
-          group: group.name,
-          model: t('video.apiDocs.v2.pricing.allVideoModels'),
-          type: t('video.apiDocs.v2.pricing.video'),
-          price: flatPrices.map(([resolution, value]) => `${resolution}: $${trimPrice(value * videoRate(group))}/s`).join(' / '),
-        })
-      }
-    }
-  }
-  return rows.sort((a, b) => a.group.localeCompare(b.group) || a.type.localeCompare(b.type) || a.model.localeCompare(b.model))
-}
-
-const pricingRows = computed(buildPricingRows)
-
-async function loadPricing() {
-  pricingLoading.value = true
-  pricingError.value = false
-  const [groupsResult, ratesResult, plazaResult] = await Promise.allSettled([
-    userGroupsAPI.getAvailable(),
-    userGroupsAPI.getUserGroupRates(),
-    modelPlazaAPI.getModelPlaza(),
-  ])
-  if (groupsResult.status === 'fulfilled') {
-    groups.value = groupsResult.value
-    groupsLoaded.value = true
-  }
-  if (ratesResult.status === 'fulfilled') userGroupRates.value = ratesResult.value
-  if (plazaResult.status === 'fulfilled') plazaGroups.value = plazaResult.value.groups
-  pricingError.value = groupsResult.status === 'rejected' && plazaResult.status === 'rejected'
-  pricingUpdatedAt.value = new Date()
-  pricingLoading.value = false
-}
-
-onMounted(() => {
-  void loadPricing()
-  pricingRefreshTimer = setInterval(() => void loadPricing(), 60_000)
-})
-
-onBeforeUnmount(() => {
-  if (pricingRefreshTimer) clearInterval(pricingRefreshTimer)
-})
 
 const authHeaders = `-H "Authorization: Bearer $SUB2_API_KEY" \\
   -H "Content-Type: application/json"`

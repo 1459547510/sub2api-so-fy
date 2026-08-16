@@ -1,20 +1,7 @@
-import { flushPromises, mount } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import VideoApiDocsView from '@/views/user/VideoApiDocsView.vue'
 import ApiCodeBlock from '@/components/video/ApiCodeBlock.vue'
-
-const { groupsApi, modelPlazaApi } = vi.hoisted(() => ({
-  groupsApi: {
-    getAvailable: vi.fn().mockResolvedValue([]),
-    getUserGroupRates: vi.fn().mockResolvedValue({}),
-  },
-  modelPlazaApi: {
-    getModelPlaza: vi.fn().mockResolvedValue({ groups: [] }),
-  },
-}))
-
-vi.mock('@/api/groups', () => ({ default: groupsApi }))
-vi.mock('@/api/modelPlaza', () => ({ default: modelPlazaApi }))
 
 vi.mock('vue-i18n', async () => {
   const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
@@ -70,60 +57,8 @@ describe('VideoApiDocsView', () => {
     expect(examples.every((code) => !(code.includes('"start_frame_url"') && code.includes('"image_reference"')))).toBe(true)
     expect(examples.filter((code) => code.startsWith('curl')).every((code) => !/^\+\s/m.test(code))).toBe(true)
     expect(wrapper.html()).not.toMatch(/Leonardo|Leo\s*Studio|Grok|upstream|provider|account_id|target_platform|composite|internal\/video-inputs/i)
-  })
-
-  it('loads model prices from the current user-visible group configuration', async () => {
-    groupsApi.getAvailable.mockResolvedValueOnce([{
-      id: 7,
-      name: 'Video image group',
-      platform: 'composite',
-      rate_multiplier: 1,
-      image_rate_independent: true,
-      image_rate_multiplier: 1,
-      image_price_1k: 0.08,
-      image_price_2k: null,
-      image_price_4k: null,
-      video_rate_independent: true,
-      video_rate_multiplier: 1,
-      video_price_480p: null,
-      video_price_720p: 0.14,
-      video_price_1080p: null,
-      video_model_prices: { 'seedance-2.0': { '720p': 0.14 } },
-    }])
-    groupsApi.getUserGroupRates.mockResolvedValueOnce({ 7: 1 })
-    modelPlazaApi.getModelPlaza.mockResolvedValueOnce({
-      groups: [{
-        id: 7,
-        name: 'Video image group',
-        platform: 'composite',
-        rate_multiplier: 1,
-        image_rate_independent: true,
-        image_rate_multiplier: 1,
-        user_rate_multiplier: 1,
-        models: [{
-          name: 'gpt-image-2',
-          platform: 'openai_media',
-          pricing: { billing_mode: 'image', per_request_price: 0.08, intervals: [] },
-          official_pricing: null,
-        }],
-      }],
-    })
-
-    const wrapper = mount(VideoApiDocsView, {
-      global: {
-        stubs: {
-          AppLayout: { template: '<div><slot /></div>' },
-          Icon: { template: '<span />' },
-          VideoSectionTabs: { template: '<nav data-testid="video-section-tabs" />' },
-        },
-      },
-    })
-    await flushPromises()
-
-    const pricingText = wrapper.find('#pricing').text()
-    expect(pricingText).toContain('Video image group')
-    expect(pricingText).toContain('gpt-image-2')
-    expect(pricingText).toContain('seedance-2.0')
-    expect(pricingText).toContain('0.14')
+    expect(wrapper.find('#pricing').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('video.apiDocs.v2.nav.pricing')
+    expect(wrapper.text()).not.toContain('video.apiDocs.v2.pricing.title')
   })
 })
