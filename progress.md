@@ -6628,5 +6628,18 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/utils/videoApiDocs.ts` and V2 docs copy: document Leo `image_urls` and the Krea Seedance 2.0 matrix.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.4..v0.1.177-fy.5` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.4`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.5` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-17 - Task: Release public V2 docs cleanup as v0.1.177-fy.6
+### What was done
+- Removed vendor names from public V2 API docs (zh/en in-app copy and `docs/WEB_API_INTEGRATION_V2_CN.md`). The published contract now describes model capabilities only.
+- Added a docs test that fails if those names reappear in V2 copy.
+- Prepared annotated tag `v0.1.177-fy.6` from this docs commit.
+
+### Testing
+- From `frontend/`, `npx vitest run src/utils/__tests__/videoApiDocs.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts` passed, 2 files and 5 tests.
+
+### Notes
+- `frontend/src/i18n/locales/{zh,en}/dashboard.ts` and `docs/WEB_API_INTEGRATION_V2_CN.md`: public V2 wording only.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.5..v0.1.177-fy.6` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.5`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.6` and its remote tag. Preserve unrelated `.superpowers/` content.
+
 
 

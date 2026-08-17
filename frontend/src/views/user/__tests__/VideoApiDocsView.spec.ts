@@ -88,7 +88,7 @@ describe('VideoApiDocsView', () => {
     for (const model of documentedVideoModels) {
       expect(examples.some((code) => code.includes(`"model": "${model}"`) && code.includes('/v1/videos/generations'))).toBe(true)
     }
-    expect(wrapper.html()).not.toMatch(/Leonardo|Leo\s*Studio|upstream|provider|account_id|target_platform|composite|internal\/video-inputs/i)
+    expect(wrapper.html()).not.toMatch(/Leonardo|LeoStudio|Leo\s*Studio|\bLeo\b|\bKrea\b|上游|upstream|provider|account_id|target_platform|composite|internal\/video-inputs/i)
     expect(wrapper.find('#pricing').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('video.apiDocs.v2.nav.pricing')
     expect(wrapper.text()).not.toContain('video.apiDocs.v2.pricing.title')
