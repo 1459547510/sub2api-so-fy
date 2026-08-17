@@ -198,6 +198,7 @@ func (s *OpenAIGatewayService) ParseOpenAIImagesRequest(c *gin.Context, body []b
 		req.bodyHash = hex.EncodeToString(sum[:8])
 	}
 
+	platform := openAIImagesPlatform(c.Request.Context())
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err == nil && strings.EqualFold(mediaType, "multipart/form-data") {
 		req.Multipart = true
@@ -211,13 +212,16 @@ func (s *OpenAIGatewayService) ParseOpenAIImagesRequest(c *gin.Context, body []b
 		if !gjson.ValidBytes(body) {
 			return nil, fmt.Errorf("failed to parse request body")
 		}
-		if parseErr := parseOpenAIImagesJSONRequest(body, req); parseErr != nil {
+		if parseErr := parseOpenAIImagesJSONRequest(body, req, platform); parseErr != nil {
 			return nil, parseErr
 		}
 	}
 
 	applyOpenAIImagesDefaults(req)
-	if err := validateOpenAIImagesModelForPlatform(req.Model, openAIImagesPlatform(c.Request.Context())); err != nil {
+	if err := validateLeoImageParsedRequest(platform, req, body); err != nil {
+		return nil, err
+	}
+	if err := validateOpenAIImagesModelForPlatform(req.Model, platform); err != nil {
 		return nil, err
 	}
 	req.SizeTier = normalizeOpenAIImageSizeTier(req.Size)
@@ -225,7 +229,7 @@ func (s *OpenAIGatewayService) ParseOpenAIImagesRequest(c *gin.Context, body []b
 	return req, nil
 }
 
-func parseOpenAIImagesJSONRequest(body []byte, req *OpenAIImagesRequest) error {
+func parseOpenAIImagesJSONRequest(body []byte, req *OpenAIImagesRequest, platform string) error {
 	if modelResult := gjson.GetBytes(body, "model"); modelResult.Exists() {
 		req.Model = strings.TrimSpace(modelResult.String())
 		req.ExplicitModel = req.Model != ""
@@ -302,9 +306,12 @@ func parseOpenAIImagesJSONRequest(body []byte, req *OpenAIImagesRequest) error {
 		if gjson.GetBytes(body, "mask.file_id").Exists() {
 			return fmt.Errorf("mask.file_id is not supported (use mask.image_url instead)")
 		}
-		if len(req.InputImageURLs) == 0 {
-			return fmt.Errorf("images[].image_url is required")
-		}
+	}
+	if isLeoImagePlatform(platform) {
+		appendLeoNativeImageURLs(body, req)
+	}
+	if req.IsEdits() && len(req.InputImageURLs) == 0 {
+		return fmt.Errorf("images[].image_url is required")
 	}
 	req.HasNativeOptions = hasOpenAINativeImageOptions(func(path string) bool {
 		return gjson.GetBytes(body, path).Exists()
@@ -590,9 +597,6 @@ func (s *OpenAIGatewayService) ForwardImages(
 	if parsed == nil {
 		return nil, fmt.Errorf("parsed images request is required")
 	}
-	if account != nil && account.IsLeo() && parsed.IsEdits() {
-		return nil, fmt.Errorf("image edits are not supported for this platform")
-	}
 	switch account.Type {
 	case AccountTypeAPIKey:
 		return s.forwardOpenAIImagesAPIKey(ctx, c, account, body, parsed, channelMappedModel)
@@ -642,6 +646,13 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	if err != nil {
 		return nil, err
 	}
+	upstreamEndpoint := parsed.Endpoint
+	if account != nil && account.IsLeo() {
+		forwardBody, forwardContentType, upstreamEndpoint, err = rewriteLeoImageUpstreamRequest(forwardBody, forwardContentType, parsed)
+		if err != nil {
+			return nil, err
+		}
+	}
 	// 生图是长耗时、上游侧已产生实际成本的操作：客户端中途断开不应连带取消上游请求。
 	// detachStreamUpstreamContext 在非流式时原样返回请求 context，于是客户端一断开
 	// 就把已经在出图的上游调用打断成 context canceled，网关记 502、不扣费，而上游那边
@@ -662,7 +673,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 			return nil, err
 		}
 	}
-	upstreamReq, err := s.buildOpenAIImagesRequest(upstreamCtx, c, account, forwardBody, forwardContentType, token, parsed.Endpoint)
+	upstreamReq, err := s.buildOpenAIImagesRequest(upstreamCtx, c, account, forwardBody, forwardContentType, token, upstreamEndpoint)
 	if err != nil {
 		return nil, err
 	}

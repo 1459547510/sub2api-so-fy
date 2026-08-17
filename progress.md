@@ -6608,5 +6608,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
 - Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
 
+## 2026-08-17 - Task: Release Leo image references as v0.1.177-fy.5
+### What was done
+- Leo groups no longer 404 `/v1/images/edits`. The gateway rewrites `images[].image_url`, `image_url`, and `image_urls` to Leo `image_urls` and always forwards `/v1/images/generations`.
+- Mask, multipart, data URLs, and non-HTTP(S) URLs return 400. OpenAI and Grok image behavior is unchanged.
+- Leo `/v1/images/generations` reference URLs are included in moderation input.
+- V2 Seedance 2.0 / Fast / Mini docs and gateway specs follow the Krea contract (`4k`, default 5s, shared aspect list). Seedance 2.5 stays on Leo.
+- Prepared annotated tag `v0.1.177-fy.5` from the validated image-reference and Seedance Krea commits.
+
+### Testing
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1 -timeout=120s -run "LeoImage|LeoEdits|LeoGeneration|LeoRejects|LeoMaskRejected|OpenAIEditsStillRequire|ModerationBody_JSONEdit|Seedance|LeoVideo|VideoBilling|KreaSeedance"` passed.
+- From `frontend/`, `npx vitest run src/utils/__tests__/videoApiDocs.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts src/components/video/__tests__/VideoSectionTabs.spec.ts` passed, 4 files and 41 tests.
+- `npx vue-tsc --noEmit` (in `frontend`): passed.
+- Live rewrite against LeoStudio sent `/v1/images/generations` with `image_urls`; a 200 with reference images was blocked by the upstream upload pool, not by the Sub2 mapping.
+
+### Notes
+- `backend/internal/service/leo_image_request.go`: collects and validates Leo reference URLs, then rewrites the upstream JSON.
+- `backend/internal/service/openai_images.go` and `backend/internal/handler/openai_images.go`: remove the Leo edits 404, map `LeoImageRequestError` to 400, and expose generation `image_urls` to moderation.
+- `frontend/src/utils/videoApiDocs.ts` and V2 docs copy: document Leo `image_urls` and the Krea Seedance 2.0 matrix.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.4..v0.1.177-fy.5` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.4`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.5` and its remote tag. Preserve unrelated `.superpowers/` content.
+
 
 

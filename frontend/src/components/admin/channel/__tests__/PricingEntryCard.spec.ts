@@ -33,7 +33,7 @@ describe('PricingEntryCard video mode', () => {
     expect(wrapper.findComponent(Select).props('options')).toContainEqual(
       expect.objectContaining({ value: 'video' })
     )
-    expect(wrapper.findAll('[data-testid^="video-price-"]')).toHaveLength(3)
+    expect(wrapper.findAll('[data-testid^="video-price-"]')).toHaveLength(4)
   })
 
   it('renders fixed resolution prices and emits interval updates', async () => {
@@ -42,7 +42,7 @@ describe('PricingEntryCard video mode', () => {
       props: { entry, platform: 'leo', allowVideo: true },
     })
 
-    expect(wrapper.findAll('[data-testid^="video-price-"]')).toHaveLength(3)
+    expect(wrapper.findAll('[data-testid^="video-price-"]')).toHaveLength(4)
     await wrapper.get('[data-testid="video-price-720p"]').setValue('0.025')
 
     const updated = wrapper.emitted('update')?.at(-1)?.[0]
@@ -51,10 +51,11 @@ describe('PricingEntryCard video mode', () => {
       ['480p', null],
       ['720p', '0.025'],
       ['1080p', null],
+      ['2160p', null],
     ])
   })
 
-  it('initializes the three video intervals when mode changes', () => {
+  it('initializes the four video intervals when mode changes', () => {
     const wrapper = shallowMount(PricingEntryCard, {
       props: { entry: createPricingFormEntry(['seedance-2.0']), platform: 'leo', allowVideo: true },
     })
@@ -62,7 +63,7 @@ describe('PricingEntryCard video mode', () => {
     wrapper.findComponent(Select).vm.$emit('update:modelValue', 'video')
     const updated = wrapper.emitted('update')?.at(-1)?.[0] as ReturnType<typeof createPricingFormEntry>
     expect(updated.billing_mode).toBe('video')
-    expect(updated.intervals.map(iv => iv.tier_label)).toEqual(['480p', '720p', '1080p'])
+    expect(updated.intervals.map(iv => iv.tier_label)).toEqual(['480p', '720p', '1080p', '2160p'])
   })
 
   it('only renders the Mini model 720p price', () => {

@@ -82,7 +82,7 @@ Web 端 V2 文档页会在打开时读取当前账号可见的媒体分组和模
 
 ## 4. 图片接口
 
-图片接口遵循 OpenAI Images 格式，支持 JSON URL 输入和 multipart 文件输入。具体模型能力以 `/v1/models` 和服务端校验结果为准。
+图片接口遵循 OpenAI Images 格式。OpenAI 图片模型支持 JSON URL 和 multipart；Leo 图片模型只接受可访问的 HTTP(S) 参考图 URL。具体模型能力以 `/v1/models` 和服务端校验结果为准。
 
 ### 4.1 图片生成
 
@@ -100,6 +100,7 @@ POST /v1/images/generations
 | `size` | string | 否 | 例如 `1024x1024`，以模型支持范围为准 |
 | `response_format` | string | 否 | `url` 或 `b64_json`，以模型支持范围为准 |
 | `quality` | string | 否 | 可选质量档位，仅在模型支持时发送 |
+| `image_urls` | string[] | 否 | Leo 图片模型的参考图绝对 HTTP(S) URL；也接受单数 `image_url` |
 
 ```bash
 curl -X POST "$BASE_URL/v1/images/generations" \
@@ -120,7 +121,9 @@ curl -X POST "$BASE_URL/v1/images/generations" \
 POST /v1/images/edits
 ```
 
-JSON 请求使用 `images[].image_url`，可选 `mask.image_url`。`file_id` 不属于统一契约。
+JSON 请求使用 `images[].image_url`，OpenAI 图片模型还可选 `mask.image_url`。`file_id` 不属于统一契约。
+
+Leo 图片模型没有独立的上游编辑接口。网关会把 `/v1/images/edits` 的 `images[].image_url` 转成 `image_urls`，再转发到 `/v1/images/generations`。这类模型不接受 `mask` 或 multipart；本地文件请先放到可访问的 HTTP(S) URL。
 
 ```bash
 curl -X POST "$BASE_URL/v1/images/edits" \

@@ -47,3 +47,39 @@ func TestOpenAIGatewayHandlerImages_DisabledGroupRejectsBeforeScheduling(t *test
 	require.Equal(t, "permission_error", gjson.GetBytes(rec.Body.Bytes(), "error.type").String())
 	require.Contains(t, rec.Body.String(), service.ImageGenerationPermissionMessage())
 }
+
+func TestOpenAIGatewayHandlerImages_LeoMaskRejectedBeforeScheduling(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"Image Model A","prompt":"keep the product","images":[{"image_url":"https://example.com/source.png"}],"mask":{"image_url":"https://example.com/mask.png"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/edits", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+	groupID := int64(112)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		ID:      223,
+		GroupID: &groupID,
+		Group: &service.Group{
+			ID:                   groupID,
+			Platform:             service.PlatformLeo,
+			AllowImageGeneration: true,
+		},
+		User: &service.User{ID: 334},
+	})
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 334, Concurrency: 1})
+
+	h := &OpenAIGatewayHandler{
+		gatewayService:      &service.OpenAIGatewayService{},
+		billingCacheService: &service.BillingCacheService{},
+		apiKeyService:       &service.APIKeyService{},
+		concurrencyHelper:   &ConcurrencyHelper{concurrencyService: &service.ConcurrencyService{}},
+	}
+
+	h.Images(c)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, "invalid_request_error", gjson.GetBytes(rec.Body.Bytes(), "error.type").String())
+	require.Contains(t, rec.Body.String(), "do not support mask")
+}

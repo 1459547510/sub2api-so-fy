@@ -97,9 +97,10 @@ describe('video pricing', () => {
     entry.intervals[0].per_request_price = '0.01'
     entry.intervals[1].per_request_price = '0.02'
     entry.intervals[2].per_request_price = '0.03'
+    entry.intervals[3].per_request_price = '0.04'
 
-    expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['480p', '720p', '1080p'])
-    expect(formIntervalsToAPI(entry.intervals).map(iv => iv.per_request_price)).toEqual([0.01, 0.02, 0.03])
+    expect(entry.intervals.map(iv => iv.tier_label)).toEqual(['480p', '720p', '1080p', '2160p'])
+    expect(formIntervalsToAPI(entry.intervals).map(iv => iv.per_request_price)).toEqual([0.01, 0.02, 0.03, 0.04])
   })
 
   it('normalizes existing video intervals to the supported resolutions and order', () => {

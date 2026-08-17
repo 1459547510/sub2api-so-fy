@@ -77,10 +77,6 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", err.Error())
 		return
 	}
-	if requestPlatform == service.PlatformLeo && parsed.IsEdits() {
-		h.errorResponse(c, http.StatusNotFound, "not_found_error", "Image edits API is not supported for this platform")
-		return
-	}
 	requestModel := parsed.Model
 	ensureCompositeTargetPlatform(c, apiKey, requestModel)
 	clientRequestModel := clientRequestedModel(c, requestModel)
@@ -296,6 +292,12 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 					zap.Error(err),
 				)
 			} else {
+				var leoImageErr *service.LeoImageRequestError
+				if errors.As(err, &leoImageErr) {
+					h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
+					h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", leoImageErr.Error())
+					return
+				}
 				var imageUpstreamErr *service.OpenAIImagesUpstreamError
 				if errors.As(err, &imageUpstreamErr) {
 					retryableServerError := service.IsOpenAIImagesRetryableUpstreamError(imageUpstreamErr)

@@ -31,7 +31,9 @@ func TestNormalizeVideoBillingResolutionLeo(t *testing.T) {
 }
 
 func TestLeoVideoPricingResolutions(t *testing.T) {
-	require.Equal(t, []string{"480p", "720p", "1080p"}, LeoVideoPricingResolutions("seedance-2.0"))
+	require.Equal(t, []string{"480p", "720p", "1080p", "2160p"}, LeoVideoPricingResolutions("seedance-2.0"))
+	require.Equal(t, VideoBillingResolution2160P, NormalizeLeoVideoBillingResolutionOrDefault("seedance-2.0", "4k"))
+	require.True(t, LeoVideoModelSupportsResolution("seedance-2.0", "4k"))
 	require.Equal(t, []string{"480p", "720p"}, LeoVideoPricingResolutions("bytedance/seedance-2.5"))
 	require.Equal(t, []string{"480p", "720p"}, LeoVideoPricingResolutions("seedance-2.5"))
 	require.Equal(t, []string{"720p"}, LeoVideoPricingResolutions("seedance-2.0-mini"))

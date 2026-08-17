@@ -27,6 +27,9 @@ func LeoVideoPricingResolutions(model string) []string {
 	if model == "bytedance/seedance-2.5" || model == "seedance-2.5" {
 		return []string{VideoBillingResolution480P, VideoBillingResolution720P}
 	}
+	if model == "seedance-2.0" {
+		return []string{VideoBillingResolution480P, VideoBillingResolution720P, VideoBillingResolution1080P, VideoBillingResolution2160P}
+	}
 	if model == "seedance-2.0-mini" {
 		return []string{VideoBillingResolution720P}
 	}
@@ -192,6 +195,20 @@ func NormalizeLeoVideoBillingResolutionOrDefault(model, resolution string) strin
 			return VideoBillingResolution720P
 		case "960", "960p", "resolution_960":
 			return VideoBillingResolution960P
+		default:
+			return VideoBillingResolution720P
+		}
+	}
+	if model == "seedance-2.0" {
+		switch resolution {
+		case "480", "480p", "sd", "resolution_480":
+			return VideoBillingResolution480P
+		case "720", "720p", "hd", "resolution_720":
+			return VideoBillingResolution720P
+		case "1080", "1080p", "full_hd", "full-hd", "fhd", "resolution_1080":
+			return VideoBillingResolution1080P
+		case "2160", "2160p", "4k", "uhd", "resolution_2160":
+			return VideoBillingResolution2160P
 		default:
 			return VideoBillingResolution720P
 		}

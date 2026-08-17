@@ -343,7 +343,7 @@ const selectedJobId = ref('')
 const prompt = ref('')
 const model = ref('seedance-2.0')
 const resolution = ref<VideoResolution>('720p')
-const duration = ref(8)
+const duration = ref(5)
 const aspectRatio = ref<VideoAspectRatio>('16:9')
 const audio = ref(false)
 const promptEnhance = ref<'AUTO' | 'ON' | 'OFF' | ''>('')
@@ -375,7 +375,7 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let videoOutputRequest = 0
 let jobsRequest = 0
 
-type VideoResolution = 'auto' | '400p' | '480p' | '544p' | '720p' | '960p' | '1080p' | '1440p' | '2160p'
+type VideoResolution = 'auto' | '400p' | '480p' | '544p' | '720p' | '960p' | '1080p' | '1440p' | '2160p' | '4k'
 type VideoAspectRatio = 'auto' | '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '21:9' | '9:21'
 
 interface VideoModelCapability {
@@ -411,6 +411,7 @@ const ltxProDurationOptions = [6, 8, 10]
 const ltxFastDurationOptions = [6, 8, 10, 12, 14, 16, 18, 20]
 const allAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '9:21']
 const hdAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
+const kreaSeedanceAspectOptions: readonly VideoAspectRatio[] = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9']
 const videoReferenceMaxBytes = 100 * 1024 * 1024
 const audioReferenceMaxBytes = 15 * 1024 * 1024
 const imageReferenceMaxBytes = 10 * 1024 * 1024
@@ -436,66 +437,63 @@ const seedance25Capability: VideoModelCapability = {
 }
 const videoModelCapabilities: Record<string, VideoModelCapability> = {
   'seedance-2.0': {
-    resolutions: ['480p', '720p', '1080p'],
+    resolutions: ['480p', '720p', '1080p', '4k'],
     defaultResolution: '720p',
     durations: allDurationOptions,
-    maxDurationByResolution: { '1080p': 12 },
-    defaultDuration: 8,
+    defaultDuration: 5,
     aspectsByResolution: {
-      '480p': allAspectRatioOptions,
-      '720p': hdAspectRatioOptions,
-      '1080p': allAspectRatioOptions,
+      '480p': kreaSeedanceAspectOptions,
+      '720p': kreaSeedanceAspectOptions,
+      '1080p': kreaSeedanceAspectOptions,
+      '4k': kreaSeedanceAspectOptions,
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,
     maxStartFrames: 1,
     maxEndFrames: 1,
-    maxImageRefs: 4,
+    maxImageRefs: 9,
     maxVideoRefs: 3,
-    maxAudioRefs: 1,
+    maxAudioRefs: 3,
     audioRefRequiresMedia: true,
     supportsAudio: true,
-    framesExcludeOtherRef: true,
   },
   'seedance-2.0-fast': {
     resolutions: ['480p', '720p'],
     defaultResolution: '720p',
     durations: allDurationOptions,
-    defaultDuration: 8,
+    defaultDuration: 5,
     aspectsByResolution: {
-      '480p': allAspectRatioOptions,
-      '720p': hdAspectRatioOptions,
+      '480p': kreaSeedanceAspectOptions,
+      '720p': kreaSeedanceAspectOptions,
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,
     maxStartFrames: 1,
     maxEndFrames: 1,
-    maxImageRefs: 4,
+    maxImageRefs: 9,
     maxVideoRefs: 3,
-    maxAudioRefs: 1,
+    maxAudioRefs: 3,
     audioRefRequiresMedia: true,
     supportsAudio: true,
-    framesExcludeOtherRef: true,
   },
   'seedance-2.0-mini': {
     resolutions: ['480p', '720p'],
     defaultResolution: '720p',
     durations: allDurationOptions,
-    defaultDuration: 8,
+    defaultDuration: 5,
     aspectsByResolution: {
-      '480p': ['16:9', '1:1', '9:16'],
-      '720p': ['16:9', '1:1', '9:16'],
+      '480p': kreaSeedanceAspectOptions,
+      '720p': kreaSeedanceAspectOptions,
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,
     maxStartFrames: 1,
     maxEndFrames: 1,
-    maxImageRefs: 4,
+    maxImageRefs: 9,
     maxVideoRefs: 3,
-    maxAudioRefs: 1,
+    maxAudioRefs: 3,
     audioRefRequiresMedia: true,
     supportsAudio: true,
-    framesExcludeOtherRef: true,
   },
   'bytedance/seedance-2.5': seedance25Capability,
   'seedance-2.5': seedance25Capability,
@@ -1558,7 +1556,7 @@ watch(model, () => {
   duration.value = capability.defaultDuration
   aspectRatio.value = defaultAspectRatioFor(capability, capability.defaultResolution)
   promptEnhance.value = ''
-}, { flush: 'sync' })
+}, { immediate: true, flush: 'sync' })
 watch(resolution, () => {
   const capability = currentModelCapability.value
   if (!capability) return

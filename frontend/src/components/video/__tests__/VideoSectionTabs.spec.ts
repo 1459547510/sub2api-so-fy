@@ -14,6 +14,7 @@ describe('VideoSectionTabs', () => {
       routes: [
         { path: '/video-generation', name: 'VideoGeneration', component: { template: '<div />' } },
         { path: '/video-generation/api-docs', name: 'VideoApiDocs', component: { template: '<div />' } },
+        { path: '/video-generation/api-docs/v1', name: 'VideoApiDocsV1', component: { template: '<div />' } },
         { path: '/video-generation/pricing', name: 'VideoPricing', component: { template: '<div />' } },
       ],
     })
@@ -34,5 +35,28 @@ describe('VideoSectionTabs', () => {
       '/video-generation/pricing',
     ])
     expect(links.map((link) => link.attributes('aria-selected'))).toEqual(['false', 'false', 'true'])
+  })
+
+  it('keeps the API docs tab selected on the V1 documentation route', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/video-generation', name: 'VideoGeneration', component: { template: '<div />' } },
+        { path: '/video-generation/api-docs', name: 'VideoApiDocs', component: { template: '<div />' } },
+        { path: '/video-generation/api-docs/v1', name: 'VideoApiDocsV1', component: { template: '<div />' } },
+        { path: '/video-generation/pricing', name: 'VideoPricing', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/video-generation/api-docs/v1')
+    await router.isReady()
+
+    const wrapper = mount(VideoSectionTabs, {
+      global: {
+        plugins: [router],
+        stubs: { Icon: { template: '<span />' } },
+      },
+    })
+
+    expect(wrapper.findAll('a').map((link) => link.attributes('aria-selected'))).toEqual(['false', 'true', 'false'])
   })
 })

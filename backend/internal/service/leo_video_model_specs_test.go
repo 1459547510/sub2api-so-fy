@@ -13,7 +13,7 @@ func TestValidateLeoVideoRequestAppliesSeedanceDefaults(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "720p", info.Resolution)
-	require.Equal(t, 8, info.DurationSeconds)
+	require.Equal(t, 5, info.DurationSeconds)
 	require.Equal(t, "16:9", info.AspectRatio)
 }
 
@@ -46,7 +46,7 @@ func TestValidateLeoVideoRequestRejectsUnsupportedModelParameters(t *testing.T) 
 		},
 		{
 			name: "mini unsupported aspect",
-			body: `{"model":"seedance-2.0-mini","prompt":"waves","resolution":"720p","aspect_ratio":"4:3"}`,
+			body: `{"model":"seedance-2.0-mini","prompt":"waves","resolution":"720p","aspect_ratio":"9:21"}`,
 			want: "aspect_ratio is not supported",
 		},
 		{
@@ -65,9 +65,9 @@ func TestValidateLeoVideoRequestRejectsUnsupportedModelParameters(t *testing.T) 
 			want: "duration must be a whole number from 4 through 15",
 		},
 		{
-			name: "standard 1080p duration above range",
-			body: `{"model":"seedance-2.0","prompt":"waves","resolution":"1080p","duration":13}`,
-			want: "duration must be a whole number from 4 through 12",
+			name: "standard duration above range",
+			body: `{"model":"seedance-2.0","prompt":"waves","resolution":"4k","duration":16}`,
+			want: "duration must be a whole number from 4 through 15",
 		},
 	}
 
@@ -79,13 +79,17 @@ func TestValidateLeoVideoRequestRejectsUnsupportedModelParameters(t *testing.T) 
 	}
 }
 
-func TestValidateLeoVideoRequestAcceptsResolutionSpecificAspect(t *testing.T) {
-	info, err := ValidateLeoVideoRequest([]byte(`{"model":"seedance-2.0","prompt":"waves","resolution":"1080p","aspect_ratio":"9:21","duration":12}`))
+func TestValidateLeoVideoRequestAcceptsKreaSeedanceParameters(t *testing.T) {
+	info, err := ValidateLeoVideoRequest([]byte(`{"model":"seedance-2.0","prompt":"waves","resolution":"4k","aspect_ratio":"21:9","duration":13}`))
 
 	require.NoError(t, err)
-	require.Equal(t, "1080p", info.Resolution)
-	require.Equal(t, "9:21", info.AspectRatio)
-	require.Equal(t, 12, info.DurationSeconds)
+	require.Equal(t, "2160p", info.Resolution)
+	require.Equal(t, "21:9", info.AspectRatio)
+	require.Equal(t, 13, info.DurationSeconds)
+
+	info, err = ValidateLeoVideoRequest([]byte(`{"model":"seedance-2.0-mini","prompt":"waves","resolution":"720p","aspect_ratio":"4:3","duration":5}`))
+	require.NoError(t, err)
+	require.Equal(t, "4:3", info.AspectRatio)
 }
 
 func TestValidateLeoVideoRequestKeepsFifteenSecondsForOtherSupportedModes(t *testing.T) {
@@ -228,11 +232,11 @@ func TestValidateLeoVideoRequestRejectsPromptAndGuidanceLimits(t *testing.T) {
 
 	tooManyImages := []byte(`{
 		"model":"seedance-2.0","prompt":"waves",
-		"image_urls":["https://example.com/1.png","https://example.com/2.png"],
-		"guidances":{"image_reference":[{},{},{}]}
+		"image_urls":["https://example.com/1.png","https://example.com/2.png","https://example.com/3.png","https://example.com/4.png","https://example.com/5.png"],
+		"guidances":{"image_reference":[{},{},{},{},{}]}
 	}`)
 	_, err = ValidateLeoVideoRequest(tooManyImages)
-	require.ErrorContains(t, err, "guidances.image_reference supports at most 4")
+	require.ErrorContains(t, err, "guidances.image_reference supports at most 9")
 
 	duplicateStart := []byte(`{
 		"model":"seedance-2.0","prompt":"waves",
@@ -248,7 +252,7 @@ func TestValidateLeoVideoRequestRejectsPromptAndGuidanceLimits(t *testing.T) {
 		"image_urls":["https://example.com/reference.png"]
 	}`)
 	_, err = ValidateLeoVideoRequest(mixedFrameAndReferences)
-	require.ErrorContains(t, err, "reference images cannot be combined")
+	require.NoError(t, err)
 }
 
 func TestValidateLeoVideoRequestAcceptsMediaAndAudioReferenceURLs(t *testing.T) {
@@ -304,12 +308,14 @@ func TestValidateLeoVideoRequestUsesMappedModelSpec(t *testing.T) {
 	_, err = ValidateLeoVideoRequestForModel(body, "seedance-2.0-fast")
 	require.ErrorContains(t, err, "resolution is not supported")
 
-	body = []byte(`{"model":"public-seedance","prompt":"waves","resolution":"1080p","duration":13}`)
-	_, err = ValidateLeoVideoRequestForModel(body, "seedance-2.0")
-	require.ErrorContains(t, err, "duration must be a whole number from 4 through 12")
+	body = []byte(`{"model":"public-seedance","prompt":"waves","resolution":"4k","duration":13}`)
+	info, err := ValidateLeoVideoRequestForModel(body, "seedance-2.0")
+	require.NoError(t, err)
+	require.Equal(t, "2160p", info.Resolution)
+	require.Equal(t, 13, info.DurationSeconds)
 
 	body = []byte(`{"model":"public-ltx","prompt":"waves"}`)
-	info, err := ValidateLeoVideoRequestForModel(body, leoLTX23FastUpstreamModelID)
+	info, err = ValidateLeoVideoRequestForModel(body, leoLTX23FastUpstreamModelID)
 	require.NoError(t, err)
 	require.Equal(t, "1080p", info.Resolution)
 	require.Equal(t, 6, info.DurationSeconds)

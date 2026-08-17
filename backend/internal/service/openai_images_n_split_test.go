@@ -38,7 +38,7 @@ func TestOpenAIImagesNValidationRejectsUnsafeFanout(t *testing.T) {
 		[]byte(`{"n":1.5}`),
 		[]byte(`{"n":0}`),
 	} {
-		err := parseOpenAIImagesJSONRequest(body, &OpenAIImagesRequest{})
+		err := parseOpenAIImagesJSONRequest(body, &OpenAIImagesRequest{}, "")
 		require.Error(t, err)
 	}
 

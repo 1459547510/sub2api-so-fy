@@ -128,7 +128,7 @@ func TestLeoVideoAsyncGenerationRejectsUnsupportedMiniAspect(t *testing.T) {
 	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(&handlerVideoJobRepo{})}
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
-	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", strings.NewReader(`{"model":"seedance-2.0-mini","prompt":"waves","aspect_ratio":"4:3"}`))
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", strings.NewReader(`{"model":"seedance-2.0-mini","prompt":"waves","aspect_ratio":"9:21"}`))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Request.Header.Set("Prefer", "respond-async")
 	setHandlerVideoAuth(c)

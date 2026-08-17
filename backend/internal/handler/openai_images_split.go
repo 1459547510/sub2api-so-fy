@@ -88,6 +88,11 @@ func (h *OpenAIGatewayHandler) handleOpenAIImagesNSplit(
 	}
 	if len(successes) == 0 {
 		for _, task := range tasks {
+			var leoImageErr *service.LeoImageRequestError
+			if errors.As(task.err, &leoImageErr) {
+				h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", leoImageErr.Error())
+				return true
+			}
 			var imageErr *service.OpenAIImagesUpstreamError
 			if errors.As(task.err, &imageErr) {
 				status := imageErr.StatusCode

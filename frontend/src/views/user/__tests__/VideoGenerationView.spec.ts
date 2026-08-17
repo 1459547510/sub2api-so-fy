@@ -184,7 +184,7 @@ describe('VideoGenerationView', () => {
     await flushPromises()
 
     const resolution = wrapper.get('[data-testid="video-resolution"]')
-    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p'])
+    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p', '4k'])
     expect((resolution.element as HTMLSelectElement).value).toBe('720p')
 
     await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0-fast')
@@ -193,18 +193,18 @@ describe('VideoGenerationView', () => {
 
     await resolution.setValue('480p')
     await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0')
-    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p'])
+    expect(resolution.findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p', '1080p', '4k'])
     expect((resolution.element as HTMLSelectElement).value).toBe('720p')
   })
 
-  it('limits Seedance Mini to 480p/720p and supported portrait ratios', async () => {
+  it('uses Krea Seedance Mini ratios instead of the old Leo portrait-only set', async () => {
     const wrapper = mountView()
     await flushPromises()
 
     await wrapper.get('[data-testid="video-model"]').setValue('seedance-2.0-mini')
 
     expect(wrapper.get('[data-testid="video-resolution"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['480p', '720p'])
-    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9', '1:1', '9:16'])
+    expect(wrapper.get('[data-testid="video-aspect-ratio"]').findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'])
   })
 
   it('limits Seedance 2.5 to its published resolution, duration, and aspect options', async () => {
@@ -387,7 +387,7 @@ describe('VideoGenerationView', () => {
     })
   })
 
-  it('limits standard 1080p to 12 seconds and keeps other resolutions at 15 seconds', async () => {
+  it('keeps the same 4-15 second range at every Krea Seedance resolution including 4k', async () => {
     const wrapper = mountView()
     await flushPromises()
 
@@ -395,29 +395,29 @@ describe('VideoGenerationView', () => {
     const resolution = wrapper.get('[data-testid="video-resolution"]')
     expect(duration.element.tagName).toBe('SELECT')
     expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
-    expect((duration.element as HTMLSelectElement).value).toBe('8')
+    expect((duration.element as HTMLSelectElement).value).toBe('5')
 
     await duration.setValue('15')
-    await resolution.setValue('1080p')
-    expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12])
-    expect((duration.element as HTMLSelectElement).value).toBe('8')
+    await resolution.setValue('4k')
+    expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    expect((duration.element as HTMLSelectElement).value).toBe('15')
 
     await resolution.setValue('720p')
     expect(duration.findAll('option').map((option) => Number(option.attributes('value')))).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
     expect(wrapper.get('[data-testid="video-prompt"]').attributes('maxlength')).toBe('5000')
   })
 
-  it('removes unsupported aspect ratios and falls back when resolution changes', async () => {
+  it('keeps Krea Seedance aspect ratios when resolution changes', async () => {
     const wrapper = mountView()
     await flushPromises()
 
     const aspectRatio = wrapper.get('[data-testid="video-aspect-ratio"]')
     await wrapper.get('[data-testid="video-resolution"]').setValue('480p')
-    await aspectRatio.setValue('9:21')
-    await wrapper.get('[data-testid="video-resolution"]').setValue('720p')
+    await aspectRatio.setValue('21:9')
+    await wrapper.get('[data-testid="video-resolution"]').setValue('4k')
 
-    expect(aspectRatio.findAll('option').map((option) => option.attributes('value'))).not.toContain('9:21')
-    expect((aspectRatio.element as HTMLSelectElement).value).toBe('16:9')
+    expect(aspectRatio.findAll('option').map((option) => option.attributes('value'))).toEqual(['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'])
+    expect((aspectRatio.element as HTMLSelectElement).value).toBe('21:9')
   })
 
   it('rejects programmatically injected unsupported model parameters before uploading', async () => {
@@ -433,8 +433,7 @@ describe('VideoGenerationView', () => {
     await wrapper.get('[data-testid="video-prompt"]').setValue('This invalid request must stay in the browser')
 
     const setupState = (wrapper.vm as any).$?.setupState
-    setupState.resolution = '1080p'
-    setupState.duration = 13
+    setupState.aspectRatio = '9:21'
     await wrapper.vm.$nextTick()
     expect(wrapper.get('[data-testid="submit-video"]').attributes('disabled')).toBeDefined()
     await wrapper.get('[data-testid="video-settings"] form').trigger('submit')

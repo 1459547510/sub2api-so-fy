@@ -81,6 +81,7 @@ export function formIntervalsToAPI(intervals: IntervalFormEntry[]): PricingInter
 export function videoPricingResolutionsForModel(model?: string): readonly string[] {
   const normalizedModel = model?.trim().toLowerCase()
   if (normalizedModel === 'bytedance/seedance-2.5' || normalizedModel === 'seedance-2.5') return ['480p', '720p']
+  if (normalizedModel === 'seedance-2.0') return ['480p', '720p', '1080p', '2160p']
   if (normalizedModel === 'seedance-2.0-mini') return ['720p']
   if (normalizedModel === 'happy-horse-1.1') return ['720p', '1080p']
   if (normalizedModel === 'grok-imagine-1.5') return ['400p', '544p', '720p', '960p']
