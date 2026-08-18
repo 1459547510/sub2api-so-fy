@@ -179,6 +179,39 @@ describe('buildVideoCards', () => {
     ])
   })
 
+  it('overlays group video_model_prices onto matching channel resolution tiers', () => {
+    const cards = buildVideoCards({
+      name: '视频图片分组',
+      ...emptyPrices,
+      video_price_720p: 0.17,
+      video_model_prices: { 'seedance-2.0': { '720p': 0.31, '1080p': 0.55 } },
+    }, [{
+      name: 'seedance-2.0',
+      platform: 'leo',
+      pricing: {
+        billing_mode: 'video',
+        intervals: [
+          { tier_label: '480p', per_request_price: 0.11 },
+          { tier_label: '720p', per_request_price: 0.19 },
+          { tier_label: '1080p', per_request_price: 0.41 },
+          { tier_label: '2160p', per_request_price: 0.9 },
+        ],
+      },
+    }])
+    expect(cards).toEqual([{
+      key: 'video:seedance-2.0',
+      title: 'seedance-2.0',
+      kind: 'video',
+      unit: 'per_second',
+      tiers: [
+        { label: '480p', value: 0.11 },
+        { label: '720p', value: 0.31 },
+        { label: '1080p', value: 0.55 },
+        { label: '2160p', value: 0.9 },
+      ],
+    }])
+  })
+
   it('maps Grok Imagine workbench IDs onto group video family overrides', () => {
     const cards = buildVideoCards({
       name: 'Grok media',

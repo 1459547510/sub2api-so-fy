@@ -6674,5 +6674,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/components/admin/channel/types.ts`: admin save omits blank resolution rows and no longer requires every listed tier.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.7..v0.1.177-fy.8` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.7`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.8` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-18 - Task: Release group video model prices and Seedance duration docs as v0.1.177-fy.9
+### What was done
+- Group per-model video prices (`video_model_prices` and group `model_pricing`) now overlay channel resolution tiers for new job billing, the pricing page, and the model plaza.
+- Current V2 docs record measured Seedance duration caps: 2.0 at 1080p is 15s without generated audio and 10s with it; 2.5 at 720p is 30s without generated audio and 15s with it.
+- Prepared annotated tag `v0.1.177-fy.9` from this commit.
+
+### Testing
+- From `backend/`, `go test ./internal/service -count=1 -timeout=120s -run "TestVideoJobBillingPrepare|TestOverlayGroup|TestVideoPriceConfigFromResolvedPricing"` passed.
+- From `backend/`, `go test ./internal/service -tags unit -count=1 -timeout=120s -run "TestListPlazaGroups_GroupVideo|TestListPlazaGroups_GroupImage"` passed.
+- From `frontend/`, `npx vitest run src/utils/__tests__/mediaPricing.spec.ts src/utils/__tests__/videoApiDocs.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/views/user/__tests__/VideoPricingView.spec.ts` passed, 4 files and 34 tests.
+
+### Notes
+- Group flat 480p/720p/1080p columns still do not stamp over models that already have per-model or channel prices.
+- In-flight video jobs keep the create-time billing snapshot; only new jobs pick up the updated group prices.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.8..v0.1.177-fy.9` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.8`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.9` and its remote tag. Preserve unrelated `.superpowers/` content.
+
 
 

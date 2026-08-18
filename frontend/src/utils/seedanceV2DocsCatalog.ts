@@ -156,10 +156,10 @@ const currentCatalog: SeedanceV2DocsCatalog = {
     'seedance-2.5': { description: 'video.apiDocs.v2.models.seedance25', body: seedance25Example },
   },
   zh: {
-    matrixDescription: '先通过 /v1/models 确认当前 Key 可用的模型，再按下表选择该模型允许的分辨率、时长、画面比例和参考输入。Seedance 2.0 / Fast 时长 4-15 秒（默认 4 秒）；Mini 时长 4-12 秒（默认 4 秒）并支持 1080p；2.5 仅支持离散时长 4、5、6、8、10、12、15、20、25、30 秒（默认 4 秒）。各分辨率画面比例相同。不支持的组合会返回 400 或 422。',
+    matrixDescription: '先通过 /v1/models 确认当前 Key 可用的模型，再按下表选择该模型允许的分辨率、时长、画面比例和参考输入。Seedance 2.0 / Fast 时长 4-15 秒（默认 4 秒；1080p 无生成音频最长 15 秒，开启生成音频最长 10 秒）；Mini 时长 4-12 秒（默认 4 秒）并支持 1080p；2.5 仅支持离散时长 4、5、6、8、10、12、15、20、25、30 秒（默认 4 秒；720p 无生成音频最长 30 秒，开启生成音频最长 15 秒）。各分辨率画面比例相同。不支持的组合会返回 400 或 422。',
     seedance20: {
       resolution: '480p、720p、1080p、4k，默认 480p',
-      duration: '4-15 秒，默认 4 秒；各分辨率相同',
+      duration: '4-15 秒，默认 4 秒。1080p 无生成音频最长 15 秒，开启生成音频最长 10 秒',
       aspectRatio: '各分辨率均为 16:9、9:16、1:1、4:3、3:4、21:9',
       promptLimit: promptLimitZh,
       references: '首帧 1、尾帧 1、参考图 12、参考视频 3、参考音频 3；可与首尾帧同时使用',
@@ -180,23 +180,23 @@ const currentCatalog: SeedanceV2DocsCatalog = {
     },
     seedance25: {
       resolution: '480p、720p，默认 480p',
-      duration: '4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒',
+      duration: '4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒。720p 无生成音频最长 30 秒，开启生成音频最长 15 秒',
       aspectRatio: '各分辨率均为 16:9、9:16、1:1、4:3、3:4、21:9',
       promptLimit: promptLimitZh,
       references: '首帧 1、尾帧 1、参考图 30、参考视频 3、参考音频 3；可与首尾帧同时使用',
     },
     models: {
-      seedance20: 'Seedance 2.0：支持 480p/720p/1080p/4k，默认 480p；时长 4-15 秒，默认 4 秒；画面比例为 16:9、9:16、1:1、4:3、3:4、21:9。最多 12 张参考图、3 个参考视频和 3 个参考音频。本示例为 4k 文生视频。',
+      seedance20: 'Seedance 2.0：支持 480p/720p/1080p/4k，默认 480p；时长 4-15 秒，默认 4 秒；1080p 无生成音频最长 15 秒，开启生成音频最长 10 秒；画面比例为 16:9、9:16、1:1、4:3、3:4、21:9。最多 12 张参考图、3 个参考视频和 3 个参考音频。本示例为 4k 文生视频。',
       seedance20Fast: 'Seedance 2.0 Fast：仅 480p/720p，默认 480p；时长 4-15 秒，默认 4 秒；画面比例与标准版相同。最多 12 张参考图、3 个参考视频和 3 个参考音频。',
       seedance20Mini: 'Seedance 2.0 Mini：支持 480p/720p/1080p，默认 480p；时长 4-12 秒，默认 4 秒；画面比例与标准版相同。图片合计最多 2 张，不支持参考视频和参考音频。本示例为 1080p 文生视频。',
-      seedance25: 'Seedance 2.5：仅 480p/720p，默认 480p；时长只能为 4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒；画面比例与 2.0 相同。最多 30 张参考图、3 个参考视频和 3 个参考音频。',
+      seedance25: 'Seedance 2.5：仅 480p/720p，默认 480p；时长只能为 4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒；720p 无生成音频最长 30 秒，开启生成音频最长 15 秒；画面比例与 2.0 相同。最多 30 张参考图、3 个参考视频和 3 个参考音频。',
     },
   },
   en: {
-    matrixDescription: 'Read /v1/models first to confirm the models available to the current Key, then choose a supported resolution, duration, aspect ratio, and reference input from the matching row. Seedance 2.0 / Fast accept 4-15 seconds (default 4 seconds). Mini accepts 4-12 seconds (default 4 seconds) including 1080p. 2.5 accepts only 4, 5, 6, 8, 10, 12, 15, 20, 25, or 30 seconds (default 4 seconds). Aspect ratios are the same at every listed resolution. Invalid combinations return 400 or 422.',
+    matrixDescription: 'Read /v1/models first to confirm the models available to the current Key, then choose a supported resolution, duration, aspect ratio, and reference input from the matching row. Seedance 2.0 / Fast accept 4-15 seconds (default 4 seconds; at 1080p, silent clips max 15s and clips with generated audio max 10s). Mini accepts 4-12 seconds (default 4 seconds) including 1080p. 2.5 accepts only 4, 5, 6, 8, 10, 12, 15, 20, 25, or 30 seconds (default 4 seconds; at 720p, silent clips max 30s and clips with generated audio max 15s). Aspect ratios are the same at every listed resolution. Invalid combinations return 400 or 422.',
     seedance20: {
       resolution: '480p, 720p, 1080p, 4k, default 480p',
-      duration: '4-15s, default 4s; the same range at every resolution',
+      duration: '4-15s, default 4s. At 1080p, silent clips max 15s and clips with generated audio max 10s',
       aspectRatio: '16:9, 9:16, 1:1, 4:3, 3:4, 21:9 at every resolution',
       promptLimit: promptLimitEn,
       references: '1 start frame, 1 end frame, 12 images, 3 videos, 3 audio references; frames may be combined with other references',
@@ -217,16 +217,16 @@ const currentCatalog: SeedanceV2DocsCatalog = {
     },
     seedance25: {
       resolution: '480p, 720p, default 480p',
-      duration: '4, 5, 6, 8, 10, 12, 15, 20, 25, or 30s, default 4s',
+      duration: '4, 5, 6, 8, 10, 12, 15, 20, 25, or 30s, default 4s. At 720p, silent clips max 30s and clips with generated audio max 15s',
       aspectRatio: '16:9, 9:16, 1:1, 4:3, 3:4, 21:9 at every resolution',
       promptLimit: promptLimitEn,
       references: '1 start frame, 1 end frame, 30 images, 3 videos, 3 audio references; frames may be combined with other references',
     },
     models: {
-      seedance20: 'Seedance 2.0 supports 480p/720p/1080p/4k, default 480p, for 4-15 seconds, default 4 seconds, at 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9. Up to 12 image, 3 video, and 3 audio references are supported. This example is 4k text-to-video.',
+      seedance20: 'Seedance 2.0 supports 480p/720p/1080p/4k, default 480p, for 4-15 seconds, default 4 seconds, at 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9. At 1080p, silent clips max 15 seconds and clips with generated audio max 10 seconds. Up to 12 image, 3 video, and 3 audio references are supported. This example is 4k text-to-video.',
       seedance20Fast: 'Seedance 2.0 Fast supports 480p/720p, default 480p, for 4-15 seconds, default 4 seconds, with the same aspect ratios as standard. Up to 12 image, 3 video, and 3 audio references are supported.',
       seedance20Mini: 'Seedance 2.0 Mini supports 480p/720p/1080p, default 480p, for 4-12 seconds, default 4 seconds, with the same aspect ratios as standard. At most 2 images in total; video and audio references are not supported. This example is 1080p text-to-video.',
-      seedance25: 'Seedance 2.5 supports 480p/720p, default 480p, and only 4, 5, 6, 8, 10, 12, 15, 20, 25, or 30 seconds, default 4 seconds, with the same aspect ratios as 2.0. Up to 30 image, 3 video, and 3 audio references are supported.',
+      seedance25: 'Seedance 2.5 supports 480p/720p, default 480p, and only 4, 5, 6, 8, 10, 12, 15, 20, 25, or 30 seconds, default 4 seconds, with the same aspect ratios as 2.0. At 720p, silent clips max 30 seconds and clips with generated audio max 15 seconds. Up to 30 image, 3 video, and 3 audio references are supported.',
     },
   },
 }

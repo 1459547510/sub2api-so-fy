@@ -129,18 +129,33 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 		channelMappedModel = job.RequestedModel
 	}
 	billingModel := resolveVideoJobBillingModel(mapping.BillingModelSource, job.RequestedModel, channelMappedModel, job.UpstreamModel)
-	price480P, price720P, price1080P := group.VideoPrice480P, group.VideoPrice720P, group.VideoPrice1080P
-	var price400P, price544P, price960P, price1440P, price2160P *float64
+	priceConfig := &VideoPriceConfig{
+		Price480P:   group.VideoPrice480P,
+		Price720P:   group.VideoPrice720P,
+		Price1080P:  group.VideoPrice1080P,
+		ModelPrices: group.VideoModelPrices,
+	}
 	pricingSource := "group"
 	if s != nil && s.Pricing != nil {
-		resolved := s.Pricing.Resolve(ctx, PricingInput{Model: billingModel, GroupID: &group.ID})
+		resolved := s.Pricing.Resolve(ctx, PricingInput{Model: billingModel, GroupID: &group.ID, Group: group})
 		if channelPrices, ok := VideoPriceConfigFromResolvedPricing(resolved); ok {
-			price480P, price720P, price1080P = channelPrices.Price480P, channelPrices.Price720P, channelPrices.Price1080P
-			price400P, price544P, price960P = channelPrices.Price400P, channelPrices.Price544P, channelPrices.Price960P
-			price1440P, price2160P = channelPrices.Price1440P, channelPrices.Price2160P
+			priceConfig = channelPrices
 			pricingSource = resolved.Source
+			if resolved.Source != PricingSourceGroup {
+				priceConfig = overlayGroupVideoModelPrices(channelPrices, group, billingModel)
+				if LookupVideoModelPrice(group.VideoModelPrices, billingModel, job.Resolution) != nil {
+					pricingSource = PricingSourceGroup
+				}
+			}
+		} else {
+			priceConfig = overlayGroupVideoModelPrices(priceConfig, group, billingModel)
 		}
+	} else {
+		priceConfig = overlayGroupVideoModelPrices(priceConfig, group, billingModel)
 	}
+	price400P, price480P, price544P := priceConfig.Price400P, priceConfig.Price480P, priceConfig.Price544P
+	price720P, price960P, price1080P := priceConfig.Price720P, priceConfig.Price960P, priceConfig.Price1080P
+	price1440P, price2160P := priceConfig.Price1440P, priceConfig.Price2160P
 	if !videoPricingIsCompleteForModel(billingModel, job.Resolution, price400P, price480P, price544P, price720P, price960P, price1080P, price1440P, price2160P) {
 		return errors.New("video pricing is incomplete")
 	}

@@ -981,7 +981,7 @@ const dashboardMessages = {
           image: { resolution: '使用 size 字段，按模型能力', duration: '不适用', aspectRatio: '由 size 或模型默认值决定', references: '部分模型使用 /v1/images/edits 的 images[] 和可选 mask；部分模型使用 image_urls，或把 edits 的 images[].image_url 转成 image_urls' },
           seedance20: {
             resolution: '480p、720p、1080p、4k，默认 480p',
-            duration: '4-15 秒，默认 4 秒；各分辨率相同',
+            duration: '4-15 秒，默认 4 秒。1080p 无生成音频最长 15 秒，开启生成音频最长 10 秒',
             aspectRatio: '各分辨率均为 16:9、9:16、1:1、4:3、3:4、21:9',
             promptLimit: '本网关按 5000 字符校验',
             references: '首帧 1、尾帧 1、参考图 12、参考视频 3、参考音频 3；可与首尾帧同时使用',
@@ -1002,17 +1002,17 @@ const dashboardMessages = {
           },
           seedance25: {
             resolution: '480p、720p，默认 480p',
-            duration: '4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒',
+            duration: '4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒。720p 无生成音频最长 30 秒，开启生成音频最长 15 秒',
             aspectRatio: '各分辨率均为 16:9、9:16、1:1、4:3、3:4、21:9',
             promptLimit: '本网关按 5000 字符校验',
             references: '首帧 1、尾帧 1、参考图 30、参考视频 3、参考音频 3；可与首尾帧同时使用',
           },
         },
         models: {
-          seedance20: 'Seedance 2.0：支持 480p/720p/1080p/4k，默认 480p；时长 4-15 秒，默认 4 秒；画面比例为 16:9、9:16、1:1、4:3、3:4、21:9。最多 12 张参考图、3 个参考视频和 3 个参考音频。本示例为 4k 文生视频。',
+          seedance20: 'Seedance 2.0：支持 480p/720p/1080p/4k，默认 480p；时长 4-15 秒，默认 4 秒；1080p 无生成音频最长 15 秒，开启生成音频最长 10 秒；画面比例为 16:9、9:16、1:1、4:3、3:4、21:9。最多 12 张参考图、3 个参考视频和 3 个参考音频。本示例为 4k 文生视频。',
           seedance20Fast: 'Seedance 2.0 Fast：仅 480p/720p，默认 480p；时长 4-15 秒，默认 4 秒；画面比例与标准版相同。最多 12 张参考图、3 个参考视频和 3 个参考音频。',
           seedance20Mini: 'Seedance 2.0 Mini：支持 480p/720p/1080p，默认 480p；时长 4-12 秒，默认 4 秒；画面比例与标准版相同。图片合计最多 2 张，不支持参考视频和参考音频。本示例为 1080p 文生视频。',
-          seedance25: 'Seedance 2.5：仅 480p/720p，默认 480p；时长只能为 4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒；画面比例与 2.0 相同。最多 30 张参考图、3 个参考视频和 3 个参考音频。',
+          seedance25: 'Seedance 2.5：仅 480p/720p，默认 480p；时长只能为 4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒；720p 无生成音频最长 30 秒，开启生成音频最长 15 秒；画面比例与 2.0 相同。最多 30 张参考图、3 个参考视频和 3 个参考音频。',
         },
         examples: {
           videoRequest: '视频创建请求', acceptedResponse: '202 接收响应', modelList: '模型列表请求', imageGeneration: '图片生成请求', imageReference: '图片参考图请求', imageEdit: '图片编辑 JSON 请求', imageMultipart: '图片编辑 multipart 请求', imageResponse: '图片响应', upload: '媒体上传请求', uploadResponse: '媒体上传响应', uploadMedia: '上传视频和音频', videoStartFrame: '视频首帧请求', videoFramePair: '视频首尾帧请求', videoReferences: '视频参考图片请求', videoAudio: '视频参考音频请求', modelTitle: '逐模型请求示例', modelDescription: '下面为每个视频模型提供可直接复制的 curl 请求。请按该模型矩阵选择分辨率、时长、画面比例和参考媒体；生产环境仍以 /v1/models 返回的 ID 为准。', videoModelDescription: '视频模型使用异步创建、轮询和内容下载流程。', imageModelDescription: '图片模型使用 OpenAI Images 生成或编辑流程。', poll: '查询任务并下载视频',

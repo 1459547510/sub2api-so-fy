@@ -747,8 +747,15 @@ func (s *OpenAIGatewayService) calculateOpenAIVideoCost(
 	groupConfig := videoPriceConfigFromAPIKey(apiKey)
 	if resolved != nil && resolved.Mode == BillingModeVideo {
 		if channelConfig, ok := VideoPriceConfigFromResolvedPricing(resolved); ok {
-			return s.billingService.calculateVideoCost(billingModel, durationModel, resolution, videoCount, durationSeconds, channelConfig, multiplier)
+			if resolved.Source == PricingSourceGroup {
+				return s.billingService.calculateVideoCost(billingModel, durationModel, resolution, videoCount, durationSeconds, channelConfig, multiplier)
+			}
+			merged := overlayGroupVideoModelPrices(channelConfig, apiKey.Group, billingModel)
+			return s.billingService.calculateVideoCost(billingModel, durationModel, resolution, videoCount, durationSeconds, merged, multiplier)
 		}
+	}
+	if LookupVideoModelPrice(groupVideoModelPrices(apiKey), billingModel, resolution) != nil {
+		return s.billingService.calculateVideoCost(billingModel, durationModel, resolution, videoCount, durationSeconds, overlayGroupVideoModelPrices(nil, apiKey.Group, billingModel), multiplier)
 	}
 	if apiKeyHasConfiguredVideoPrice(apiKey, billingModel, resolution) {
 		return s.billingService.calculateVideoCost(billingModel, durationModel, resolution, videoCount, durationSeconds, groupConfig, multiplier)

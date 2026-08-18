@@ -273,12 +273,31 @@ function overrideTiersForModel(group: VideoPriceFields, model: string): MediaPri
   return []
 }
 
-function fillOverrideWithFlatPrices(group: VideoPriceFields, overrideTiers: MediaPriceTier[]): MediaPriceTier[] {
-  const byLabel = new Map(overrideTiers.map((tier) => [tier.label, tier]))
-  return collectConfiguredTiers(
-    VIDEO_RESOLUTIONS,
-    (tier) => byLabel.get(tier.label)?.value ?? configuredPrice(group[tier.field]),
-  )
+function mergeVideoTiers(
+  group: VideoPriceFields,
+  channelTiers: MediaPriceTier[],
+  overrideTiers: MediaPriceTier[],
+): MediaPriceTier[] {
+  if (channelTiers.length === 0) {
+    if (overrideTiers.length === 0) return []
+    const byLabel = new Map(overrideTiers.map((tier) => [tier.label, tier]))
+    return collectConfiguredTiers(
+      VIDEO_RESOLUTIONS,
+      (tier) => byLabel.get(tier.label)?.value ?? configuredPrice(group[tier.field]),
+    )
+  }
+
+  const overrides = new Map(overrideTiers.map((tier) => [tier.label, tier.value]))
+  const merged = channelTiers.map((tier) => {
+    const override = tier.label ? overrides.get(tier.label) : undefined
+    return override === undefined ? tier : { label: tier.label, value: override }
+  })
+  for (const [label, value] of overrides) {
+    if (!merged.some((tier) => tier.label === label)) {
+      merged.push({ label, value })
+    }
+  }
+  return sortVideoTiers(merged)
 }
 
 function overrideVideoModels(group: VideoPriceFields): string[] {
@@ -300,25 +319,14 @@ function videoCardForModel(
 ): MediaPriceCard | null {
   const name = typeof model === 'string' ? model : model.name
   const pricing = typeof model === 'string' ? undefined : model.pricing
-  const channelTiers = videoTiersFromPricing(pricing)
-  if (channelTiers.length > 0) {
+  const tiers = mergeVideoTiers(group, videoTiersFromPricing(pricing), overrideTiersForModel(group, name))
+  if (tiers.length > 0) {
     return {
       key: `video:${name}`,
       title: name,
       kind: 'video',
       unit: 'per_second',
-      tiers: channelTiers,
-    }
-  }
-
-  const overrideTiers = overrideTiersForModel(group, name)
-  if (overrideTiers.length > 0) {
-    return {
-      key: `video:${name}`,
-      title: name,
-      kind: 'video',
-      unit: 'per_second',
-      tiers: fillOverrideWithFlatPrices(group, overrideTiers),
+      tiers,
     }
   }
 

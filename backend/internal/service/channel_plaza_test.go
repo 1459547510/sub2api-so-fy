@@ -293,6 +293,47 @@ func TestListPlazaGroups_GroupImagePriceOverridesChannelPricing(t *testing.T) {
 	require.Len(t, channels[0].ModelPricing[0].Intervals, 1)
 }
 
+func TestListPlazaGroups_GroupVideoModelPricesOverrideChannelTiers(t *testing.T) {
+	price480 := 0.11
+	price720 := 0.19
+	price1080 := 0.41
+	price2160 := 0.90
+	channels := []Channel{{
+		ID: 1, Name: "video-ch", Status: StatusActive, GroupIDs: []int64{10},
+		ModelPricing: []ChannelModelPricing{{
+			Platform:    "leo",
+			Models:      []string{"seedance-2.0"},
+			BillingMode: BillingModeVideo,
+			Intervals: []PricingInterval{
+				{TierLabel: "480p", PerRequestPrice: &price480},
+				{TierLabel: "720p", PerRequestPrice: &price720},
+				{TierLabel: "1080p", PerRequestPrice: &price1080},
+				{TierLabel: "2160p", PerRequestPrice: &price2160},
+			},
+		}},
+	}}
+	groups := []Group{{
+		ID: 10, Name: "g-media", Platform: "leo", RateMultiplier: 1,
+		VideoModelPrices: map[string]map[string]float64{"seedance-2.0": {"720p": 0.31, "1080p": 0.55}},
+	}}
+	out, err := newPlazaChannelService(channels, groups, nil).ListPlazaGroups(context.Background())
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	require.Len(t, out[0].Models, 1)
+	p := out[0].Models[0].Pricing
+	require.NotNil(t, p)
+	tierPrices := map[string]float64{}
+	for _, iv := range p.Intervals {
+		require.NotNil(t, iv.PerRequestPrice)
+		tierPrices[iv.TierLabel] = *iv.PerRequestPrice
+	}
+	require.InDelta(t, 0.11, tierPrices["480p"], 1e-9)
+	require.InDelta(t, 0.31, tierPrices["720p"], 1e-9)
+	require.InDelta(t, 0.55, tierPrices["1080p"], 1e-9)
+	require.InDelta(t, 0.90, tierPrices["2160p"], 1e-9)
+	require.InDelta(t, 0.19, price720, 1e-9, "渠道原始定价不被修改")
+}
+
 func TestListPlazaGroups_GroupImagePriceIgnoredForNonImageModes(t *testing.T) {
 	// token 模式定价不受分组图片价影响。
 	imgPrice := 0.02
