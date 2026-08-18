@@ -159,7 +159,10 @@ function pricingIntervalCount(model: MediaModelRef): number {
 }
 
 function preferRicherModel(existing: MediaModelRef, incoming: MediaModelRef): MediaModelRef {
-  if (pricingIntervalCount(incoming) > pricingIntervalCount(existing)) return incoming
+  // Available-channel copies are merged after plaza. Live channel interval
+  // prices must win so 渠道定价 edits show up on the public price page.
+  if (pricingIntervalCount(incoming) > 0) return incoming
+  if (pricingIntervalCount(existing) > 0) return existing
   if (!existing.pricing && incoming.pricing) return incoming
   return existing
 }
@@ -278,26 +281,15 @@ function mergeVideoTiers(
   channelTiers: MediaPriceTier[],
   overrideTiers: MediaPriceTier[],
 ): MediaPriceTier[] {
-  if (channelTiers.length === 0) {
-    if (overrideTiers.length === 0) return []
-    const byLabel = new Map(overrideTiers.map((tier) => [tier.label, tier]))
-    return collectConfiguredTiers(
-      VIDEO_RESOLUTIONS,
-      (tier) => byLabel.get(tier.label)?.value ?? configuredPrice(group[tier.field]),
-    )
+  if (channelTiers.length > 0) {
+    return sortVideoTiers(channelTiers)
   }
-
-  const overrides = new Map(overrideTiers.map((tier) => [tier.label, tier.value]))
-  const merged = channelTiers.map((tier) => {
-    const override = tier.label ? overrides.get(tier.label) : undefined
-    return override === undefined ? tier : { label: tier.label, value: override }
-  })
-  for (const [label, value] of overrides) {
-    if (!merged.some((tier) => tier.label === label)) {
-      merged.push({ label, value })
-    }
-  }
-  return sortVideoTiers(merged)
+  if (overrideTiers.length === 0) return []
+  const byLabel = new Map(overrideTiers.map((tier) => [tier.label, tier]))
+  return collectConfiguredTiers(
+    VIDEO_RESOLUTIONS,
+    (tier) => byLabel.get(tier.label)?.value ?? configuredPrice(group[tier.field]),
+  )
 }
 
 function overrideVideoModels(group: VideoPriceFields): string[] {

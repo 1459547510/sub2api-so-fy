@@ -1059,6 +1059,28 @@ func TestResolve_GroupPricingOverridesChannel(t *testing.T) {
 	require.InDelta(t, 2e-6, resolved.BasePricing.OutputPricePerToken, 1e-12)
 }
 
+func TestResolve_ChannelVideoPricingBeatsGroupVideoCards(t *testing.T) {
+	r := newResolverWithChannel(t, []ChannelModelPricing{{
+		Platform:    "anthropic",
+		Models:      []string{"seedance-2.0"},
+		BillingMode: BillingModeVideo,
+		Intervals: []PricingInterval{
+			{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.25)},
+		},
+	}})
+	group := &Group{ID: 100, ModelPricing: []ChannelModelPricing{{
+		Models:      []string{"seedance-2.0"},
+		BillingMode: BillingModeVideo,
+		Intervals:   []PricingInterval{{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.5)}},
+	}}}
+	resolved := r.Resolve(context.Background(), PricingInput{Model: "seedance-2.0", GroupID: groupIDPtr(), Group: group})
+
+	require.Equal(t, BillingModeVideo, resolved.Mode)
+	require.Equal(t, PricingSourceChannel, resolved.Source)
+	require.Len(t, resolved.RequestTiers, 1)
+	require.InDelta(t, 0.25, *resolved.RequestTiers[0].PerRequestPrice, 1e-12)
+}
+
 func TestResolve_GroupLongContextUsesPresetNotCustomIntervals(t *testing.T) {
 	bs := newTestBillingServiceForResolver()
 	bs.fallbackPrices["claude-sonnet-4"].LongContextInputThreshold = 200000

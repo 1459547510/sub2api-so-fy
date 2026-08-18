@@ -56,8 +56,8 @@ type PlazaGroup struct {
 //   - 渠道按 lower(name) 排序后遍历，保证同名模型去重结果确定；
 //   - 同分组同名模型「先见者胜」，仅当已存条目无定价而新条目有定价时升级替换；
 //   - 图片计费模型的档位价按实收口径合成（分组图片价 > 渠道档位价 > 渠道默认按次价，
-//     见 plazaImageDisplayPricing）；视频模型优先使用分组 model_pricing，
-//     再用 video_model_prices 覆盖同名分辨率档位（见 plazaDisplayPricing）；
+//     见 plazaImageDisplayPricing）；视频模型使用渠道档位价，分组 video_model_prices
+//     不再盖住刚保存的渠道定价（见 plazaDisplayPricing）；
 //   - 每个模型附带 LiteLLM 官方参考价（查不到为 nil）；
 //   - 只返回 Models 非空的分组；分组按 RateMultiplier 升序（同倍率按名称），
 //     组内模型按名称排序。
@@ -191,7 +191,7 @@ func plazaDisplayPricing(p *ChannelModelPricing, g *Group, modelName string) *Ch
 		if mode == "" {
 			mode = BillingModeToken
 		}
-		if mode == BillingModeVideo || mode == BillingModeImage || mode == BillingModePerRequest {
+		if mode == BillingModeImage || mode == BillingModePerRequest {
 			clone := groupPricing.Clone()
 			return &clone
 		}
@@ -199,42 +199,7 @@ func plazaDisplayPricing(p *ChannelModelPricing, g *Group, modelName string) *Ch
 	if p != nil && p.BillingMode == BillingModeImage {
 		return plazaImageDisplayPricing(p, g)
 	}
-	if p != nil && p.BillingMode == BillingModeVideo {
-		return plazaVideoDisplayPricing(p, g, modelName)
-	}
 	return p
-}
-
-// plazaVideoDisplayPricing overlays group video_model_prices onto matching
-// channel resolution labels so the plaza matches billed per-model unit prices.
-func plazaVideoDisplayPricing(p *ChannelModelPricing, g *Group, modelName string) *ChannelModelPricing {
-	if p == nil || g == nil || p.BillingMode != BillingModeVideo {
-		return p
-	}
-	prices := NormalizeVideoModelPrices(g.VideoModelPrices)
-	if len(prices) == 0 {
-		return p
-	}
-	clone := *p
-	clone.Intervals = make([]PricingInterval, len(p.Intervals))
-	copy(clone.Intervals, p.Intervals)
-	changed := false
-	for i := range clone.Intervals {
-		label := strings.ToLower(strings.TrimSpace(clone.Intervals[i].TierLabel))
-		canonical, ok := LookupVideoBillingResolution(label)
-		if !ok {
-			continue
-		}
-		if price := LookupVideoModelPrice(prices, modelName, canonical); price != nil {
-			v := *price
-			clone.Intervals[i].PerRequestPrice = &v
-			changed = true
-		}
-	}
-	if !changed {
-		return p
-	}
-	return &clone
 }
 
 // plazaImageDisplayPricing 为图片计费模型合成展示定价，使档位价与实收口径一致：

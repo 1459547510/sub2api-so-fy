@@ -293,7 +293,7 @@ func TestListPlazaGroups_GroupImagePriceOverridesChannelPricing(t *testing.T) {
 	require.Len(t, channels[0].ModelPricing[0].Intervals, 1)
 }
 
-func TestListPlazaGroups_GroupVideoModelPricesOverrideChannelTiers(t *testing.T) {
+func TestListPlazaGroups_ChannelVideoTiersStayLive(t *testing.T) {
 	price480 := 0.11
 	price720 := 0.19
 	price1080 := 0.41
@@ -328,8 +328,8 @@ func TestListPlazaGroups_GroupVideoModelPricesOverrideChannelTiers(t *testing.T)
 		tierPrices[iv.TierLabel] = *iv.PerRequestPrice
 	}
 	require.InDelta(t, 0.11, tierPrices["480p"], 1e-9)
-	require.InDelta(t, 0.31, tierPrices["720p"], 1e-9)
-	require.InDelta(t, 0.55, tierPrices["1080p"], 1e-9)
+	require.InDelta(t, 0.19, tierPrices["720p"], 1e-9)
+	require.InDelta(t, 0.41, tierPrices["1080p"], 1e-9)
 	require.InDelta(t, 0.90, tierPrices["2160p"], 1e-9)
 	require.InDelta(t, 0.19, price720, 1e-9, "渠道原始定价不被修改")
 }

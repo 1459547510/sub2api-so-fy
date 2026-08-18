@@ -129,30 +129,7 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 		channelMappedModel = job.RequestedModel
 	}
 	billingModel := resolveVideoJobBillingModel(mapping.BillingModelSource, job.RequestedModel, channelMappedModel, job.UpstreamModel)
-	priceConfig := &VideoPriceConfig{
-		Price480P:   group.VideoPrice480P,
-		Price720P:   group.VideoPrice720P,
-		Price1080P:  group.VideoPrice1080P,
-		ModelPrices: group.VideoModelPrices,
-	}
-	pricingSource := "group"
-	if s != nil && s.Pricing != nil {
-		resolved := s.Pricing.Resolve(ctx, PricingInput{Model: billingModel, GroupID: &group.ID, Group: group})
-		if channelPrices, ok := VideoPriceConfigFromResolvedPricing(resolved); ok {
-			priceConfig = channelPrices
-			pricingSource = resolved.Source
-			if resolved.Source != PricingSourceGroup {
-				priceConfig = overlayGroupVideoModelPrices(channelPrices, group, billingModel)
-				if LookupVideoModelPrice(group.VideoModelPrices, billingModel, job.Resolution) != nil {
-					pricingSource = PricingSourceGroup
-				}
-			}
-		} else {
-			priceConfig = overlayGroupVideoModelPrices(priceConfig, group, billingModel)
-		}
-	} else {
-		priceConfig = overlayGroupVideoModelPrices(priceConfig, group, billingModel)
-	}
+	priceConfig, pricingSource := s.resolveVideoJobPriceConfig(ctx, group, job, billingModel, channelMappedModel)
 	price400P, price480P, price544P := priceConfig.Price400P, priceConfig.Price480P, priceConfig.Price544P
 	price720P, price960P, price1080P := priceConfig.Price720P, priceConfig.Price960P, priceConfig.Price1080P
 	price1440P, price2160P := priceConfig.Price1440P, priceConfig.Price2160P
@@ -362,6 +339,55 @@ func (s *VideoJobBillingService) loadUsageContext(ctx context.Context, job *Vide
 	apiKeyCopy.Group = group
 	apiKeyCopy.User = user
 	return &apiKeyCopy, user, account, subscription, nil
+}
+
+func (s *VideoJobBillingService) resolveVideoJobPriceConfig(ctx context.Context, group *Group, job *VideoJob, billingModel, channelMappedModel string) (*VideoPriceConfig, string) {
+	flats := &VideoPriceConfig{
+		Price480P:   group.VideoPrice480P,
+		Price720P:   group.VideoPrice720P,
+		Price1080P:  group.VideoPrice1080P,
+		ModelPrices: group.VideoModelPrices,
+	}
+	if s == nil || s.Pricing == nil {
+		return overlayGroupVideoModelPrices(flats, group, billingModel), "group"
+	}
+
+	var groupCard *VideoPriceConfig
+	for _, model := range uniqueNonEmptyStrings(billingModel, job.RequestedModel, channelMappedModel) {
+		resolved := s.Pricing.Resolve(ctx, PricingInput{Model: model, GroupID: &group.ID, Group: group})
+		cfg, ok := VideoPriceConfigFromResolvedPricing(resolved)
+		if !ok {
+			continue
+		}
+		if resolved.Source == PricingSourceChannel {
+			return cfg, PricingSourceChannel
+		}
+		if groupCard == nil {
+			groupCard = cfg
+		}
+	}
+	if groupCard != nil {
+		return groupCard, PricingSourceGroup
+	}
+	return overlayGroupVideoModelPrices(flats, group, billingModel), "group"
+}
+
+func uniqueNonEmptyStrings(values ...string) []string {
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		key := strings.ToLower(value)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }
 
 func resolveVideoJobBillingModel(source, requestedModel, channelMappedModel, upstreamModel string) string {

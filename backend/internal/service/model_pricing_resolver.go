@@ -70,6 +70,26 @@ type PricingInput struct {
 // 2. 如果指定了 GroupID，查找渠道定价并覆盖
 func (r *ModelPricingResolver) Resolve(ctx context.Context, input PricingInput) *ResolvedPricing {
 	longContextPricingEnabled := input.Group == nil || input.Group.LongContextPricingEnabled
+
+	var chPricing *ChannelModelPricing
+	if input.GroupID != nil && r.channelService != nil {
+		chPricing = r.channelService.GetChannelModelPricing(ctx, *input.GroupID, input.Model)
+	}
+
+	// Live channel video cards beat group video cards so 渠道定价 edits bill
+	// immediately. Group video cards remain the fallback when the channel has
+	// no video price for this model. Token group cards still override first.
+	if mode := configuredBillingMode(chPricing); mode == BillingModeVideo {
+		resolved := &ResolvedPricing{
+			Mode:           mode,
+			Source:         PricingSourceChannel,
+			channelPricing: chPricing,
+		}
+		resolved.longContextPricingEnabled = longContextPricingEnabled
+		r.applyRequestTierOverrides(chPricing, resolved)
+		return resolved
+	}
+
 	if groupPricing := matchGroupModelPricing(input.Group, input.Model); groupPricing != nil {
 		// Group token cards only override the first-tier / flat rates.
 		// Long-context ladders come from official presets, gated by the checkbox.
@@ -83,24 +103,17 @@ func (r *ModelPricingResolver) Resolve(ctx context.Context, input PricingInput) 
 		return resolved
 	}
 
-	var chPricing *ChannelModelPricing
-	if input.GroupID != nil && r.channelService != nil {
-		chPricing = r.channelService.GetChannelModelPricing(ctx, *input.GroupID, input.Model)
-		if chPricing != nil {
-			mode := chPricing.BillingMode
-			if mode == "" {
-				mode = BillingModeToken
+	if chPricing != nil {
+		mode := configuredBillingMode(chPricing)
+		if mode == BillingModePerRequest || mode == BillingModeImage {
+			resolved := &ResolvedPricing{
+				Mode:           mode,
+				Source:         PricingSourceChannel,
+				channelPricing: chPricing,
 			}
-			if mode == BillingModePerRequest || mode == BillingModeImage || mode == BillingModeVideo {
-				resolved := &ResolvedPricing{
-					Mode:           mode,
-					Source:         PricingSourceChannel,
-					channelPricing: chPricing,
-				}
-				resolved.longContextPricingEnabled = longContextPricingEnabled
-				r.applyRequestTierOverrides(chPricing, resolved)
-				return resolved
-			}
+			resolved.longContextPricingEnabled = longContextPricingEnabled
+			r.applyRequestTierOverrides(chPricing, resolved)
+			return resolved
 		}
 	}
 
@@ -147,6 +160,16 @@ func (r *ModelPricingResolver) resolveConfiguredPricing(config *ChannelModelPric
 	resolved.SupportsCacheBreakdown = resolved.BasePricing != nil && resolved.BasePricing.SupportsCacheBreakdown
 	r.applyTokenOverrides(config, resolved)
 	return resolved
+}
+
+func configuredBillingMode(pricing *ChannelModelPricing) BillingMode {
+	if pricing == nil {
+		return ""
+	}
+	if pricing.BillingMode == "" {
+		return BillingModeToken
+	}
+	return pricing.BillingMode
 }
 
 func matchGroupModelPricing(group *Group, model string) *ChannelModelPricing {

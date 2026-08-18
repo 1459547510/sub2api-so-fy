@@ -167,7 +167,7 @@ func TestVideoJobBillingPrepareAcceptsLegacySeedance20ThreeTierPricing(t *testin
 	require.Zero(t, snapshot.Price2160P)
 }
 
-func TestVideoJobBillingPrepareUsesGroupVideoModelPricesOverChannel(t *testing.T) {
+func TestVideoJobBillingPrepareUsesChannelVideoPricingOverGroupVideoModelPrices(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	gateway, pricing := newVideoJobChannelPricingServices(t, BillingModelSourceRequested, "seedance-2.0", 0.12, 0.25, 0.60)
 	svc := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
@@ -183,17 +183,17 @@ func TestVideoJobBillingPrepareUsesGroupVideoModelPricesOverChannel(t *testing.T
 
 	require.NoError(t, svc.Prepare(context.Background(), job, apiKey, &User{ID: 1}, nil))
 	require.NotNil(t, job.HoldAmount)
-	require.InDelta(t, 2.0, *job.HoldAmount, 1e-12)
+	require.InDelta(t, 1.25, *job.HoldAmount, 1e-12)
 
 	var snapshot VideoJobBillingSnapshot
 	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
-	require.Equal(t, PricingSourceGroup, snapshot.PricingSource)
+	require.Equal(t, PricingSourceChannel, snapshot.PricingSource)
 	require.InDelta(t, 0.12, snapshot.Price480P, 1e-12)
-	require.InDelta(t, 0.4, snapshot.Price720P, 1e-12)
+	require.InDelta(t, 0.25, snapshot.Price720P, 1e-12)
 	require.InDelta(t, 0.60, snapshot.Price1080P, 1e-12)
 }
 
-func TestVideoJobBillingPrepareUsesGroupModelPricingOverChannel(t *testing.T) {
+func TestVideoJobBillingPrepareUsesChannelVideoPricingOverGroupModelPricing(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	gateway, pricing := newVideoJobChannelPricingServices(t, BillingModelSourceRequested, "seedance-2.0", 0.12, 0.25, 0.60)
 	svc := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
@@ -211,12 +211,53 @@ func TestVideoJobBillingPrepareUsesGroupModelPricingOverChannel(t *testing.T) {
 
 	require.NoError(t, svc.Prepare(context.Background(), job, apiKey, &User{ID: 1}, nil))
 	require.NotNil(t, job.HoldAmount)
-	require.InDelta(t, 2.5, *job.HoldAmount, 1e-12)
+	require.InDelta(t, 1.25, *job.HoldAmount, 1e-12)
 
 	var snapshot VideoJobBillingSnapshot
 	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
-	require.Equal(t, PricingSourceGroup, snapshot.PricingSource)
-	require.InDelta(t, 0.5, snapshot.Price720P, 1e-12)
+	require.Equal(t, PricingSourceChannel, snapshot.PricingSource)
+	require.InDelta(t, 0.25, snapshot.Price720P, 1e-12)
+}
+
+func TestVideoJobBillingPrepareUsesRequestedChannelCardWhenBillingModelIsMapped(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{}
+	const groupID int64 = 100
+	repo := &fakeVideoBillingChannelRepository{
+		channels: []Channel{{
+			ID: 77, Name: "leo-video", Status: StatusActive, GroupIDs: []int64{groupID},
+			BillingModelSource: BillingModelSourceChannelMapped,
+			ModelMapping:       map[string]map[string]string{PlatformLeo: {"seedance-2.0": "seedance-upstream"}},
+			ModelPricing: []ChannelModelPricing{{
+				Platform: PlatformLeo, Models: []string{"seedance-2.0"}, BillingMode: BillingModeVideo,
+				Intervals: []PricingInterval{
+					{TierLabel: "480p", PerRequestPrice: f64p(0.12)},
+					{TierLabel: "720p", PerRequestPrice: f64p(0.25)},
+					{TierLabel: "1080p", PerRequestPrice: f64p(0.60)},
+				},
+			}},
+		}},
+		groupPlatforms: map[int64]string{groupID: PlatformLeo},
+	}
+	channelService := NewChannelService(repo, nil, nil, nil)
+	svc := &VideoJobBillingService{
+		BillingRepo: balance,
+		Gateway:     &OpenAIGatewayService{channelService: channelService},
+		Pricing:     NewModelPricingResolver(channelService, &BillingService{fallbackPrices: map[string]*ModelPricing{}}),
+	}
+	job := &VideoJob{
+		JobID: "vidjob_seedance20_mapped_lookup", UserID: 1, APIKeyID: 2, GroupID: groupID,
+		RequestedModel: "seedance-2.0", UpstreamModel: "seedance-upstream", Resolution: "720p", DurationSeconds: 5,
+	}
+
+	require.NoError(t, svc.Prepare(context.Background(), job, newVideoJobBillingAPIKey(groupID), &User{ID: 1}, nil))
+	require.NotNil(t, job.HoldAmount)
+	require.InDelta(t, 1.25, *job.HoldAmount, 1e-12)
+
+	var snapshot VideoJobBillingSnapshot
+	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
+	require.Equal(t, "seedance-upstream", snapshot.BillingModel)
+	require.Equal(t, PricingSourceChannel, snapshot.PricingSource)
+	require.InDelta(t, 0.25, snapshot.Price720P, 1e-12)
 }
 
 func TestVideoJobBillingPrepareRejectsSeedance20FourKWithout2160Price(t *testing.T) {

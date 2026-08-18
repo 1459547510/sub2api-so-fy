@@ -179,7 +179,7 @@ describe('buildVideoCards', () => {
     ])
   })
 
-  it('overlays group video_model_prices onto matching channel resolution tiers', () => {
+  it('keeps live channel interval prices when group video_model_prices also exist', () => {
     const cards = buildVideoCards({
       name: '视频图片分组',
       ...emptyPrices,
@@ -205,8 +205,8 @@ describe('buildVideoCards', () => {
       unit: 'per_second',
       tiers: [
         { label: '480p', value: 0.11 },
-        { label: '720p', value: 0.31 },
-        { label: '1080p', value: 0.55 },
+        { label: '720p', value: 0.19 },
+        { label: '1080p', value: 0.41 },
         { label: '2160p', value: 0.9 },
       ],
     }])
@@ -273,6 +273,50 @@ describe('collectGroupModels', () => {
       }],
     )
     expect(models[0].pricing?.intervals).toEqual([{ tier_label: '720p', per_request_price: 0.19 }])
+  })
+
+  it('uses live channel interval prices over plaza copies', () => {
+    const models = collectGroupModels(
+      7,
+      [{
+        id: 7,
+        models: [{
+          name: 'seedance-2.0',
+          pricing: {
+            billing_mode: 'video',
+            intervals: [
+              { tier_label: '480p', per_request_price: 0.22 },
+              { tier_label: '720p', per_request_price: 0.31 },
+              { tier_label: '1080p', per_request_price: 0.55 },
+            ],
+          },
+        }],
+      }],
+      [{
+        platforms: [{
+          groups: [{ id: 7 }],
+          supported_models: [{
+            name: 'seedance-2.0',
+            platform: 'leo',
+            pricing: {
+              billing_mode: 'video',
+              intervals: [
+                { tier_label: '480p', per_request_price: 0.11 },
+                { tier_label: '720p', per_request_price: 0.19 },
+                { tier_label: '1080p', per_request_price: 0.41 },
+                { tier_label: '2160p', per_request_price: 0.9 },
+              ],
+            },
+          }],
+        }],
+      }],
+    )
+    expect(models[0].pricing?.intervals).toEqual([
+      { tier_label: '480p', per_request_price: 0.11 },
+      { tier_label: '720p', per_request_price: 0.19 },
+      { tier_label: '1080p', per_request_price: 0.41 },
+      { tier_label: '2160p', per_request_price: 0.9 },
+    ])
   })
 
   it('unions plaza and available-channel models for the group', () => {

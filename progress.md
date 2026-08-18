@@ -6690,5 +6690,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - In-flight video jobs keep the create-time billing snapshot; only new jobs pick up the updated group prices.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.8..v0.1.177-fy.9` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.8`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.9` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-18 - Task: Release live channel video pricing as v0.1.177-fy.10
+### What was done
+- Channel video `model_pricing` is now the live source for the public price page and new video-job billing. Saving 渠道定价 updates displayed and billed unit prices immediately.
+- Group video cards and `video_model_prices` remain fallback only when the channel has no video card for that model.
+- Video billing also looks up the requested and mapped model names so prices saved on the public model ID still apply.
+- Prepared annotated tag `v0.1.177-fy.10` from this commit.
+
+### Testing
+- From `backend/`, `go test ./internal/service -count=1 -timeout=180s -run "TestVideoJobBillingPrepare|TestResolve_ChannelVideo|TestResolve_GroupPricing|TestListPlazaGroups_ChannelVideo|TestListPlazaGroups_GroupImage|TestAPIKeyAuthSnapshot|TestVideoPriceConfig"` passed.
+- From `frontend/`, `npx vitest run src/utils/__tests__/mediaPricing.spec.ts src/views/user/__tests__/VideoPricingView.spec.ts` passed, 2 files and 29 tests.
+
+### Notes
+- In-flight video jobs keep the create-time billing snapshot; only new jobs pick up the updated channel prices.
+- Auth snapshot version is 20 so cached API keys reload group `model_pricing` for the fallback path.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.9..v0.1.177-fy.10` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.9`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.10` and its remote tag. Preserve unrelated `.superpowers/` content.
+
 
 

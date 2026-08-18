@@ -78,6 +78,17 @@ func groupVideoModelPrices(apiKey *APIKey) map[string]map[string]float64 {
 	return apiKey.Group.VideoModelPrices
 }
 
+func cloneGroupModelPricing(in []ChannelModelPricing) []ChannelModelPricing {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]ChannelModelPricing, len(in))
+	for i := range in {
+		out[i] = in[i].Clone()
+	}
+	return out
+}
+
 func apiKeyHasConfiguredVideoPrice(apiKey *APIKey, model, resolution string) bool {
 	return apiKey != nil && apiKey.Group != nil && apiKey.Group.GetVideoPriceForModel(model, resolution) != nil
 }
