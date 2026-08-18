@@ -78,6 +78,12 @@ export function formIntervalsToAPI(intervals: IntervalFormEntry[]): PricingInter
   }))
 }
 
+export function formPricedVideoIntervalsToAPI(intervals: IntervalFormEntry[], model?: string): PricingInterval[] {
+  return formIntervalsToAPI(normalizeVideoIntervals(intervals, model)).filter(
+    (iv) => iv.per_request_price != null,
+  )
+}
+
 export function videoPricingResolutionsForModel(model?: string): readonly string[] {
   const normalizedModel = model?.trim().toLowerCase()
   if (normalizedModel === 'bytedance/seedance-2.5' || normalizedModel === 'seedance-2.5') return ['480p', '720p']
@@ -167,12 +173,16 @@ export function validateVideoPricing(entry: PricingFormEntry, t: TranslateFn): s
   }
 
   const intervals = normalizeVideoIntervals(entry.intervals, entry.models[0])
-  const allPricesValid = intervals.every(iv => {
-    if (iv.per_request_price == null || iv.per_request_price === '') return false
+  let priced = 0
+  for (const iv of intervals) {
+    if (iv.per_request_price == null || iv.per_request_price === '') continue
     const price = Number(iv.per_request_price)
-    return Number.isFinite(price) && price >= 0
-  })
-  return allPricesValid ? null : t('admin.channels.form.videoPricesRequired')
+    if (!Number.isFinite(price) || price < 0) {
+      return t('admin.channels.form.videoPricesRequired')
+    }
+    priced++
+  }
+  return priced > 0 ? null : t('admin.channels.form.videoPricesRequired')
 }
 
 // ── 模型模式冲突检测 ──────────────────────────────────────

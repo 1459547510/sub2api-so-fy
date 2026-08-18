@@ -6659,5 +6659,20 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/internal/service/public_vendor.go`: shared sanitizer for public image and video error strings.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.6..v0.1.177-fy.7` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.6`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.7` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-18 - Task: Release optional video resolution prices as v0.1.177-fy.8
+### What was done
+- Channel and group video pricing can save a subset of native resolution tiers. Unused resolutions may be left blank; at least one non-negative price is still required.
+- This unblocks seedance-2.0 rows that sell 480p/720p/1080p without a 2160p price.
+- Prepared annotated tag `v0.1.177-fy.8` from this commit.
+
+### Testing
+- From `backend/`, `go test ./internal/service -count=1 -timeout=120s -run "TestValidatePricingBillingMode"` passed.
+- From `frontend/`, `npx vitest run src/components/admin/channel/__tests__/types.spec.ts src/components/admin/channel/__tests__/PricingEntryCard.spec.ts` passed, 2 files and 23 tests.
+
+### Notes
+- `backend/internal/service/channel_service.go`: video pricing must be a non-empty subset of the model's native resolutions.
+- `frontend/src/components/admin/channel/types.ts`: admin save omits blank resolution rows and no longer requires every listed tier.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.7..v0.1.177-fy.8` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.7`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.8` and its remote tag. Preserve unrelated `.superpowers/` content.
+
 
 

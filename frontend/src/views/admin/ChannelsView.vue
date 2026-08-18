@@ -633,7 +633,7 @@ import { extractApiErrorMessage } from '@/utils/apiError'
 import { adminAPI } from '@/api/admin'
 import type { Channel, ChannelModelPricing, CreateChannelRequest, UpdateChannelRequest, AccountStatsPricingRule } from '@/api/admin/channels'
 import type { PricingFormEntry } from '@/components/admin/channel/types'
-import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, formIntervalsToAPI, findModelConflict, validateIntervals, createPricingFormEntry, createSyncedPricingEntries, getNextLeoVideoModel, normalizeVideoIntervals, validateVideoPricing } from '@/components/admin/channel/types'
+import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, formIntervalsToAPI, formPricedVideoIntervalsToAPI, findModelConflict, validateIntervals, createPricingFormEntry, createSyncedPricingEntries, getNextLeoVideoModel, normalizeVideoIntervals, validateVideoPricing } from '@/components/admin/channel/types'
 import type { AdminGroup, GroupPlatform } from '@/types'
 import type { Column } from '@/components/common/types'
 import { platformTextClass, platformBadgeLightClass } from '@/utils/platformColors'
@@ -1103,9 +1103,9 @@ function formToAPI(): { group_ids: number[], model_pricing: ChannelModelPricing[
         image_input_price: mTokToPerToken(entry.image_input_price),
         image_output_price: mTokToPerToken(entry.image_output_price),
         per_request_price: entry.per_request_price != null && entry.per_request_price !== '' ? Number(entry.per_request_price) : null,
-        intervals: formIntervalsToAPI(entry.billing_mode === 'video'
-          ? normalizeVideoIntervals(entry.intervals || [], entry.models[0])
-          : entry.intervals || [])
+        intervals: entry.billing_mode === 'video'
+          ? formPricedVideoIntervalsToAPI(entry.intervals || [], entry.models[0])
+          : formIntervalsToAPI(entry.intervals || [])
       })
     }
   }

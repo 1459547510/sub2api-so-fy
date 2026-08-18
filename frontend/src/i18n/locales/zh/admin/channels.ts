@@ -137,7 +137,7 @@ export default {
         videoResolutionPrices: '分辨率单价',
         videoPricePlaceholder: '每秒美元价格',
         videoSingleModelRequired: '每条视频定价只能配置一个模型',
-        videoPricesRequired: '视频定价必须填写所选模型支持分辨率的非负价格',
+        videoPricesRequired: '视频定价至少填写一档所选模型支持分辨率的非负价格，未售卖的分辨率可留空',
         second: '秒',
         tierLabel: '层级',
         resolution: '分辨率',

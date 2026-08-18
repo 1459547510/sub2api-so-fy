@@ -4452,6 +4452,7 @@ import type { PricingFormEntry } from "@/components/admin/channel/types";
 import {
   apiIntervalsToForm,
   formIntervalsToAPI,
+  formPricedVideoIntervalsToAPI,
   mTokToPerToken,
   perTokenToMTok,
   toNullableNumber,
@@ -4563,7 +4564,9 @@ const groupPricingToAPI = (
       intervals:
         entry.billing_mode === "token"
           ? []
-          : formIntervalsToAPI(entry.intervals || []),
+          : entry.billing_mode === "video"
+            ? formPricedVideoIntervalsToAPI(entry.intervals || [], entry.models[0])
+            : formIntervalsToAPI(entry.intervals || []),
     }));
 
 const { t } = useI18n();

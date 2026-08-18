@@ -137,7 +137,7 @@ export default {
         videoResolutionPrices: 'Resolution Prices',
         videoPricePlaceholder: 'USD per second',
         videoSingleModelRequired: 'Video pricing entries must contain exactly one model',
-        videoPricesRequired: 'Video pricing requires non-negative prices for the selected model\'s supported resolutions',
+        videoPricesRequired: 'Video pricing requires at least one non-negative price for a supported resolution; unused resolutions may be left blank',
         second: 'second',
         tierLabel: 'Tier',
         resolution: 'Resolution',

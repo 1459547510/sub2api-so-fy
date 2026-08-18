@@ -2540,7 +2540,7 @@ func TestValidatePricingBillingMode(t *testing.T) {
 				},
 			}},
 			wantErr: true,
-			errMsg:  "requires exactly 720p and 1080p",
+			errMsg:  "unsupported video pricing tier",
 		},
 		{
 			name: "video Grok compatibility tiers - invalid",
@@ -2555,7 +2555,7 @@ func TestValidatePricingBillingMode(t *testing.T) {
 				},
 			}},
 			wantErr: true,
-			errMsg:  "requires exactly 400p, 544p, 720p, and 960p",
+			errMsg:  "unsupported video pricing tier",
 		},
 		{
 			name: "video multiple models - invalid",
@@ -2594,7 +2594,7 @@ func TestValidatePricingBillingMode(t *testing.T) {
 			errMsg:  "must configure per-second prices through resolution intervals",
 		},
 		{
-			name: "video missing tier - invalid",
+			name: "video subset of native resolution tiers - valid",
 			pricing: []ChannelModelPricing{{
 				Platform:    PlatformLeo,
 				BillingMode: BillingModeVideo,
@@ -2604,8 +2604,16 @@ func TestValidatePricingBillingMode(t *testing.T) {
 					{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.08)},
 				},
 			}},
+		},
+		{
+			name: "video no priced tiers - invalid",
+			pricing: []ChannelModelPricing{{
+				Platform:    PlatformLeo,
+				BillingMode: BillingModeVideo,
+				Models:      []string{"seedance-2.0"},
+			}},
 			wantErr: true,
-			errMsg:  "requires exactly 480p, 720p, and 1080p",
+			errMsg:  "requires at least one of 480p, 720p, 1080p, 2160p",
 		},
 		{
 			name: "video duplicate tier - invalid",

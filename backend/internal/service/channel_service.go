@@ -667,7 +667,7 @@ func validateAccountStatsPricingRules(rules []AccountStatsPricingRule) error {
 }
 
 // validatePricingBillingMode 校验计费模式配置：按次/图片模式必须配价格或区间，
-// 视频模式必须按单模型配置完整的分辨率每秒价格，所有价格字段不能为负，区间至少有一个价格字段。
+// 视频模式必须按单模型配置至少一档支持分辨率的每秒价格，所有价格字段不能为负，区间至少有一个价格字段。
 func validatePricingBillingMode(pricing []ChannelModelPricing) error {
 	for _, p := range pricing {
 		if err := checkBillingModeRequirements(p); err != nil {
@@ -727,23 +727,11 @@ func checkVideoBillingModeRequirements(p ChannelModelPricing) error {
 		)
 	}
 	requiredResolutions := LeoVideoPricingResolutions(p.Models[0])
-	if len(p.Intervals) != len(requiredResolutions) {
-		resolutionList := strings.Join(requiredResolutions, ", ")
-		if len(requiredResolutions) == 2 {
-			resolutionList = strings.Join(requiredResolutions, " and ")
-		} else if len(requiredResolutions) > 2 {
-			resolutionList = strings.Join(requiredResolutions[:len(requiredResolutions)-1], ", ") + ", and " + requiredResolutions[len(requiredResolutions)-1]
-		}
-		return infraerrors.BadRequest(
-			"VIDEO_PRICING_INVALID_TIERS",
-			fmt.Sprintf("video pricing requires exactly %s intervals", resolutionList),
-		)
-	}
-
 	required := make(map[string]bool, len(requiredResolutions))
 	for _, resolution := range requiredResolutions {
 		required[resolution] = false
 	}
+	priced := 0
 	for _, interval := range p.Intervals {
 		label := strings.ToLower(strings.TrimSpace(interval.TierLabel))
 		seen, ok := required[label]
@@ -772,6 +760,13 @@ func checkVideoBillingModeRequirements(p ChannelModelPricing) error {
 			)
 		}
 		required[label] = true
+		priced++
+	}
+	if priced == 0 {
+		return infraerrors.BadRequest(
+			"VIDEO_PRICING_INVALID_TIERS",
+			fmt.Sprintf("video pricing requires at least one of %s", strings.Join(requiredResolutions, ", ")),
+		)
 	}
 	return nil
 }
