@@ -411,7 +411,7 @@ const ltxProDurationOptions = [6, 8, 10]
 const ltxFastDurationOptions = [6, 8, 10, 12, 14, 16, 18, 20]
 const allAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '9:21']
 const hdAspectRatioOptions: readonly VideoAspectRatio[] = ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9']
-const kreaSeedanceAspectOptions: readonly VideoAspectRatio[] = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9']
+const seedanceSharedAspectOptions: readonly VideoAspectRatio[] = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9']
 const videoReferenceMaxBytes = 100 * 1024 * 1024
 const audioReferenceMaxBytes = 15 * 1024 * 1024
 const imageReferenceMaxBytes = 10 * 1024 * 1024
@@ -442,10 +442,10 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     durations: allDurationOptions,
     defaultDuration: 5,
     aspectsByResolution: {
-      '480p': kreaSeedanceAspectOptions,
-      '720p': kreaSeedanceAspectOptions,
-      '1080p': kreaSeedanceAspectOptions,
-      '4k': kreaSeedanceAspectOptions,
+      '480p': seedanceSharedAspectOptions,
+      '720p': seedanceSharedAspectOptions,
+      '1080p': seedanceSharedAspectOptions,
+      '4k': seedanceSharedAspectOptions,
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,
@@ -463,8 +463,8 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     durations: allDurationOptions,
     defaultDuration: 5,
     aspectsByResolution: {
-      '480p': kreaSeedanceAspectOptions,
-      '720p': kreaSeedanceAspectOptions,
+      '480p': seedanceSharedAspectOptions,
+      '720p': seedanceSharedAspectOptions,
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,
@@ -482,8 +482,8 @@ const videoModelCapabilities: Record<string, VideoModelCapability> = {
     durations: allDurationOptions,
     defaultDuration: 5,
     aspectsByResolution: {
-      '480p': kreaSeedanceAspectOptions,
-      '720p': kreaSeedanceAspectOptions,
+      '480p': seedanceSharedAspectOptions,
+      '720p': seedanceSharedAspectOptions,
     },
     defaultAspectRatio: '16:9',
     maxPromptLength: 5000,

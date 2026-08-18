@@ -389,10 +389,25 @@ func (r *ModelPricingResolver) GetRequestTierPriceByContext(resolved *ResolvedPr
 }
 
 // VideoPriceConfigFromResolvedPricing extracts a channel video price configuration.
-// Each model must provide its model-specific resolution tiers. Explicit zero
-// prices remain valid through non-nil pointers.
+// A model may persist a subset of its native resolution tiers so older
+// seedance-2.0 rows without 2160p remain billable at 480p/720p/1080p.
+// Explicit zero prices remain valid through non-nil pointers.
 func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPriceConfig, bool) {
 	if resolved == nil || resolved.Mode != BillingModeVideo {
+		return nil, false
+	}
+	if config, ok := parseLeoVideoPriceConfig(resolved); ok {
+		return config, true
+	}
+	model := ""
+	if resolved.channelPricing != nil && len(resolved.channelPricing.Models) == 1 {
+		model = resolved.channelPricing.Models[0]
+	}
+	return legacyLeoVideoPriceConfig(resolved, model)
+}
+
+func parseLeoVideoPriceConfig(resolved *ResolvedPricing) (*VideoPriceConfig, bool) {
+	if resolved == nil || len(resolved.RequestTiers) == 0 {
 		return nil, false
 	}
 
@@ -402,15 +417,16 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 		model = resolved.channelPricing.Models[0]
 	}
 	requiredResolutions := LeoVideoPricingResolutions(model)
-	if len(resolved.RequestTiers) != len(requiredResolutions) {
-		if config, ok := legacyLeoVideoPriceConfig(resolved, model); ok {
-			return config, true
-		}
-		return nil, false
+	required := make(map[string]struct{}, len(requiredResolutions))
+	for _, resolution := range requiredResolutions {
+		required[resolution] = struct{}{}
 	}
-	seen := make(map[string]bool, len(requiredResolutions))
+	seen := make(map[string]bool, len(resolved.RequestTiers))
 	for _, tier := range resolved.RequestTiers {
 		label := strings.ToLower(strings.TrimSpace(tier.TierLabel))
+		if _, ok := required[label]; !ok {
+			return nil, false
+		}
 		if seen[label] || tier.PerRequestPrice == nil || *tier.PerRequestPrice < 0 {
 			return nil, false
 		}
@@ -436,10 +452,8 @@ func VideoPriceConfigFromResolvedPricing(resolved *ResolvedPricing) (*VideoPrice
 		}
 		seen[label] = true
 	}
-	for _, resolution := range requiredResolutions {
-		if !seen[resolution] {
-			return nil, false
-		}
+	if len(seen) == 0 {
+		return nil, false
 	}
 	config := &VideoPriceConfig{}
 	if seen[VideoBillingResolution400P] {

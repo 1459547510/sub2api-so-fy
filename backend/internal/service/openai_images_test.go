@@ -1480,7 +1480,7 @@ func TestOpenAIGatewayServiceParseOpenAIImagesRequest_LeoRejectsMaskAndMultipart
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = req
 	_, err := (&OpenAIGatewayService{}).ParseOpenAIImagesRequest(c, body)
-	require.ErrorContains(t, err, "do not support mask")
+	require.ErrorContains(t, err, "does not support mask")
 
 	var multipartBody bytes.Buffer
 	writer := multipart.NewWriter(&multipartBody)

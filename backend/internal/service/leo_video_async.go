@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -38,12 +37,6 @@ type LeoAsyncUpstreamError struct {
 	Message    string
 	Retryable  bool
 	Ambiguous  bool
-}
-
-var videoProviderNamePattern = regexp.MustCompile(`(?i)\b(?:leonardo(?:\.ai| ai)?|leo\s*studio|leo)\b`)
-
-func SanitizeVideoProviderMessage(message string) string {
-	return videoProviderNamePattern.ReplaceAllString(message, "Video service")
 }
 
 func (e *LeoAsyncUpstreamError) Error() string {

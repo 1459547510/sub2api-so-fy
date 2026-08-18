@@ -160,9 +160,25 @@ describe('AvailableChannelsTable responsive surfaces', () => {
     const mobile = wrapper.get('[data-testid="mobile-channels"]')
 
     expect(mobile.text()).toContain('Fallback channel')
-    expect(mobile.text()).toContain('openai')
+    expect(mobile.text()).toContain('OpenAI')
+    expect(mobile.text()).not.toContain('openai')
     expect(mobile.text()).toContain('No models')
     expect(mobile.findAll('dd')[0].text()).toBe('-')
+  })
+
+  it('shows video platform as Video instead of the internal channel id', () => {
+    const wrapper = mountTable({
+      rows: [
+        {
+          name: 'Video channel',
+          description: '',
+          platforms: [{ platform: 'leo', groups: [], supported_models: [] }],
+        },
+      ],
+    })
+
+    expect(wrapper.text()).toContain('Video')
+    expect(wrapper.text()).not.toMatch(/\bleo\b/i)
   })
 
   it('provides loading and empty states on both responsive surfaces', async () => {

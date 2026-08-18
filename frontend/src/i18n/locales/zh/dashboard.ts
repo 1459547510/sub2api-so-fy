@@ -1,4 +1,6 @@
-export default {
+import { applySeedanceV2DocsToDashboard } from '@/utils/seedanceV2DocsCatalog'
+
+const dashboardMessages = {
   dashboard: {
     title: '仪表盘',
     welcomeMessage: '欢迎回来！这是您账户的概览。',
@@ -948,6 +950,7 @@ export default {
       perSecond: '按秒',
     },
     apiDocs: {
+      // Seedance V2 copy is selected by frontend/src/utils/seedanceV2DocsSource.ts.
       v2: {
         eyebrow: '开发者接口',
         title: '视频图片统一 API 对接文档',
@@ -973,35 +976,43 @@ export default {
         video: { title: '异步视频接口', description: '文本、首尾帧、参考图片、参考视频和参考音频使用同一个创建路径；实际可用字段以模型能力和服务端校验为准。' },
         videoFields: { model: '从 /v1/models 选择视频模型 ID。', prompt: '描述场景、动作、镜头和风格。', resolution: '模型支持的分辨率，例如 720p。', duration: '模型支持的整数秒数。', aspectRatio: '模型支持的画面比例，例如 16:9。', audio: '是否请求生成音频，默认 false。', promptEnhance: '可选提示词增强档位；只有模型支持时才发送。', imageUrl: '单张首帧绝对 HTTP(S) URL。', startFrameUrl: '首帧绝对 HTTP(S) URL。', endFrameUrl: '尾帧绝对 HTTP(S) URL。', guidances: '参考媒体对象；图片、视频和音频分别放在 image_reference、video_reference_base、audio_reference。' },
         matrix: {
-          title: '逐模型参数矩阵', description: '先通过 /v1/models 确认当前 Key 可用的模型，再按下表选择该模型允许的分辨率、时长、画面比例和参考输入。Seedance 2.0 / Fast / Mini 按时长 4-15 秒（默认 5 秒）校验，各分辨率画面比例相同。不支持的组合会返回 400 或 422。', model: '模型', resolution: '分辨率', duration: '时长', aspectRatio: '画面比例', references: '参考媒体',
+          title: '逐模型参数矩阵', description: '先通过 /v1/models 确认当前 Key 可用的模型，再按下表选择该模型允许的分辨率、时长、画面比例和参考输入。不支持的组合会返回 400 或 422。', model: '模型', resolution: '分辨率', duration: '时长', aspectRatio: '画面比例', references: '参考媒体',
           video: { resolution: '按模型能力', duration: '按模型能力，默认值由服务端决定', aspectRatio: '按模型能力', references: '首尾帧、图片、视频、音频按模型能力启用' },
           image: { resolution: '使用 size 字段，按模型能力', duration: '不适用', aspectRatio: '由 size 或模型默认值决定', references: '部分模型使用 /v1/images/edits 的 images[] 和可选 mask；部分模型使用 image_urls，或把 edits 的 images[].image_url 转成 image_urls' },
           seedance20: {
-            resolution: '480p、720p、1080p、4k',
-            duration: '4-15 秒，默认 5 秒；各分辨率相同',
-            aspectRatio: '各分辨率均为 16:9、4:3、1:1、3:4、9:16、21:9',
+            resolution: '480p、720p、1080p、4k，默认 480p',
+            duration: '4-15 秒，默认 4 秒；各分辨率相同',
+            aspectRatio: '各分辨率均为 16:9、9:16、1:1、4:3、3:4、21:9',
             promptLimit: '本网关按 5000 字符校验',
-            references: '首帧 1、尾帧 1、参考图 9、参考视频 3、参考音频 3；可与首尾帧同时使用',
+            references: '首帧 1、尾帧 1、参考图 12、参考视频 3、参考音频 3；可与首尾帧同时使用',
           },
           seedance20Fast: {
-            resolution: '480p、720p',
-            duration: '4-15 秒，默认 5 秒',
-            aspectRatio: '各分辨率均为 16:9、4:3、1:1、3:4、9:16、21:9',
+            resolution: '480p、720p，默认 480p',
+            duration: '4-15 秒，默认 4 秒',
+            aspectRatio: '各分辨率均为 16:9、9:16、1:1、4:3、3:4、21:9',
             promptLimit: '本网关按 5000 字符校验',
-            references: '首帧 1、尾帧 1、参考图 9、参考视频 3、参考音频 3；可与首尾帧同时使用',
+            references: '首帧 1、尾帧 1、参考图 12、参考视频 3、参考音频 3；可与首尾帧同时使用',
           },
           seedance20Mini: {
-            resolution: '480p、720p',
-            duration: '4-15 秒，默认 5 秒',
-            aspectRatio: '各分辨率均为 16:9、4:3、1:1、3:4、9:16、21:9',
+            resolution: '480p、720p、1080p，默认 480p',
+            duration: '4-12 秒，默认 4 秒',
+            aspectRatio: '各分辨率均为 16:9、9:16、1:1、4:3、3:4、21:9',
             promptLimit: '本网关按 5000 字符校验',
-            references: '首帧 1、尾帧 1、参考图 9、参考视频 3、参考音频 3；可与首尾帧同时使用',
+            references: '首帧 1、尾帧 1，图片合计最多 2 张；不支持参考视频和参考音频',
+          },
+          seedance25: {
+            resolution: '480p、720p，默认 480p',
+            duration: '4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒',
+            aspectRatio: '各分辨率均为 16:9、9:16、1:1、4:3、3:4、21:9',
+            promptLimit: '本网关按 5000 字符校验',
+            references: '首帧 1、尾帧 1、参考图 30、参考视频 3、参考音频 3；可与首尾帧同时使用',
           },
         },
         models: {
-          seedance20: 'Seedance 2.0：支持 480p/720p/1080p/4k，时长 4-15 秒，默认 5 秒；画面比例为 16:9、4:3、1:1、3:4、9:16、21:9。最多 9 张参考图、3 个参考视频和 3 个参考音频。本示例为 4k 文生视频。',
-          seedance20Fast: 'Seedance 2.0 Fast：仅 480p/720p，时长 4-15 秒，默认 5 秒；画面比例与标准版相同。最多 9 张参考图、3 个参考视频和 3 个参考音频。',
-          seedance20Mini: 'Seedance 2.0 Mini：仅 480p/720p，时长 4-15 秒，默认 5 秒；画面比例与标准版相同，不再限制为 16:9/1:1/9:16。最多 9 张参考图、3 个参考视频和 3 个参考音频。',
+          seedance20: 'Seedance 2.0：支持 480p/720p/1080p/4k，默认 480p；时长 4-15 秒，默认 4 秒；画面比例为 16:9、9:16、1:1、4:3、3:4、21:9。最多 12 张参考图、3 个参考视频和 3 个参考音频。本示例为 4k 文生视频。',
+          seedance20Fast: 'Seedance 2.0 Fast：仅 480p/720p，默认 480p；时长 4-15 秒，默认 4 秒；画面比例与标准版相同。最多 12 张参考图、3 个参考视频和 3 个参考音频。',
+          seedance20Mini: 'Seedance 2.0 Mini：支持 480p/720p/1080p，默认 480p；时长 4-12 秒，默认 4 秒；画面比例与标准版相同。图片合计最多 2 张，不支持参考视频和参考音频。本示例为 1080p 文生视频。',
+          seedance25: 'Seedance 2.5：仅 480p/720p，默认 480p；时长只能为 4、5、6、8、10、12、15、20、25、30 秒，默认 4 秒；画面比例与 2.0 相同。最多 30 张参考图、3 个参考视频和 3 个参考音频。',
         },
         examples: {
           videoRequest: '视频创建请求', acceptedResponse: '202 接收响应', modelList: '模型列表请求', imageGeneration: '图片生成请求', imageReference: '图片参考图请求', imageEdit: '图片编辑 JSON 请求', imageMultipart: '图片编辑 multipart 请求', imageResponse: '图片响应', upload: '媒体上传请求', uploadResponse: '媒体上传响应', uploadMedia: '上传视频和音频', videoStartFrame: '视频首帧请求', videoFramePair: '视频首尾帧请求', videoReferences: '视频参考图片请求', videoAudio: '视频参考音频请求', modelTitle: '逐模型请求示例', modelDescription: '下面为每个视频模型提供可直接复制的 curl 请求。请按该模型矩阵选择分辨率、时长、画面比例和参考媒体；生产环境仍以 /v1/models 返回的 ID 为准。', videoModelDescription: '视频模型使用异步创建、轮询和内容下载流程。', imageModelDescription: '图片模型使用 OpenAI Images 生成或编辑流程。', poll: '查询任务并下载视频',
@@ -1412,3 +1423,5 @@ export default {
 
   // Admin
 }
+
+export default applySeedanceV2DocsToDashboard(dashboardMessages, 'zh')

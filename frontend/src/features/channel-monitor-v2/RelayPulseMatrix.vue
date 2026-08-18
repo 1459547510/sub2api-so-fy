@@ -176,6 +176,7 @@ import type {
   MonitorMetric,
 } from '@/api/channelMonitorV2'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { platformLabel } from '@/utils/platformColors'
 import Icon from '@/components/icons/Icon.vue'
 import {
   formatLatencyPrivacy,
@@ -348,7 +349,7 @@ function cellClass(health: MonitorHealth, requestCount: number): string {
 }
 
 function rowLabel(row: MonitorMatrixRow): string {
-  const parts = [row.platform]
+  const parts = [platformLabel(row.platform)]
   if (row.group_name || row.group_id) parts.push(row.group_name || `#${row.group_id}`)
   if (row.model) parts.push(row.model === '__other__' ? t('channelMonitorV2.otherModels') : row.model)
   return parts.join(' / ')

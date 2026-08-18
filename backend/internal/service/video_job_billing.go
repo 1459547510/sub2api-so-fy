@@ -141,7 +141,7 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 			pricingSource = resolved.Source
 		}
 	}
-	if !videoPricingIsCompleteForModel(billingModel, price400P, price480P, price544P, price720P, price960P, price1080P, price1440P, price2160P) {
+	if !videoPricingIsCompleteForModel(billingModel, job.Resolution, price400P, price480P, price544P, price720P, price960P, price1080P, price1440P, price2160P) {
 		return errors.New("video pricing is incomplete")
 	}
 	if price400P == nil {
@@ -203,46 +203,27 @@ func (s *VideoJobBillingService) Prepare(ctx context.Context, job *VideoJob, api
 	return err
 }
 
-func videoPricingIsCompleteForModel(model string, price400P, price480P, price544P, price720P, price960P, price1080P, price1440P, price2160P *float64) bool {
-	for _, resolution := range LeoVideoPricingResolutions(model) {
-		switch resolution {
-		case VideoBillingResolution400P:
-			if price400P == nil {
-				return false
-			}
-		case VideoBillingResolution480P:
-			if price480P == nil {
-				return false
-			}
-		case VideoBillingResolution544P:
-			if price544P == nil {
-				return false
-			}
-		case VideoBillingResolution720P:
-			if price720P == nil {
-				return false
-			}
-		case VideoBillingResolution960P:
-			if price960P == nil {
-				return false
-			}
-		case VideoBillingResolution1080P:
-			if price1080P == nil {
-				return false
-			}
-		case VideoBillingResolution1440P:
-			if price1440P == nil {
-				return false
-			}
-		case VideoBillingResolution2160P:
-			if price2160P == nil {
-				return false
-			}
-		default:
-			return false
-		}
+func videoPricingIsCompleteForModel(model, resolution string, price400P, price480P, price544P, price720P, price960P, price1080P, price1440P, price2160P *float64) bool {
+	switch NormalizeLeoVideoBillingResolutionOrDefault(model, resolution) {
+	case VideoBillingResolution400P:
+		return price400P != nil
+	case VideoBillingResolution480P:
+		return price480P != nil
+	case VideoBillingResolution544P:
+		return price544P != nil
+	case VideoBillingResolution720P:
+		return price720P != nil
+	case VideoBillingResolution960P:
+		return price960P != nil
+	case VideoBillingResolution1080P:
+		return price1080P != nil
+	case VideoBillingResolution1440P:
+		return price1440P != nil
+	case VideoBillingResolution2160P:
+		return price2160P != nil
+	default:
+		return price480P != nil
 	}
-	return true
 }
 
 func (s *VideoJobBillingService) SettleCompleted(ctx context.Context, job *VideoJob, result json.RawMessage) error {

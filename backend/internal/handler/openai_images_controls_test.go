@@ -81,5 +81,6 @@ func TestOpenAIGatewayHandlerImages_LeoMaskRejectedBeforeScheduling(t *testing.T
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	require.Equal(t, "invalid_request_error", gjson.GetBytes(rec.Body.Bytes(), "error.type").String())
-	require.Contains(t, rec.Body.String(), "do not support mask")
+	require.Contains(t, rec.Body.String(), "does not support mask")
+	require.NotRegexp(t, `(?i)leonardo|leostudio|leo\s*studio|\bleo\b|\bkrea\b`, rec.Body.String())
 }

@@ -6641,5 +6641,23 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/i18n/locales/{zh,en}/dashboard.ts` and `docs/WEB_API_INTEGRATION_V2_CN.md`: public V2 wording only.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.5..v0.1.177-fy.6` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.5`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.6` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-18 - Task: Release public channel-name cleanup as v0.1.177-fy.7
+### What was done
+- User-facing UI no longer shows internal channel IDs such as `leo`; those surfaces display `Video`.
+- In-app Seedance V2 docs switch to the current contract (default 4s, Mini 1080p / 4-12s, 2.5 discrete durations) without shipping vendor names in the frontend bundle.
+- Client image and video error strings no longer name upstream vendors.
+- Video billing accepts a subset of native resolution prices so older seedance-2.0 rows without 2160p still bill at 480p/720p/1080p.
+- Prepared annotated tag `v0.1.177-fy.7` from this commit.
+
+### Testing
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1 -timeout=120s -run "LeoImage|SanitizeVideo|SanitizeImage|OpenAIImagesUpstreamErrorClientMessage|VideoPriceConfigFromResolvedPricing|VideoJobBillingPrepare"` passed.
+- From `backend/`, `go test ./internal/handler -count=1 -timeout=120s -run "LeoMaskRejected|LeoVideoJobErrorsHide|LeoVideoPassthroughMessagesHide|LeoVideoAsyncJobHides|LeoEdits"` passed.
+- From `frontend/`, `npx vitest run src/utils/__tests__/videoApiDocs.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts src/components/channels/__tests__/AvailableChannelsTable.spec.ts src/features/channel-monitor-v2/__tests__/RelayPulseMatrix.spec.ts src/views/user/__tests__/VideoGenerationView.spec.ts` passed, 5 files and 50 tests.
+
+### Notes
+- `frontend/src/utils/seedanceV2DocsSource.ts`: operator switch is `current` / `previous`; vendor names stay in comments only.
+- `backend/internal/service/public_vendor.go`: shared sanitizer for public image and video error strings.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.6..v0.1.177-fy.7` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.6`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.7` and its remote tag. Preserve unrelated `.superpowers/` content.
+
 
 

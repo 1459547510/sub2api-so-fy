@@ -1,4 +1,6 @@
-export default {
+import { applySeedanceV2DocsToDashboard } from '@/utils/seedanceV2DocsCatalog'
+
+const dashboardMessages = {
   dashboard: {
     title: 'Dashboard',
     welcomeMessage: "Welcome back! Here's an overview of your account.",
@@ -943,6 +945,7 @@ export default {
       perSecond: 'per second',
     },
     apiDocs: {
+      // Seedance V2 copy is selected by frontend/src/utils/seedanceV2DocsSource.ts.
       v2: {
         eyebrow: 'Developer API',
         title: 'Video and Image API Integration',
@@ -966,35 +969,43 @@ export default {
         video: { title: 'Asynchronous video API', description: 'Text, start/end frames, image references, video references, and audio references use one creation path; accepted fields are validated per model.' },
         videoFields: { model: 'Choose a video model ID from /v1/models.', prompt: 'Describe the scene, action, camera, and style.', resolution: 'A resolution supported by the model, such as 720p.', duration: 'An integer duration supported by the model.', aspectRatio: 'An aspect ratio supported by the model, such as 16:9.', audio: 'Whether to request generated audio; defaults to false.', promptEnhance: 'Optional prompt enhancement mode; send it only when supported.', imageUrl: 'One absolute HTTP(S) start-frame URL.', startFrameUrl: 'An absolute HTTP(S) start-frame URL.', endFrameUrl: 'An absolute HTTP(S) end-frame URL.', guidances: 'Reference objects; put images, videos, and audio in image_reference, video_reference_base, and audio_reference.' },
         matrix: {
-          title: 'Per-model parameter matrix', description: 'Read /v1/models first to confirm the models available to the current Key, then choose a supported resolution, duration, aspect ratio, and reference input from the matching row. Seedance 2.0 / Fast / Mini accept 4-15 seconds (default 5 seconds) with the same aspect ratios at every listed resolution. Invalid combinations return 400 or 422.', model: 'Model', resolution: 'Resolution', duration: 'Duration', aspectRatio: 'Aspect ratio', references: 'Reference media',
+          title: 'Per-model parameter matrix', description: 'Read /v1/models first to confirm the models available to the current Key, then choose a supported resolution, duration, aspect ratio, and reference input from the matching row. Invalid combinations return 400 or 422.', model: 'Model', resolution: 'Resolution', duration: 'Duration', aspectRatio: 'Aspect ratio', references: 'Reference media',
           video: { resolution: 'Model-specific', duration: 'Model-specific; the server supplies the default', aspectRatio: 'Model-specific', references: 'Start/end frames and media references are model-specific' },
           image: { resolution: 'Use size, model-specific', duration: 'Not applicable', aspectRatio: 'Determined by size or the model default', references: 'Some models use /v1/images/edits with images[] and an optional mask; others use image_urls, or rewrite edits images[].image_url to image_urls' },
           seedance20: {
-            resolution: '480p, 720p, 1080p, 4k',
-            duration: '4-15s, default 5s; the same range at every resolution',
-            aspectRatio: '16:9, 4:3, 1:1, 3:4, 9:16, 21:9 at every resolution',
+            resolution: '480p, 720p, 1080p, 4k, default 480p',
+            duration: '4-15s, default 4s; the same range at every resolution',
+            aspectRatio: '16:9, 9:16, 1:1, 4:3, 3:4, 21:9 at every resolution',
             promptLimit: 'This gateway enforces a 5000-character limit',
-            references: '1 start frame, 1 end frame, 9 images, 3 videos, 3 audio references; frames may be combined with other references',
+            references: '1 start frame, 1 end frame, 12 images, 3 videos, 3 audio references; frames may be combined with other references',
           },
           seedance20Fast: {
-            resolution: '480p, 720p',
-            duration: '4-15s, default 5s',
-            aspectRatio: '16:9, 4:3, 1:1, 3:4, 9:16, 21:9 at every resolution',
+            resolution: '480p, 720p, default 480p',
+            duration: '4-15s, default 4s',
+            aspectRatio: '16:9, 9:16, 1:1, 4:3, 3:4, 21:9 at every resolution',
             promptLimit: 'This gateway enforces a 5000-character limit',
-            references: '1 start frame, 1 end frame, 9 images, 3 videos, 3 audio references; frames may be combined with other references',
+            references: '1 start frame, 1 end frame, 12 images, 3 videos, 3 audio references; frames may be combined with other references',
           },
           seedance20Mini: {
-            resolution: '480p, 720p',
-            duration: '4-15s, default 5s',
-            aspectRatio: '16:9, 4:3, 1:1, 3:4, 9:16, 21:9 at every resolution',
+            resolution: '480p, 720p, 1080p, default 480p',
+            duration: '4-12s, default 4s',
+            aspectRatio: '16:9, 9:16, 1:1, 4:3, 3:4, 21:9 at every resolution',
             promptLimit: 'This gateway enforces a 5000-character limit',
-            references: '1 start frame, 1 end frame, 9 images, 3 videos, 3 audio references; frames may be combined with other references',
+            references: '1 start frame, 1 end frame, at most 2 images in total; video and audio references are not supported',
+          },
+          seedance25: {
+            resolution: '480p, 720p, default 480p',
+            duration: '4, 5, 6, 8, 10, 12, 15, 20, 25, or 30s, default 4s',
+            aspectRatio: '16:9, 9:16, 1:1, 4:3, 3:4, 21:9 at every resolution',
+            promptLimit: 'This gateway enforces a 5000-character limit',
+            references: '1 start frame, 1 end frame, 30 images, 3 videos, 3 audio references; frames may be combined with other references',
           },
         },
         models: {
-          seedance20: 'Seedance 2.0 supports 480p/720p/1080p/4k for 4-15 seconds, default 5 seconds, at 16:9, 4:3, 1:1, 3:4, 9:16, or 21:9. Up to 9 image, 3 video, and 3 audio references are supported. This example is 4k text-to-video.',
-          seedance20Fast: 'Seedance 2.0 Fast supports 480p/720p for 4-15 seconds, default 5 seconds, with the same aspect ratios as standard. Up to 9 image, 3 video, and 3 audio references are supported.',
-          seedance20Mini: 'Seedance 2.0 Mini supports 480p/720p for 4-15 seconds, default 5 seconds, with the same aspect ratios as standard. It is no longer limited to 16:9/1:1/9:16. Up to 9 image, 3 video, and 3 audio references are supported.',
+          seedance20: 'Seedance 2.0 supports 480p/720p/1080p/4k, default 480p, for 4-15 seconds, default 4 seconds, at 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9. Up to 12 image, 3 video, and 3 audio references are supported. This example is 4k text-to-video.',
+          seedance20Fast: 'Seedance 2.0 Fast supports 480p/720p, default 480p, for 4-15 seconds, default 4 seconds, with the same aspect ratios as standard. Up to 12 image, 3 video, and 3 audio references are supported.',
+          seedance20Mini: 'Seedance 2.0 Mini supports 480p/720p/1080p, default 480p, for 4-12 seconds, default 4 seconds, with the same aspect ratios as standard. At most 2 images in total; video and audio references are not supported. This example is 1080p text-to-video.',
+          seedance25: 'Seedance 2.5 supports 480p/720p, default 480p, and only 4, 5, 6, 8, 10, 12, 15, 20, 25, or 30 seconds, default 4 seconds, with the same aspect ratios as 2.0. Up to 30 image, 3 video, and 3 audio references are supported.',
         },
         examples: { videoRequest: 'Video creation request', acceptedResponse: '202 accepted response', modelList: 'Model list request', imageGeneration: 'Image generation request', imageReference: 'Image reference request', imageEdit: 'Image edit JSON request', imageMultipart: 'Image edit multipart request', imageResponse: 'Image response', upload: 'Media upload request', uploadResponse: 'Media upload response', uploadMedia: 'Upload video and audio', videoStartFrame: 'Video start-frame request', videoFramePair: 'Video start/end-frame request', videoReferences: 'Video image-reference request', videoAudio: 'Video audio-reference request', modelTitle: 'Per-model request examples', modelDescription: 'Each video model below has a copy-ready curl request. Use only the resolutions, durations, aspect ratios, and reference inputs listed for that model; production clients should still send an ID returned by /v1/models.', videoModelDescription: 'Video models use the asynchronous create, poll, and content download flow.', imageModelDescription: 'Image models use the OpenAI Images generation or edit flow.', poll: 'Poll a job and download video' },
         fields: { field: 'Field', type: 'Type', required: 'Required', description: 'Description', yes: 'Yes', no: 'No' },
@@ -1403,3 +1414,5 @@ export default {
 
   // Admin
 }
+
+export default applySeedanceV2DocsToDashboard(dashboardMessages, 'en')

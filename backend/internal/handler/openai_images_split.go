@@ -103,7 +103,7 @@ func (h *OpenAIGatewayHandler) handleOpenAIImagesNSplit(
 				if strings.TrimSpace(errType) == "" {
 					errType = "upstream_error"
 				}
-				message := imageErr.Message
+				message := imageErr.ClientMessage()
 				if strings.TrimSpace(message) == "" {
 					message = "Upstream request failed"
 				}

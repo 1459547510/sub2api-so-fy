@@ -84,8 +84,17 @@ func TestLeoAsyncVideoErrorsAreTypedAndDoNotExposeSecret(t *testing.T) {
 }
 
 func TestSanitizeVideoProviderMessageHidesUpstreamNames(t *testing.T) {
-	message := SanitizeVideoProviderMessage("Leonardo request failed; Leonardo AI, Leonardo.ai, LeoStudio, Leo Studio and leo rejected it")
+	message := SanitizeVideoProviderMessage("Leonardo request failed; Leonardo AI, Leonardo.ai, LeoStudio, Leo Studio, Krea and leo rejected it")
 
-	require.Equal(t, "Video service request failed; Video service, Video service, Video service, Video service and Video service rejected it", message)
+	require.Equal(t, "Video service request failed; Video service, Video service, Video service, Video service, Video service and Video service rejected it", message)
 	require.NotContains(t, strings.ToLower(message), "leo")
+	require.NotContains(t, strings.ToLower(message), "krea")
+}
+
+func TestSanitizeImageProviderMessageHidesUpstreamNames(t *testing.T) {
+	message := SanitizeImageProviderMessage("Leo image models do not support mask; Krea rejected Leonardo.ai")
+
+	require.Equal(t, "Image service image models do not support mask; Image service rejected Image service", message)
+	require.NotContains(t, strings.ToLower(message), "leo")
+	require.NotContains(t, strings.ToLower(message), "krea")
 }

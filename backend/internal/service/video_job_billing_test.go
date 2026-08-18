@@ -146,6 +146,40 @@ func TestVideoJobBillingPrepareUsesChannelVideoPricingByBillingModelSource(t *te
 	}
 }
 
+func TestVideoJobBillingPrepareAcceptsLegacySeedance20ThreeTierPricing(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{}
+	gateway, pricing := newVideoJobChannelPricingServices(t, BillingModelSourceRequested, "seedance-2.0", 0.12, 0.25, 0.60)
+	svc := &VideoJobBillingService{BillingRepo: balance, Gateway: gateway, Pricing: pricing}
+	groupID := int64(100)
+	job := &VideoJob{
+		JobID: "vidjob_seedance20_1080p", UserID: 1, APIKeyID: 2, GroupID: groupID,
+		RequestedModel: "seedance-2.0", UpstreamModel: "seedance-2.0", Resolution: "1080p", DurationSeconds: 15,
+	}
+
+	require.NoError(t, svc.Prepare(context.Background(), job, newVideoJobBillingAPIKey(groupID), &User{ID: 1}, nil))
+	require.NotNil(t, job.HoldAmount)
+	require.InDelta(t, 9.0, *job.HoldAmount, 1e-12)
+
+	var snapshot VideoJobBillingSnapshot
+	require.NoError(t, json.Unmarshal(job.BillingSnapshot, &snapshot))
+	require.Equal(t, PricingSourceChannel, snapshot.PricingSource)
+	require.InDelta(t, 0.60, snapshot.Price1080P, 1e-12)
+	require.Zero(t, snapshot.Price2160P)
+}
+
+func TestVideoJobBillingPrepareRejectsSeedance20FourKWithout2160Price(t *testing.T) {
+	gateway, pricing := newVideoJobChannelPricingServices(t, BillingModelSourceRequested, "seedance-2.0", 0.12, 0.25, 0.60)
+	svc := &VideoJobBillingService{BillingRepo: &fakeVideoJobBalanceRepo{}, Gateway: gateway, Pricing: pricing}
+	groupID := int64(100)
+	job := &VideoJob{
+		JobID: "vidjob_seedance20_4k", UserID: 1, APIKeyID: 2, GroupID: groupID,
+		RequestedModel: "seedance-2.0", UpstreamModel: "seedance-2.0", Resolution: "4k", DurationSeconds: 15,
+	}
+
+	err := svc.Prepare(context.Background(), job, newVideoJobBillingAPIKey(groupID), &User{ID: 1}, nil)
+	require.EqualError(t, err, "video pricing is incomplete")
+}
+
 func TestVideoJobBillingPrepareFallsBackToGroupVideoPricing(t *testing.T) {
 	balance := &fakeVideoJobBalanceRepo{}
 	gateway, pricing := newVideoJobChannelPricingServices(t, BillingModelSourceRequested, "another-model", 0.01, 0.02, 0.03)

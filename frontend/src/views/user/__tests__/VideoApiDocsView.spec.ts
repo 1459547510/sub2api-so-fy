@@ -78,7 +78,8 @@ describe('VideoApiDocsView', () => {
     expect(examples.some((code) => code.includes('/v1/images/generations') && code.includes('"image_urls"'))).toBe(true)
     expect(examples.some((code) => code.includes('/v1/images/edits') && code.includes('image[]=@./input.png'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "gpt-image-2"') && code.includes('images'))).toBe(true)
-    expect(examples.some((code) => code.includes('"model": "seedance-2.0"') && code.includes('"resolution": "4k"'))).toBe(true)
+    expect(examples.some((code) => code.includes('"model": "seedance-2.0"') && code.includes('"resolution": "4k"') && code.includes('"duration": 4'))).toBe(true)
+    expect(examples.some((code) => code.includes('"model": "seedance-2.0-mini"') && code.includes('"resolution": "1080p"'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "seedance-2.0"') && code.includes('/v1/videos/generations'))).toBe(true)
     expect(examples.some((code) => code.includes('-F "video=@./reference.mp4"'))).toBe(true)
     expect(examples.some((code) => code.includes('-F "audio=@./reference.mp3"'))).toBe(true)
@@ -88,7 +89,7 @@ describe('VideoApiDocsView', () => {
     for (const model of documentedVideoModels) {
       expect(examples.some((code) => code.includes(`"model": "${model}"`) && code.includes('/v1/videos/generations'))).toBe(true)
     }
-    expect(wrapper.html()).not.toMatch(/Leonardo|LeoStudio|Leo\s*Studio|\bLeo\b|\bKrea\b|上游|upstream|provider|account_id|target_platform|composite|internal\/video-inputs/i)
+    expect(wrapper.html()).not.toMatch(/Leonardo|LeoStudio|Leo\s*Studio|\bLeo\b|\bKrea\b|\bTrioma\b|byteplus|上游|upstream|provider|account_id|target_platform|composite|internal\/video-inputs/i)
     expect(wrapper.find('#pricing').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('video.apiDocs.v2.nav.pricing')
     expect(wrapper.text()).not.toContain('video.apiDocs.v2.pricing.title')
@@ -117,6 +118,6 @@ describe('VideoApiDocsView', () => {
     for (const model of documentedVideoModels) {
       expect(examples.some((code) => code.includes(`"model": "${model}"`) && code.includes('/v1/videos/generations'))).toBe(true)
     }
-    expect(wrapper.html()).not.toMatch(/Leonardo|Leo\s*Studio|UUID|upstream|provider|internal\/video-inputs|upstream_job_id/i)
+    expect(wrapper.html()).not.toMatch(/Leonardo|LeoStudio|Leo\s*Studio|\bLeo\b|\bKrea\b|\bTrioma\b|byteplus|上游|upstream|provider|UUID|internal\/video-inputs|upstream_job_id/i)
   })
 })

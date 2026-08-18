@@ -1,11 +1,14 @@
 package service
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 )
+
+var publicImageVendorName = regexp.MustCompile(`(?i)leonardo|leostudio|leo\s*studio|\bleo\b|\bkrea\b`)
 
 func TestCollectLeoImageReferenceURLs(t *testing.T) {
 	body := []byte(`{
@@ -61,7 +64,7 @@ func TestRewriteLeoImageUpstreamRequestKeepsNativeImageURLs(t *testing.T) {
 
 func TestRewriteLeoImageUpstreamRequestRejectsMaskAndMultipart(t *testing.T) {
 	_, _, _, err := rewriteLeoImageUpstreamRequest([]byte(`{"prompt":"x","images":[{"image_url":"https://example.com/a.png"}],"mask":{"image_url":"https://example.com/mask.png"}}`), "application/json", &OpenAIImagesRequest{Endpoint: openAIImagesEditsEndpoint})
-	require.ErrorContains(t, err, "do not support mask")
+	require.ErrorContains(t, err, "does not support mask")
 
 	_, _, _, err = rewriteLeoImageUpstreamRequest([]byte(`{"prompt":"x"}`), "multipart/form-data; boundary=x", &OpenAIImagesRequest{Multipart: true, Endpoint: openAIImagesEditsEndpoint})
 	require.ErrorContains(t, err, "multipart uploads are not supported")
@@ -71,6 +74,25 @@ func TestValidateLeoImageReferenceURL(t *testing.T) {
 	require.NoError(t, validateLeoImageReferenceURL("https://cdn.example/ref.png"))
 	require.ErrorContains(t, validateLeoImageReferenceURL("data:image/png;base64,AAAA"), "data URLs")
 	require.ErrorContains(t, validateLeoImageReferenceURL("/local.png"), "absolute HTTP(S) URL")
+}
+
+func TestOpenAIImagesUpstreamErrorClientMessageHidesVendorNames(t *testing.T) {
+	err := &OpenAIImagesUpstreamError{Message: "Leonardo.ai rejected the request through LeoStudio and Krea"}
+	require.Equal(t, "Image service rejected the request through Image service and Image service", err.ClientMessage())
+	require.NotRegexp(t, publicImageVendorName, err.ClientMessage())
+}
+
+func TestLeoImagePublicErrorMessagesHideVendorNames(t *testing.T) {
+	for _, message := range []string{
+		leoImageMultipartUnsupported,
+		leoImageMaskUnsupported,
+		leoImageDataURLUnsupported,
+		leoImageURLRequired,
+		leoImageJSONRequired,
+		(&LeoImageRequestError{message: leoImageMaskUnsupported}).Error(),
+	} {
+		require.NotRegexp(t, publicImageVendorName, message)
+	}
 }
 
 func TestValidateLeoImageParsedRequest(t *testing.T) {

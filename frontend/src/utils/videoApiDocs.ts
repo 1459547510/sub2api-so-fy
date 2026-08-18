@@ -1,4 +1,7 @@
 import { buildGatewayUrl } from '@/api/client'
+import { activeSeedanceV2Docs } from './seedanceV2DocsCatalog'
+
+// Seedance V2 matrix/examples follow frontend/src/utils/seedanceV2DocsSource.ts.
 
 export type VideoModelMatrixRow = {
   model: string
@@ -40,7 +43,7 @@ const matrixKeys = [
   ['veo-3.1-lite', 'veo31Lite'],
 ] as const
 
-const kreaSeedanceMatrixKeys = new Set(['seedance20', 'seedance20Fast', 'seedance20Mini'])
+const v2SeedanceMatrixKeys = new Set(activeSeedanceV2Docs.v2MatrixKeys)
 
 export const videoModelMatrixRows: VideoModelMatrixRow[] = matrixKeys.map(([model, key]) => ({
   model,
@@ -52,7 +55,7 @@ export const videoModelMatrixRows: VideoModelMatrixRow[] = matrixKeys.map(([mode
 }))
 
 export const v2VideoModelMatrixRows: VideoModelMatrixRow[] = matrixKeys.map(([model, key]) => {
-  const prefix = kreaSeedanceMatrixKeys.has(key) ? 'video.apiDocs.v2.matrix' : 'video.apiDocs.matrix'
+  const prefix = v2SeedanceMatrixKeys.has(key) ? 'video.apiDocs.v2.matrix' : 'video.apiDocs.matrix'
   return {
     model,
     resolution: `${prefix}.${key}.resolution`,
@@ -388,41 +391,7 @@ const modelExampleBodies: Array<{ model: string; description: string; body: stri
   },
 ]
 
-const v2SeedanceExampleOverrides: Record<string, { description: string; body: string }> = {
-  'seedance-2.0': {
-    description: 'video.apiDocs.v2.models.seedance20',
-    body: `{
-  "model": "seedance-2.0",
-  "prompt": "A slow aerial shot over a coastal city at sunrise",
-  "resolution": "4k",
-  "duration": 5,
-  "aspect_ratio": "16:9",
-  "audio": false
-}`,
-  },
-  'seedance-2.0-fast': {
-    description: 'video.apiDocs.v2.models.seedance20Fast',
-    body: `{
-  "model": "seedance-2.0-fast",
-  "prompt": "A fast tracking shot through a neon city street",
-  "resolution": "720p",
-  "duration": 5,
-  "aspect_ratio": "21:9",
-  "audio": false
-}`,
-  },
-  'seedance-2.0-mini': {
-    description: 'video.apiDocs.v2.models.seedance20Mini',
-    body: `{
-  "model": "seedance-2.0-mini",
-  "prompt": "A paper boat drifting across a calm lake",
-  "resolution": "720p",
-  "duration": 5,
-  "aspect_ratio": "21:9",
-  "audio": false
-}`,
-  },
-}
+const v2SeedanceExampleOverrides = activeSeedanceV2Docs.exampleOverrides
 
 export function buildVideoModelExamples(baseUrl: string): VideoModelExample[] {
   return modelExampleBodies.map((example) => ({

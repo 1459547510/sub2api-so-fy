@@ -569,6 +569,23 @@ func TestVideoPriceConfigFromResolvedPricing(t *testing.T) {
 		require.Nil(t, config.Price1080P)
 	})
 
+	t.Run("seedance 2.0 keeps legacy 480p/720p/1080p rows billable", func(t *testing.T) {
+		config, ok := VideoPriceConfigFromResolvedPricing(&ResolvedPricing{
+			Mode:           BillingModeVideo,
+			channelPricing: &ChannelModelPricing{Models: []string{"seedance-2.0"}},
+			RequestTiers: []PricingInterval{
+				{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.12)},
+				{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.25)},
+				{TierLabel: "1080p", PerRequestPrice: testPtrFloat64(0.60)},
+			},
+		})
+		require.True(t, ok)
+		require.InDelta(t, 0.12, *config.Price480P, 1e-12)
+		require.InDelta(t, 0.25, *config.Price720P, 1e-12)
+		require.InDelta(t, 0.60, *config.Price1080P, 1e-12)
+		require.Nil(t, config.Price2160P)
+	})
+
 	t.Run("legacy Happy Horse and Grok tiers remain readable during migration", func(t *testing.T) {
 		legacy := []PricingInterval{
 			{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.10)},
@@ -603,11 +620,19 @@ func TestVideoPriceConfigFromResolvedPricing(t *testing.T) {
 		{name: "nil resolved"},
 		{name: "wrong billing mode", resolved: &ResolvedPricing{Mode: BillingModeImage}},
 		{
-			name: "missing tier",
+			name: "unknown tier",
 			resolved: &ResolvedPricing{Mode: BillingModeVideo, RequestTiers: []PricingInterval{
 				{TierLabel: "480p", PerRequestPrice: testPtrFloat64(0.05)},
 				{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.08)},
+				{TierLabel: "potato", PerRequestPrice: testPtrFloat64(0.12)},
 			}},
+		},
+		{
+			name: "empty tiers",
+			resolved: &ResolvedPricing{
+				Mode:           BillingModeVideo,
+				channelPricing: &ChannelModelPricing{Models: []string{"seedance-2.0"}},
+			},
 		},
 		{
 			name: "duplicate tier",

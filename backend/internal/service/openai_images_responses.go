@@ -85,12 +85,16 @@ func (e *OpenAIImagesUpstreamError) clientMessage() string {
 		return "Upstream request failed"
 	}
 	if trimmed := strings.TrimSpace(e.Message); trimmed != "" {
-		return trimmed
+		return SanitizeImageProviderMessage(trimmed)
 	}
 	if trimmed := strings.TrimSpace(e.Code); trimmed != "" {
-		return trimmed
+		return SanitizeImageProviderMessage(trimmed)
 	}
 	return "Upstream request failed"
+}
+
+func (e *OpenAIImagesUpstreamError) ClientMessage() string {
+	return e.clientMessage()
 }
 
 // IsOpenAIImagesRetryableUpstreamError reports whether an Images error is an

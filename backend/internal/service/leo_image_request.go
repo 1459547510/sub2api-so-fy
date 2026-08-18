@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	leoImageMultipartUnsupported = "Leo image models accept HTTP(S) image URLs via image_urls or images[].image_url; multipart uploads are not supported"
-	leoImageMaskUnsupported      = "Leo image models do not support mask; send image_urls or images[].image_url"
-	leoImageDataURLUnsupported   = "Leo image models do not accept data URLs; use an absolute HTTP(S) URL"
+	leoImageMultipartUnsupported = "This model accepts HTTP(S) image URLs via image_urls or images[].image_url; multipart uploads are not supported"
+	leoImageMaskUnsupported      = "This model does not support mask; send image_urls or images[].image_url"
+	leoImageDataURLUnsupported   = "This model does not accept data URLs; use an absolute HTTP(S) URL"
 	leoImageURLRequired          = "image reference must be an absolute HTTP(S) URL"
-	leoImageJSONRequired         = "Leo image models require a JSON request body"
+	leoImageJSONRequired         = "This model requires a JSON request body"
 )
 
 type LeoImageRequestError struct {
@@ -26,7 +26,7 @@ func (e *LeoImageRequestError) Error() string {
 	if e == nil {
 		return ""
 	}
-	return e.message
+	return SanitizeImageProviderMessage(e.message)
 }
 
 func newLeoImageRequestError(message string) error {
@@ -81,7 +81,7 @@ func rewriteLeoImageUpstreamRequest(body []byte, contentType string, parsed *Ope
 	if len(refs) > 0 {
 		out, err = sjson.SetBytes(out, "image_urls", refs)
 		if err != nil {
-			return nil, "", "", fmt.Errorf("rewrite Leo image_urls: %w", err)
+			return nil, "", "", fmt.Errorf("rewrite image_urls: %w", err)
 		}
 	}
 	deletePaths := []string{"images", "image_url", "mask"}
@@ -94,7 +94,7 @@ func rewriteLeoImageUpstreamRequest(body []byte, contentType string, parsed *Ope
 		}
 		out, err = sjson.DeleteBytes(out, path)
 		if err != nil {
-			return nil, "", "", fmt.Errorf("remove Leo-incompatible image field %s: %w", path, err)
+			return nil, "", "", fmt.Errorf("remove incompatible image field %s: %w", path, err)
 		}
 	}
 	return out, "application/json", openAIImagesGenerationsEndpoint, nil
