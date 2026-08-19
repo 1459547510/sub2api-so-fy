@@ -212,6 +212,12 @@ export function formPricedVideoIntervalsToAPI(intervals: IntervalFormEntry[], mo
   )
 }
 
+/** Empty native-resolution prices mean the model is not sold and should not be saved. */
+export function isUnsoldVideoPricingEntry(entry: PricingFormEntry): boolean {
+  return entry.billing_mode === 'video'
+    && formPricedVideoIntervalsToAPI(entry.intervals || [], entry.models[0]).length === 0
+}
+
 export function videoPricingResolutionsForModel(model?: string): readonly string[] {
   const normalizedModel = model?.trim().toLowerCase()
   if (normalizedModel === 'bytedance/seedance-2.5' || normalizedModel === 'seedance-2.5') return ['480p', '720p']
@@ -297,9 +303,6 @@ export function createSyncedPricingEntries(
 
 export function validateVideoPricing(entry: PricingFormEntry, t: TranslateFn): string | null {
   if (entry.billing_mode !== 'video') return null
-  if (entry.models.length !== 1) {
-    return t('admin.channels.form.videoSingleModelRequired')
-  }
 
   const intervals = normalizeVideoIntervals(entry.intervals, entry.models[0])
   let priced = 0
@@ -311,7 +314,11 @@ export function validateVideoPricing(entry: PricingFormEntry, t: TranslateFn): s
     }
     priced++
   }
-  return priced > 0 ? null : t('admin.channels.form.videoPricesRequired')
+  if (priced === 0) return null
+  if (entry.models.length !== 1) {
+    return t('admin.channels.form.videoSingleModelRequired')
+  }
+  return null
 }
 
 // ── 模型模式冲突检测 ──────────────────────────────────────

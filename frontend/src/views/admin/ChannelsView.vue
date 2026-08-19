@@ -635,7 +635,7 @@ import { adminAPI } from '@/api/admin'
 import type { Channel, ChannelModelPricing, CreateChannelRequest, UpdateChannelRequest, AccountStatsPricingRule } from '@/api/admin/channels'
 import type { PricingFormEntry } from '@/components/admin/channel/types'
 import { COMPOSITE_ROUTE_PLATFORMS, groupMatchesChannelPlatform } from '@/components/admin/channel/compositeGroups'
-import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, apiTimePricingToForm, createDefaultTimePricingForm, formIntervalsToAPI, formPricedVideoIntervalsToAPI, formTimePricingToAPI, findModelConflict, validateIntervals, validateTimePricing, createPricingFormEntry, createSyncedPricingEntries, getNextLeoVideoModel, normalizeVideoIntervals, validateVideoPricing } from '@/components/admin/channel/types'
+import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, apiTimePricingToForm, createDefaultTimePricingForm, formIntervalsToAPI, formPricedVideoIntervalsToAPI, formTimePricingToAPI, findModelConflict, validateIntervals, validateTimePricing, createPricingFormEntry, createSyncedPricingEntries, getNextLeoVideoModel, isUnsoldVideoPricingEntry, normalizeVideoIntervals, validateVideoPricing } from '@/components/admin/channel/types'
 import type { AdminGroup, GroupPlatform } from '@/types'
 import type { Column } from '@/components/common/types'
 import { platformTextClass, platformBadgeLightClass } from '@/utils/platformColors'
@@ -1099,6 +1099,7 @@ function formToAPI(): { group_ids: number[], model_pricing: ChannelModelPricing[
     // Model pricing with platform tag
     for (const entry of section.model_pricing) {
       if (entry.models.length === 0) continue
+      if (isUnsoldVideoPricingEntry(entry)) continue
       model_pricing.push({
         platform: section.platform,
         models: entry.models,
@@ -1457,6 +1458,7 @@ async function handleSubmit() {
       return
     }
     for (const entry of section.model_pricing) {
+      if (isUnsoldVideoPricingEntry(entry)) continue
       if (entry.models.length === 0) {
         const platformLabel = t('admin.groups.platforms.' + section.platform, section.platform)
         appStore.showError(t('admin.channels.emptyModelsInPricing', { platform: platformLabel }))

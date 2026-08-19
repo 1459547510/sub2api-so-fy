@@ -7,6 +7,7 @@ import {
   getNextLeoVideoModel,
   normalizeVideoIntervals,
   validateIntervals,
+  isUnsoldVideoPricingEntry,
   validateVideoPricing,
   apiTimePricingToForm,
   createDefaultTimePricingForm,
@@ -224,11 +225,14 @@ describe('video pricing', () => {
     ])
   })
 
-  it('requires one model and at least one non-negative native resolution price', () => {
-    const entry = createPricingFormEntry(['seedance-2.0'], 'video')
-    expect(validateVideoPricing(entry, t)).toContain('videoPricesRequired')
+  it('treats an all-empty video card as unsold and still requires one model plus non-negative prices when selling', () => {
+    const entry = createPricingFormEntry(['seedance-2.5'], 'video')
+    expect(isUnsoldVideoPricingEntry(entry)).toBe(true)
+    expect(validateVideoPricing(entry, t)).toBeNull()
+    expect(formPricedVideoIntervalsToAPI(entry.intervals, entry.models[0])).toEqual([])
 
     entry.intervals[0].per_request_price = 0.01
+    expect(isUnsoldVideoPricingEntry(entry)).toBe(false)
     expect(validateVideoPricing(entry, t)).toBeNull()
     expect(formPricedVideoIntervalsToAPI(entry.intervals, entry.models[0]).map(iv => [iv.tier_label, iv.per_request_price])).toEqual([
       ['480p', 0.01],
@@ -243,7 +247,7 @@ describe('video pricing', () => {
     expect(validateVideoPricing(entry, t)).toContain('videoSingleModelRequired')
 
     entry.models.pop()
-    entry.intervals[2].per_request_price = -1
+    entry.intervals[1].per_request_price = -1
     expect(validateVideoPricing(entry, t)).toContain('videoPricesRequired')
   })
 })

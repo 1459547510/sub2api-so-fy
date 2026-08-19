@@ -6823,3 +6823,25 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This release does not include the in-app Seedance V2 catalog switch still sitting in the worktree.
 - Roll back source behavior with `git revert --no-commit v0.1.178-fy.2..v0.1.178-fy.3` after reviewing the reversal; the previous deployable source tag is `v0.1.178-fy.2`. To withdraw the binary, remove GitHub Release `v0.1.178-fy.3` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-19 - Task: Drop unsold video price cards so channel save can clear a resolution
+### What was done
+- Live OpenAI Media tabs had leftover empty `seedance-2.5` / `seedance-2-5` cards. Saving after clearing another model's resolution failed because those cards had no 480p/720p price.
+- An all-empty video card now means the model is not sold: validation lets it through, and save omits it from the payload.
+
+### Testing
+- From `frontend/`, `npx vitest run src/components/admin/channel/__tests__/types.spec.ts src/components/admin/channel/__tests__/compositeGroups.spec.ts` passed, 2 files and 34 tests.
+
+### Notes
+- Roll back with `git revert` of this commit. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-19 - Task: Release unsold video-card save as v0.1.178-fy.4
+### What was done
+- Prepared annotated tag `v0.1.178-fy.4` so clearing a resolution (for example seedance-2.0 1080p) is not blocked by empty leftover video cards.
+
+### Testing
+- From `frontend/`, `npx vitest run src/components/admin/channel/__tests__/types.spec.ts src/components/admin/channel/__tests__/compositeGroups.spec.ts` passed, 2 files and 34 tests.
+
+### Notes
+- This release does not include the in-app Seedance V2 catalog switch still sitting in the worktree.
+- Roll back source behavior with `git revert --no-commit v0.1.178-fy.3..v0.1.178-fy.4` after reviewing the reversal; the previous deployable source tag is `v0.1.178-fy.3`. To withdraw the binary, remove GitHub Release `v0.1.178-fy.4` and its remote tag. Preserve unrelated `.superpowers/` content.
+
