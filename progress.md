@@ -1009,7 +1009,7 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `.gitignore`, `backend/cmd/server/wire_gen.go`, `backend/internal/handler/handler.go`, `backend/internal/handler/openai_gateway_handler.go`, `backend/internal/handler/wire.go`, `backend/internal/server/routes/gateway.go`, `backend/internal/service/admin_account.go`, `backend/internal/service/scheduler_snapshot_service.go`, and `deploy/config.example.yaml`: resolved upstream/local merge conflicts.
 - `backend/internal/handler/leo_video.go` and `backend/internal/service/openai_account_scheduler_test.go`: aligned Leo calls with upstream scheduler and scheduling-result signatures.
 - Remaining files in this merge are upstream changes from `upstream/main`; use `git diff --cached --name-only` to inspect the complete file list.
-- Rollback point: revert the merge commit with `git revert -m 1 <merge-commit>` and remove tag `v0.1.156-fy.1` if the release must be withdrawn; do not restore the homepage WIP stashes into the release branch.
+- Rollback point: revert the merge commit with `git revert -m 1 e0708aa17` and remove tag `v0.1.156-fy.1` if the release must be withdrawn; do not restore the homepage WIP stashes into the release branch.
 
 ## 2026-07-16 - Task: Fix CI regressions after upstream v0.1.156 merge
 ### What was done
@@ -5975,7 +5975,7 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/admin/ops/utils/__tests__/opsFormatters.spec.ts`: merges upstream v0.1.175 frontend regression coverage into the fork release set.
 - `frontend/src/views/admin/ops/utils/opsFormatters.ts`: merges the upstream v0.1.175 frontend behavior into the fork release set.
 - `progress.md`: records the merge, conflict resolutions, test evidence, changed-file inventory, and rollback point.
-- Rollback after publication with `git revert -m 1 <merge-commit>`, then push the revert and publish a follow-up fork tag; no database rollback is required. Preserve unrelated `.superpowers/` content.
+- Rollback after publication with `git revert -m 1 e0708aa17`, then push the revert and publish a follow-up fork tag; no database rollback is required. Preserve unrelated `.superpowers/` content.
 
 ## 2026-08-13 - Task: Publish OpenAI reasoning compatibility release
 ### What was done
@@ -6115,7 +6115,7 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `frontend/src/views/admin/GroupsView.vue`: adds group model pricing and long-context controls while retaining the Leo-specific video editor.
 - `frontend/src/views/admin/__tests__/AccountsView.sparkShadow.spec.ts`: covers updated account-tier display and refresh behavior.
 - `progress.md`: records the merge scope, verification evidence, changed-file inventory, migration impact, and rollback point.
-- Rollback source behavior after commit with `git revert -m 1 <merge-commit>`, push the revert, and publish a follow-up fork tag. Existing deployments may leave the additive group columns and `schema_migrations` row in place because the previous binary ignores them; do not drop the columns unless their data is backed up and a separate database change is explicitly approved. Preserve unrelated `.superpowers/` content.
+- Rollback source behavior after commit with `git revert -m 1 e0708aa17`, push the revert, and publish a follow-up fork tag. Existing deployments may leave the additive group columns and `schema_migrations` row in place because the previous binary ignores them; do not drop the columns unless their data is backed up and a separate database change is explicitly approved. Preserve unrelated `.superpowers/` content.
 
 ## 2026-08-13 - Task: Publish v0.1.176-fy.1
 ### What was done
@@ -6706,5 +6706,38 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Auth snapshot version is 20 so cached API keys reload group `model_pricing` for the fallback path.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.9..v0.1.177-fy.10` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.9`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.10` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-19 - Task: Document merge and release rules
+### What was done
+- Added a single Chinese reference document covering upstream Release detection, merge boundaries, conflict handling, fork versioning, application update behavior, release verification, server upgrades, and rollback rules.
+- Added the document to the tracked `docs/` allowlist.
 
+### Testing
+- Confirmed the new document is UTF-8 readable and contains no literal escaped Markdown backticks.
+- Targeted document inspection passed for the repository names, current baseline, version format, update source, verification commands, and rollback guidance.
+- Full repository diff validation is unavailable while a pre-existing merge remains unresolved in the worktree; no application code was changed in this task.
 
+### Notes
+- `docs/合并发版规则.md`: records the current second-development merge and release rules.
+- `.gitignore`: allows the new rules document to be versioned under the existing `docs/*` ignore policy.
+- `progress.md`: records this documentation task and its verification boundary.
+- Before commit, remove only the new document and its `.gitignore` allowlist line, then remove this appended progress entry; after a dedicated commit, use `git revert <merge-release-rules-commit>`. Preserve the unrelated in-progress merge and untracked workspace files.
+
+## 2026-08-19 - Task: Merge upstream v0.1.178 and prepare FY release v0.1.178-fy.1
+### What was done
+- Finished `git merge v0.1.178` on `codex/leo-video-channel` (HEAD was `daa3d58` = v0.1.177-fy.10).
+- Resolved 35 conflicted files by keeping fork customizations (Leo / OpenAI Media, video cost and channel video pricing, GitHub Token env binding leftovers, TZ / cyber-policy, hide channel names on user surfaces, fy-only media pricing) and taking upstream 0.1.178 features (Kimi / Zhipu / DeepSeek, channel quota monitor mode, peak/off-peak time pricing, OpenAI team circuit breaker, CN provider balance check).
+- Preserved the 0.1.177 fingerprint compatibility path: explicit upstream `codex_fingerprint_mode` is not overwritten by the legacy fingerprint marker (`enforceCodexIdentityHeadersWithUA` after fork fingerprint headers).
+- Bumped `apiKeyAuthSnapshotVersion` to 21 so cached snapshots refresh after the combined video + long-context/time-pricing fields.
+- Merge commit: `merge: upstream v0.1.178 into fork`.
+
+### Testing
+- Backend compile: `go test -count=0 ./...` passed after merging duplicate `validateAccountStatsPricingRules` and `ModelPricing` auto-merge leftovers.
+- Backend: `go test -p 1 ./... -count=1` failed once on a racy `TestCNProviderBalanceCheckRunOnceProbesCodingPlanQuota`; added a mutex on the fake prober and the test passed 3 times.
+- Backend: `go vet ./...` passed.
+- Frontend: `npx vitest run` passed, 239 files and 1739 tests (fixed GroupBadge / PlatformTypeBadge unclosed `if`s from the platform-color merge, and the Grok placeholder source assertion).
+- Frontend: `npx vue-tsc --noEmit` passed.
+- Frontend: `npx vite build` passed (32.85s).
+
+### Notes
+- Important conflict resolutions: platforms lists now include `leo` / `openai_media` plus `kimi` / `zhipu` / `deepseek`; video interval pricing and time pricing both serialize on channels; groups still send `time_pricing: null`; `setting_public` keeps `VideoGenerationEnabled` / `TokenIncentiveEnabled` and adds `ChannelMonitorShowQuota`; OpenAI usage keeps video `CostOverride` and passes `pricingAt`; scheduling keeps cyber-policy user filter and an exported `NormalizeOpenAICompatiblePlatform` that also recognizes media platforms.
+- Roll back this merge with `git revert -m 1 e0708aa17` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.10`. Preserve unrelated `.superpowers/` content.
