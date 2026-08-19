@@ -953,6 +953,9 @@ export default {
         grok: 'Grok',
         leo: 'Leo',
         openai_media: 'OpenAI Media',
+        kimi: 'Kimi',
+        zhipu: 'Zhipu GLM',
+        deepseek: 'DeepSeek',
         composite: 'Composite',
       },
       deleteConfirm:

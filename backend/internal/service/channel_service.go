@@ -646,12 +646,41 @@ func validatePricingEntries(pricing []ChannelModelPricing) error {
 	if err := validatePricingIntervals(pricing); err != nil {
 		return err
 	}
-	return validatePricingBillingMode(pricing)
+	if err := validatePricingBillingMode(pricing); err != nil {
+		return err
+	}
+	return validatePricingTimePricing(pricing)
+}
+
+func validatePricingTimePricing(pricing []ChannelModelPricing) error {
+	for i := range pricing {
+		config := pricing[i].TimePricing
+		if config == nil {
+			continue
+		}
+		if len(config.Periods) == 0 {
+			pricing[i].TimePricing = nil
+			continue
+		}
+		mode := pricing[i].BillingMode
+		if mode != "" && mode != BillingModeToken {
+			return infraerrors.BadRequest("TIME_PRICING_UNSUPPORTED_MODE", "time pricing only supports token billing mode")
+		}
+		if err := validateChannelTimePricing(config); err != nil {
+			return infraerrors.BadRequest("INVALID_TIME_PRICING", fmt.Sprintf(
+				"invalid time pricing for platform '%s' models %v: %v", pricing[i].Platform, pricing[i].Models, err))
+		}
+	}
+	return nil
 }
 
 func validateAccountStatsPricingRules(rules []AccountStatsPricingRule) error {
 	for i, rule := range rules {
 		for _, pricing := range rule.Pricing {
+			if pricing.TimePricing != nil && len(pricing.TimePricing.Periods) > 0 {
+				return fmt.Errorf("account stats pricing rule #%d: %w", i+1,
+					infraerrors.BadRequest("ACCOUNT_STATS_TIME_PRICING_UNSUPPORTED", "account stats pricing does not support time pricing"))
+			}
 			if pricing.BillingMode == BillingModeVideo {
 				return fmt.Errorf("account stats pricing rule #%d: %w", i+1, infraerrors.BadRequest(
 					"ACCOUNT_STATS_VIDEO_PRICING_UNSUPPORTED",

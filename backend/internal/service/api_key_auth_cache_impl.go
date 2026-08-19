@@ -14,7 +14,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 )
 
-const apiKeyAuthSnapshotVersion = 20 // v20: group model_pricing cards for video/image billing (force refresh)
+const apiKeyAuthSnapshotVersion = 21 // v21: merge v0.1.178 long-context/time-pricing with fork video/image model_pricing (force refresh)
 
 type apiKeyAuthCacheConfig struct {
 	l1Size        int
@@ -407,6 +407,7 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 			AudioRealtimePricePerMin:        apiKey.Group.AudioRealtimePricePerMin,
 			AudioTTSPricePerMillionChars:    apiKey.Group.AudioTTSPricePerMillionChars,
 			AudioSTTPricePerHour:            apiKey.Group.AudioSTTPricePerHour,
+			LongContextPricingEnabled:       apiKey.Group.LongContextPricingEnabled,
 			ClaudeCodeOnly:                  apiKey.Group.ClaudeCodeOnly,
 			FallbackGroupID:                 apiKey.Group.FallbackGroupID,
 			FallbackGroupIDOnInvalidRequest: apiKey.Group.FallbackGroupIDOnInvalidRequest,
@@ -503,6 +504,7 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 			AudioRealtimePricePerMin:        snapshot.Group.AudioRealtimePricePerMin,
 			AudioTTSPricePerMillionChars:    snapshot.Group.AudioTTSPricePerMillionChars,
 			AudioSTTPricePerHour:            snapshot.Group.AudioSTTPricePerHour,
+			LongContextPricingEnabled:       snapshot.Group.LongContextPricingEnabled,
 			ClaudeCodeOnly:                  snapshot.Group.ClaudeCodeOnly,
 			FallbackGroupID:                 snapshot.Group.FallbackGroupID,
 			FallbackGroupIDOnInvalidRequest: snapshot.Group.FallbackGroupIDOnInvalidRequest,

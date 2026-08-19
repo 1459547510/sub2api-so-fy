@@ -779,11 +779,12 @@ func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account
 		req.Host = "chatgpt.com"
 		req.Header.Set("accept", "text/event-stream")
 		req.Header.Set("OpenAI-Beta", "responses=experimental")
-		req.Header.Set("Originator", openai.CodexDefaultOriginator)
+		canonical := resolveCodexOutboundIdentity("")
+		req.Header.Set("Originator", canonical.originator)
 		if customUA := strings.TrimSpace(credentialAccount.GetOpenAIUserAgent()); customUA != "" {
 			req.Header.Set("User-Agent", customUA)
 		} else {
-			req.Header.Set("User-Agent", codexCLIUserAgent)
+			req.Header.Set("User-Agent", canonical.userAgent)
 		}
 		setOpenAIChatGPTAccountHeaders(req.Header, credentialAccount)
 		applyOpenAICodexFingerprintHeaders(req.Header, credentialAccount, 0, "account-test:"+upstreamTestModelID, openAICodexDeviceFingerprint{})
@@ -2111,11 +2112,13 @@ func (s *AccountTestService) testOpenAICompactConnection(c *gin.Context, account
 	} else {
 		req.Header.Set("Authorization", "Bearer "+authToken)
 	}
+	if !isOAuth {
+		applyOpenAICodexProbeHeaders(req.Header)
+	}
 	if isOAuth {
 		ensureCodexIdentityHeaders(req.Header)
 		applyOpenAICodexFingerprintHeaders(req.Header, credentialAccount, 0, "compact-probe", openAICodexDeviceFingerprint{})
-	} else {
-		applyOpenAICodexProbeHeaders(req.Header)
+		enforceCodexIdentityHeadersWithUA(req.Header, credentialAccount.GetOpenAIUserAgent())
 	}
 	probeSessionID := compactProbeSessionID(account.ID)
 	req.Header.Set("Session_ID", probeSessionID)
@@ -3022,11 +3025,12 @@ func (s *AccountTestService) testOpenAIImageOAuth(c *gin.Context, ctx context.Co
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("OpenAI-Beta", "responses=experimental")
-	req.Header.Set("originator", openai.CodexDefaultOriginator)
+	canonical := resolveCodexOutboundIdentity("")
+	req.Header.Set("originator", canonical.originator)
 	if customUA := strings.TrimSpace(credentialAccount.GetOpenAIUserAgent()); customUA != "" {
 		req.Header.Set("User-Agent", customUA)
 	} else {
-		req.Header.Set("User-Agent", codexCLIUserAgent)
+		req.Header.Set("User-Agent", canonical.userAgent)
 	}
 	setOpenAIChatGPTAccountHeaders(req.Header, credentialAccount)
 	applyOpenAICodexFingerprintHeaders(req.Header, credentialAccount, 0, "account-test", openAICodexDeviceFingerprint{})

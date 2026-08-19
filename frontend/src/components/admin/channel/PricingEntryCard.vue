@@ -156,6 +156,12 @@
               />
             </div>
           </div>
+
+          <TimePricingSection
+            v-if="enableTimePricing"
+            :model-value="entry.time_pricing"
+            @update:model-value="emit('update', { ...entry, time_pricing: $event })"
+          />
         </div>
 
         <!-- Per-request mode -->
@@ -289,6 +295,7 @@ import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
 import IntervalRow from './IntervalRow.vue'
 import ModelTagInput from './ModelTagInput.vue'
+import TimePricingSection from './TimePricingSection.vue'
 import type { PricingFormEntry, IntervalFormEntry } from './types'
 import { perTokenToMTok, getPlatformTagClass, normalizeVideoIntervals, videoPricingResolutionsForModel } from './types'
 import type { BillingMode } from '@/api/admin/channels'
@@ -301,9 +308,11 @@ const props = withDefaults(defineProps<{
   platform?: string
   allowVideo?: boolean
   hideTokenIntervals?: boolean
+  enableTimePricing?: boolean
 }>(), {
   allowVideo: false,
   hideTokenIntervals: false,
+  enableTimePricing: false,
 })
 
 const emit = defineEmits<{
@@ -339,6 +348,7 @@ function onBillingModeUpdate(mode: BillingMode) {
     intervals: mode === 'video' && props.allowVideo
       ? normalizeVideoIntervals(props.entry.intervals, props.entry.models[0])
       : [],
+    time_pricing: { ...(props.entry.time_pricing || { timezone: 'Asia/Shanghai', periods: [] }), periods: [] },
   })
 }
 
