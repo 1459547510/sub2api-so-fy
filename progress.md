@@ -6741,3 +6741,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - Important conflict resolutions: platforms lists now include `leo` / `openai_media` plus `kimi` / `zhipu` / `deepseek`; video interval pricing and time pricing both serialize on channels; groups still send `time_pricing: null`; `setting_public` keeps `VideoGenerationEnabled` / `TokenIncentiveEnabled` and adds `ChannelMonitorShowQuota`; OpenAI usage keeps video `CostOverride` and passes `pricingAt`; scheduling keeps cyber-policy user filter and an exported `NormalizeOpenAICompatiblePlatform` that also recognizes media platforms.
 - Roll back this merge with `git revert -m 1 e0708aa17` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.10`. Preserve unrelated `.superpowers/` content.
+## 2026-08-19 - Task: Verify published upstream merge release v0.1.178-fy.1
+### What was done
+- Confirmed the fork branch and release tag are pushed to GitHub.
+- Confirmed the public Linux amd64 release asset is downloadable and matches the published checksum.
+
+### Testing
+- Remote branch `codex/leo-video-channel`: confirmed at `b65805f24f5e87e415679a3f332af63a25fa8323`.
+- Remote tag `v0.1.178-fy.1`: confirmed; GitHub Release published at 2026-08-19 10:41 CST.
+- Release asset download: HTTP `200`; `sub2api_0.1.178-fy.1_linux_amd64.tar.gz` size `37,718,798` bytes.
+- SHA-256: `a1c47ce130291f50fff361fc6b49576dd67a8bb5a8855bcff46dda2ad4595d2c`; matched `checksums.txt`.
+
+### Notes
+- Release: https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.178-fy.1
+- `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
+- Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
+
