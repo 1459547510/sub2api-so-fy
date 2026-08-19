@@ -634,6 +634,7 @@ import { extractApiErrorMessage } from '@/utils/apiError'
 import { adminAPI } from '@/api/admin'
 import type { Channel, ChannelModelPricing, CreateChannelRequest, UpdateChannelRequest, AccountStatsPricingRule } from '@/api/admin/channels'
 import type { PricingFormEntry } from '@/components/admin/channel/types'
+import { COMPOSITE_ROUTE_PLATFORMS, groupMatchesChannelPlatform } from '@/components/admin/channel/compositeGroups'
 import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, apiTimePricingToForm, createDefaultTimePricingForm, formIntervalsToAPI, formPricedVideoIntervalsToAPI, formTimePricingToAPI, findModelConflict, validateIntervals, validateTimePricing, createPricingFormEntry, createSyncedPricingEntries, getNextLeoVideoModel, normalizeVideoIntervals, validateVideoPricing } from '@/components/admin/channel/types'
 import type { AdminGroup, GroupPlatform } from '@/types'
 import type { Column } from '@/components/common/types'
@@ -764,9 +765,9 @@ let abortController: AbortController | null = null
 
 // ── Platform config ──
 const platformOrder: GroupPlatform[] = ['anthropic', 'openai', 'gemini', 'antigravity', 'grok', 'leo', 'openai_media', 'kimi', 'zhipu', 'deepseek']
-// composite 分组只覆盖主平台（与后端 isConcreteRequestPlatform / composite-routes target_platform 一致），
-// 不含国产供应商平台。
-const compositePlatforms: GroupPlatform[] = ['anthropic', 'openai', 'gemini', 'antigravity', 'grok']
+// composite 分组展开路由页签只覆盖主平台（与后端 isConcreteRequestPlatform /
+// composite-routes target_platform 一致），不含媒体和国产供应商。媒体定价页签
+// 仍可挂上同一个 composite 分组，否则视频渠道保存定价会误报未选分组。
 
 // ── Helpers ──
 function formatDate(value: string): string {
@@ -805,9 +806,7 @@ function togglePlatform(platform: GroupPlatform) {
 }
 
 function getGroupsForPlatform(platform: GroupPlatform): AdminGroup[] {
-  return allGroups.value.filter(
-    g => g.platform === platform || (g.platform === 'composite' && compositePlatforms.includes(platform))
-  )
+  return allGroups.value.filter(g => groupMatchesChannelPlatform(g.platform, platform))
 }
 
 // ── Group helpers ──
@@ -1177,7 +1176,7 @@ function apiToForm(channel: Channel): PlatformSection[] {
   for (const gid of channel.group_ids || []) {
     const p = groupPlatformMap.get(gid)
     if (p === 'composite') {
-      compositePlatforms.forEach(platform => activePlatforms.add(platform))
+      COMPOSITE_ROUTE_PLATFORMS.forEach(platform => activePlatforms.add(platform))
     } else if (p) {
       activePlatforms.add(p)
     }
@@ -1194,11 +1193,9 @@ function apiToForm(channel: Channel): PlatformSection[] {
   for (const platform of platformOrder) {
     if (!activePlatforms.has(platform)) continue
 
-    const groupIds = (channel.group_ids || []).filter(gid => {
-      const groupPlatform = groupPlatformMap.get(gid)
-      return groupPlatform === platform ||
-        (groupPlatform === 'composite' && compositePlatforms.includes(platform))
-    })
+    const groupIds = (channel.group_ids || []).filter(gid =>
+      groupMatchesChannelPlatform(groupPlatformMap.get(gid), platform)
+    )
     const mapping = (channel.model_mapping || {})[platform] || {}
     const pricing = (channel.model_pricing || [])
       .filter(p => (p.platform || 'anthropic') === platform)

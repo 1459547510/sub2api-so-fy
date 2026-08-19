@@ -6774,3 +6774,52 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the final remote branch, tag, asset download, and checksum verification for this release.
 - Roll back this log-only change with `git revert <log-commit>` after committing; preserve unrelated `.superpowers/` content.
 
+## 2026-08-19 - Task: Restore production after 0.1.178-fy.2 startup 502
+### What was done
+- Production `sub2api` crash-looped after the `v0.1.178-fy.2` upgrade: migration `224_user_platform_quotas_add_cn_providers.sql` rebuilt `user_platform_quotas_platform_check` without `leo` / `openai_media`, and 16 existing quota rows failed the CHECK.
+- Applied the full 10-platform CHECK on the live database, recorded the original 224 checksum so the running binary could skip the broken file, then restarted. `225` / `226` applied and `GET /health` returned `{"status":"ok"}`.
+- Added idempotent migration `227_user_platform_quotas_keep_media_platforms.sql` so later releases restore media platforms after upstream 224 instead of crashing again.
+
+### Testing
+- Live: `systemctl is-active sub2api` is `active`; local and public `https://api.fflink.top/health` returned HTTP 200.
+- From `backend/`, `go test ./migrations -count=1 -run "TestUserPlatformQuotasKeepMediaPlatformsMigration|TestUserPlatformQuotasCNProvidersMigration"` is recorded with this change.
+
+### Notes
+- Do not edit applied `224_*.sql`; checksum is immutable. Roll back this source change with `git revert` of the 227 commit. Live rollback of the constraint is `ALTER TABLE user_platform_quotas DROP CONSTRAINT user_platform_quotas_platform_check` followed by the 222 media-only CHECK, which would again block CN provider quota rows.
+
+## 2026-08-19 - Task: Switch public Seedance V2 docs to the previous catalog
+### What was done
+- Set `SEEDANCE_V2_DOCS_SOURCE` to `previous` so in-app V2 docs use the 4-15s / default 5s / 9-reference Seedance 2.0 matrix. Seedance 2.5 stays on the V1 matrix copy.
+- Updated the docs tests to assert the active catalog without naming backends on public surfaces.
+
+### Testing
+- From `frontend/`, `npx vitest run src/utils/__tests__/videoApiDocs.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts` is recorded with this change.
+
+### Notes
+- Switch back with `SEEDANCE_V2_DOCS_SOURCE = 'current'`. Roll back this change with `git revert` of the switch commit. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-19 - Task: Fix channel video price save blocked by missing composite group
+### What was done
+- Video channels attach a composite group but keep resolution prices on `leo` / `openai_media`. Those tabs no longer received the composite group, so clearing one resolution and saving failed with the raw key `admin.channels.noGroupsSelected`.
+- Composite groups now attach to media pricing tabs without auto-enabling those tabs on every composite channel. Added the missing `noGroupsSelected` / `emptyModelsInPricing` copy.
+
+### Testing
+- From `frontend/`, `npx vitest run src/components/admin/channel/__tests__/compositeGroups.spec.ts src/components/admin/channel/__tests__/types.spec.ts` is recorded with this change.
+
+### Notes
+- Roll back with `git revert` of this commit. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-19 - Task: Release composite media-group restore as v0.1.178-fy.3
+### What was done
+- Composite groups again attach to media pricing tabs so video channels can clear a resolution price and save. Chat-only composite channels still do not auto-open those tabs.
+- Added migration `227` so the next upgrade keeps media platforms in `user_platform_quotas` after upstream `224`.
+- Prepared annotated tag `v0.1.178-fy.3`.
+
+### Testing
+- From `frontend/`, `npx vitest run src/components/admin/channel/__tests__/compositeGroups.spec.ts src/components/admin/channel/__tests__/types.spec.ts src/i18n/__tests__/localesNoKeyCollision.spec.ts` passed, 3 files and 40 tests.
+- From `backend/`, `go test ./migrations -count=1 -run "TestUserPlatformQuotasKeepMediaPlatformsMigration|TestUserPlatformQuotasCNProvidersMigration"` passed.
+
+### Notes
+- This release does not include the in-app Seedance V2 catalog switch still sitting in the worktree.
+- Roll back source behavior with `git revert --no-commit v0.1.178-fy.2..v0.1.178-fy.3` after reviewing the reversal; the previous deployable source tag is `v0.1.178-fy.2`. To withdraw the binary, remove GitHub Release `v0.1.178-fy.3` and its remote tag. Preserve unrelated `.superpowers/` content.
+
