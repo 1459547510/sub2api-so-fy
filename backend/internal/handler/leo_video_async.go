@@ -75,18 +75,7 @@ func (h *OpenAIGatewayHandler) LeoVideoAsyncGeneration(c *gin.Context) {
 		APIKey: apiKey, User: user, Subscription: subscription, Body: body, LocalInputName: localInputName,
 	})
 	if err != nil {
-		status, code := http.StatusBadGateway, "upstream_error"
-		var upstreamErr *service.LeoAsyncUpstreamError
-		if errors.Is(err, service.ErrVideoInsufficientBalance) {
-			status, code = http.StatusPaymentRequired, "billing_error"
-		} else if validationErr := (*service.LeoVideoValidationError)(nil); errors.As(err, &validationErr) {
-			status, code = http.StatusBadRequest, "invalid_request_error"
-		} else if errors.As(err, &upstreamErr) && (upstreamErr.StatusCode == http.StatusBadRequest || upstreamErr.StatusCode == http.StatusUnprocessableEntity) {
-			status, code = upstreamErr.StatusCode, "invalid_request_error"
-		} else if strings.Contains(err.Error(), "required") || strings.Contains(err.Error(), "valid JSON") {
-			status, code = http.StatusBadRequest, "invalid_request_error"
-		}
-		h.errorResponse(c, status, code, service.SanitizeVideoProviderMessage(err.Error()))
+		h.leoVideoCreateErrorResponse(c, err)
 		return
 	}
 	statusURL := "/v1/videos/jobs/" + job.JobID
@@ -94,6 +83,23 @@ func (h *OpenAIGatewayHandler) LeoVideoAsyncGeneration(c *gin.Context) {
 	c.Header("Location", statusURL)
 	c.Header("Cache-Control", "no-store")
 	c.JSON(http.StatusAccepted, gin.H{"job_id": job.JobID, "status": job.Status, "status_url": statusURL})
+}
+
+// leoVideoCreateErrorResponse maps video-job creation failures onto client
+// errors. Shared by the native async handler and the Sora-format compat entry.
+func (h *OpenAIGatewayHandler) leoVideoCreateErrorResponse(c *gin.Context, err error) {
+	status, code := http.StatusBadGateway, "upstream_error"
+	var upstreamErr *service.LeoAsyncUpstreamError
+	if errors.Is(err, service.ErrVideoInsufficientBalance) {
+		status, code = http.StatusPaymentRequired, "billing_error"
+	} else if validationErr := (*service.LeoVideoValidationError)(nil); errors.As(err, &validationErr) {
+		status, code = http.StatusBadRequest, "invalid_request_error"
+	} else if errors.As(err, &upstreamErr) && (upstreamErr.StatusCode == http.StatusBadRequest || upstreamErr.StatusCode == http.StatusUnprocessableEntity) {
+		status, code = upstreamErr.StatusCode, "invalid_request_error"
+	} else if strings.Contains(err.Error(), "required") || strings.Contains(err.Error(), "valid JSON") {
+		status, code = http.StatusBadRequest, "invalid_request_error"
+	}
+	h.errorResponse(c, status, code, service.SanitizeVideoProviderMessage(err.Error()))
 }
 
 func (h *OpenAIGatewayHandler) LeoVideoJobs(c *gin.Context) {

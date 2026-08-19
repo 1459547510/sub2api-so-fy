@@ -117,6 +117,12 @@ func RegisterGatewayRoutes(
 		case service.PlatformGrok:
 			h.OpenAIGateway.GrokVideoGeneration(c)
 		case service.PlatformLeo, service.PlatformOpenAIMedia:
+			// OpenAI-compatible relays create through multipart/form-data
+			// (Sora format); native clients keep the JSON contract.
+			if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
+				h.OpenAIGateway.SoraVideoCompatCreate(c)
+				return
+			}
 			h.OpenAIGateway.LeoVideoGeneration(c)
 		default:
 			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
@@ -134,7 +140,7 @@ func RegisterGatewayRoutes(
 		// shape to keep composite-group polling on the Leo job service.
 		platform := getGroupPlatform(c)
 		requestID := videoLookupRequestID(c)
-		if (platform == service.PlatformComposite || service.IsOpenAIMediaPlatform(platform)) && isLeoVideoJobID(requestID) {
+		if (platform == service.PlatformComposite || service.IsMediaPlatform(platform)) && isLeoVideoJobID(requestID) {
 			h.OpenAIGateway.LeoVideoJob(c)
 			return
 		}
@@ -153,10 +159,32 @@ func RegisterGatewayRoutes(
 			},
 		})
 	}
+	// soraVideoStatusHandler serves GET /videos/{id}: local vidjob IDs answer
+	// in the OpenAI video-object dialect for Sora-format relays, while the
+	// native shape stays on /videos/jobs/{id} and /videos/generations/{id}.
+	soraVideoStatusHandler := func(c *gin.Context) {
+		platform := getGroupPlatform(c)
+		requestID := videoLookupRequestID(c)
+		if (platform == service.PlatformComposite || service.IsMediaPlatform(platform)) && isLeoVideoJobID(requestID) {
+			h.OpenAIGateway.LeoVideoJobSora(c)
+			return
+		}
+		if platform == service.PlatformGrok || platform == service.PlatformComposite {
+			h.OpenAIGateway.GrokVideoStatus(c)
+			return
+		}
+		service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": gin.H{
+				"type":    "not_found_error",
+				"message": "Videos API is not supported for this platform",
+			},
+		})
+	}
 	videoContentHandler := func(c *gin.Context) {
 		platform := getGroupPlatform(c)
 		requestID := videoLookupRequestID(c)
-		if (platform == service.PlatformComposite || service.IsOpenAIMediaPlatform(platform)) && isLeoVideoJobID(requestID) {
+		if (platform == service.PlatformComposite || service.IsMediaPlatform(platform)) && isLeoVideoJobID(requestID) {
 			h.OpenAIGateway.LeoVideoJobContent(c)
 			return
 		}
@@ -342,7 +370,7 @@ func RegisterGatewayRoutes(
 		gateway.GET("/videos/generations/:request_id", videoStatusHandler)
 		gateway.GET("/videos/edits/:request_id", videoStatusHandler)
 		gateway.GET("/videos/extensions/:request_id", videoStatusHandler)
-		gateway.GET("/videos/:request_id", videoStatusHandler)
+		gateway.GET("/videos/:request_id", soraVideoStatusHandler)
 		gateway.GET("/videos/:request_id/content", videoContentHandler)
 
 		// xAI Voice APIs (Grok platform only): HTTP TTS/STT + Realtime WS.
@@ -508,7 +536,7 @@ func RegisterGatewayRoutes(
 	r.GET("/videos/generations/:request_id", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, videoStatusHandler)
 	r.GET("/videos/edits/:request_id", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, videoStatusHandler)
 	r.GET("/videos/extensions/:request_id", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, videoStatusHandler)
-	r.GET("/videos/:request_id", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, videoStatusHandler)
+	r.GET("/videos/:request_id", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, soraVideoStatusHandler)
 	r.GET("/videos/:request_id/content", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, videoContentHandler)
 
 	rootVoiceHandler := func(endpoint string) gin.HandlerFunc {

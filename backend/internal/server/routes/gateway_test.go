@@ -1,7 +1,9 @@
 package routes
 
 import (
+	"bytes"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -417,6 +419,38 @@ func TestGatewayRoutesLeoSupportsVideoAndImageGeneration(t *testing.T) {
 		require.Equal(t, http.StatusNotFound, w.Code, "method=%s path=%s body=%s", tc.method, tc.path, w.Body.String())
 		require.Contains(t, w.Body.String(), "not_found_error")
 		require.NotContains(t, strings.ToLower(w.Body.String()), "leo")
+	}
+}
+
+func TestGatewayRoutesLeoServesSoraCompatVideoAliases(t *testing.T) {
+	// Sora-format relays create via multipart POST /v1/videos and poll
+	// GET /v1/videos/{vidjob_id}; both must reach the Leo job handlers on
+	// media-platform groups instead of the platform-gate 404.
+	router := newGatewayRoutesTestRouter(service.PlatformLeo)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(t, writer.WriteField("model", "seedance-2.0"))
+	require.NoError(t, writer.WriteField("prompt", "waves"))
+	require.NoError(t, writer.Close())
+	req := httptest.NewRequest(http.MethodPost, "/v1/videos", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.NotEqual(t, http.StatusNotFound, w.Code)
+	require.NotContains(t, w.Body.String(), "not supported for this platform")
+
+	for _, path := range []string{
+		"/v1/videos/vidjob_example",
+		"/videos/vidjob_example",
+		"/v1/videos/vidjob_example/content",
+		"/videos/vidjob_example/content",
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		require.NotContains(t, w.Body.String(), "not supported for this platform", "path=%s", path)
+		require.NotContains(t, w.Body.String(), "Videos API is not supported", "path=%s", path)
 	}
 }
 

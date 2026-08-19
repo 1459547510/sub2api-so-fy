@@ -6706,6 +6706,22 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Auth snapshot version is 20 so cached API keys reload group `model_pricing` for the fallback path.
 - Roll back source behavior with `git revert --no-commit v0.1.177-fy.9..v0.1.177-fy.10` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.9`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.10` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-19 - Task: Release OpenAI-compatible (Sora-format) video entry as v0.1.177-fy.11
+### What was done
+- `POST /v1/videos` now accepts Sora-format `multipart/form-data` on media-platform groups and translates it onto the async video-job pipeline (`seconds`->`duration`, `size`->`resolution`+`aspect_ratio`, `input_reference`->stored image reference, `metadata` whitelist passthrough). JSON requests keep the native contract.
+- `GET /v1/videos/{vidjob_id}` answers in the OpenAI video-object dialect (`queued`/`in_progress`/`completed`/`failed`) so OpenAI-compatible relays can poll; `/v1/videos/jobs/{id}` keeps the native shape. Pure leo-platform groups can now use `/v1/videos/{id}` and `/content`.
+- Restored the fork's ops behavior: a failed error-log batch insert returns the error without fanning out into per-row retries (regressed by an upstream merge).
+- Prepared annotated tag `v0.1.177-fy.11` from this commit.
+
+### Testing
+- From `backend/`, `go test ./internal/handler ./internal/server/routes ./internal/service -count=1` passed after the ops fix.
+- From `frontend/`, `npx vitest run src/utils/__tests__/videoApiDocs.spec.ts` passed (public docs vendor-name scan covers the new markdown section).
+
+### Notes
+- New public copy lives in `docs/WEB_API_INTEGRATION_V2_CN.md` section 5.4; the existing vendor-name scan test covers it. Compat error bodies reuse `SanitizeVideoProviderMessage`.
+- `DELETE /v1/videos/{id}` is intentionally not aliased; cancellation stays on `/v1/videos/jobs/{id}`.
+- Roll back source behavior with `git revert --no-commit v0.1.177-fy.10..v0.1.177-fy.11` after reviewing the reversal; the previous deployable source tag is `v0.1.177-fy.10`. To withdraw the binary, remove GitHub Release `v0.1.177-fy.11` and its remote tag. Preserve unrelated `.superpowers/` content.
+
 ## 2026-08-19 - Task: Document merge and release rules
 ### What was done
 - Added a single Chinese reference document covering upstream Release detection, merge boundaries, conflict handling, fork versioning, application update behavior, release verification, server upgrades, and rollback rules.

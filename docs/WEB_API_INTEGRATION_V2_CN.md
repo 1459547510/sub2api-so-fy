@@ -288,6 +288,64 @@ curl -o output.mp4 "$BASE_URL/v1/videos/jobs/vidjob_example/content" \
 
 只有创建任务的同一个 API Key 才能查询、下载或取消该任务。任务进入终态后不要继续提交取消请求。
 
+### 5.4 OpenAI 视频兼容入口
+
+面向使用 OpenAI 视频接口格式的中转/聚合网关（渠道类型选 OpenAI，`base_url` 填本站地址，密钥填本站 API Key）。原生 JSON 契约不受影响，两种方言按路径和 Content-Type 区分。
+
+创建（`multipart/form-data`）：
+
+```http
+POST /v1/videos
+```
+
+| 表单字段 | 对应原生字段 | 说明 |
+| --- | --- | --- |
+| `model` | `model` | 公开模型 ID 原样填写 |
+| `prompt` | `prompt` | 文本提示词 |
+| `seconds` | `duration` | 正整数秒 |
+| `size` | `resolution` + `aspect_ratio` | `1920x1080` 这类宽x高，或直接填 `720p` 等档位 |
+| `input_reference` | 参考图 | PNG/JPEG/WebP 文件，自动上传并作为参考图片 |
+| `metadata` | 高级字段 | JSON 字符串，可携带 `resolution`、`aspect_ratio`、`audio`、`duration`、`image_urls`、`start_frame_url`、`end_frame_url`、`guidances`、`prompt_enhance` |
+
+```bash
+curl "$BASE_URL/v1/videos" \
+  -H "Authorization: Bearer $SUB2_API_KEY" \
+  -F "model=<video-model-id>" \
+  -F "prompt=A slow aerial shot over a coastal city at sunrise" \
+  -F "seconds=8" \
+  -F "size=1280x720"
+```
+
+创建响应为 OpenAI 视频对象：
+
+```json
+{
+  "id": "vidjob_example",
+  "object": "video",
+  "model": "<video-model-id>",
+  "status": "queued",
+  "progress": 0,
+  "created_at": 1755500000,
+  "seconds": "8",
+  "size": "1280x720"
+}
+```
+
+查询与下载：
+
+```http
+GET /v1/videos/{id}
+GET /v1/videos/{id}/content
+```
+
+`GET /v1/videos/{id}` 返回同一视频对象，状态依次为 `queued`、`in_progress`、`completed`；失败或取消为 `failed`，并附 `error.message`。`completed` 后从 `/content` 下载 MP4。
+
+兼容边界：
+
+- 分辨率、时长、画面比例仍以所选模型能力为准，超出会返回参数错误。
+- 多参考图/视频/音频、首尾帧等高级参数通过 `metadata` 传入，或改用 5.1 的原生 JSON 接口。
+- 该入口始终异步；不支持通过 `DELETE /v1/videos/{id}` 取消，取消请使用 5.3 的任务接口。
+
 ## 6. 错误和重试
 
 统一错误格式：
