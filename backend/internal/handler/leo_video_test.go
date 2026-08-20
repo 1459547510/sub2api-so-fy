@@ -41,6 +41,17 @@ func TestLeoVideoGenerationValidatesRequestBeforeDependencies(t *testing.T) {
 	}
 }
 
+func TestLeoVideoGenerationDoesNotPersistInvalidSyncRequest(t *testing.T) {
+	repo := &handlerVideoJobRepo{}
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(repo)}
+	rec, c := newLeoVideoHandlerTestContext(`{"model":"seedance-2.0"}`, true)
+
+	h.LeoVideoGeneration(c)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Nil(t, repo.job)
+}
+
 func TestLeoVideoGenerationRequiresVideoPermission(t *testing.T) {
 	rec, c := newLeoVideoHandlerTestContext(`{"model":"seedance-2.0","prompt":"waves"}`, false)
 

@@ -1408,6 +1408,8 @@ const dashboardMessages = {
     noKeyHint: '请创建已启用视频权限的 API Key，或使用自定义 Sub2 API Key。',
     results: '最新结果',
     resultsHint: '活动任务每两秒自动刷新。',
+    resultsHintOwnKey: '列出当前 Key 下的全部视频任务，活动任务每两秒自动刷新。',
+    resultsHintCustomKey: '只显示本次使用自定义 Key 提交的任务，不加载历史。',
     polling: '正在刷新活动任务',
     queueReady: '队列已就绪',
     previewEmpty: '选择已完成任务预览视频',

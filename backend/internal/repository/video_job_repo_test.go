@@ -67,10 +67,17 @@ func TestVideoJobRepositoryCreateListAndTransition(t *testing.T) {
 	second.RequestHash = "request-hash-2"
 	require.NoError(t, repo.CreateVideoJob(ctx, &second))
 
-	jobs, err := repo.ListVideoJobsForAPIKey(ctx, 2, 20, "")
+	jobs, total, err := repo.ListVideoJobsForAPIKey(ctx, 2, 20, 0, "")
 	require.NoError(t, err)
+	require.Equal(t, 2, total)
 	require.Len(t, jobs, 2)
 	require.Equal(t, second.JobID, jobs[0].JobID)
+
+	page, pageTotal, err := repo.ListVideoJobsForAPIKey(ctx, 2, 1, 1, "")
+	require.NoError(t, err)
+	require.Equal(t, 2, pageTotal)
+	require.Len(t, page, 1)
+	require.Equal(t, first.JobID, page[0].JobID)
 
 	startedAt := time.Now().UTC().Truncate(time.Millisecond)
 	require.NoError(t, repo.TransitionVideoJob(ctx, first.JobID, []string{service.VideoJobPending}, service.VideoJobRunning, service.VideoJobTransition{StartedAt: &startedAt}))

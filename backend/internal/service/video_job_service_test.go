@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,11 +42,11 @@ func (r *fakeVideoJobServiceRepo) GetVideoJobForAPIKey(_ context.Context, jobID 
 	return cloneVideoJob(r.job), nil
 }
 
-func (r *fakeVideoJobServiceRepo) ListVideoJobsForAPIKey(_ context.Context, apiKeyID int64, _ int, _ string) ([]*VideoJob, error) {
+func (r *fakeVideoJobServiceRepo) ListVideoJobsForAPIKey(_ context.Context, apiKeyID int64, _ int, _ int, _ string) ([]*VideoJob, int, error) {
 	if r.job != nil && r.job.APIKeyID == apiKeyID {
-		return []*VideoJob{cloneVideoJob(r.job)}, nil
+		return []*VideoJob{cloneVideoJob(r.job)}, 1, nil
 	}
-	return r.list, nil
+	return r.list, len(r.list), nil
 }
 
 func (r *fakeVideoJobServiceRepo) ListActiveVideoJobs(_ context.Context, _ int) ([]*VideoJob, error) {
@@ -238,6 +239,98 @@ func TestVideoJobServiceMarksCanceledLocalInputTerminal(t *testing.T) {
 	require.Equal(t, 1, removed)
 }
 
+func TestVideoJobServiceHoldSyncReservesEstimatedCostWithoutCreatingJob(t *testing.T) {
+	repo := &fakeVideoJobServiceRepo{}
+	balance := &fakeVideoJobBalanceRepo{}
+	svc := &VideoJobService{Repo: repo, Billing: &VideoJobBillingService{BillingRepo: balance}}
+
+	job, err := svc.HoldSync(context.Background(), CreateVideoJobInput{
+		APIKey: newVideoJobServiceTestAPIKey(), User: &User{ID: 1},
+		Body: []byte(`{"model":"seedance-2.5","prompt":"waves","resolution":"720p","duration":30}`),
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, job)
+	require.NotNil(t, job.HoldAmount)
+	require.InDelta(t, 3.0, *job.HoldAmount, 1e-12)
+	require.Equal(t, 30, job.DurationSeconds)
+	require.Equal(t, "720p", job.Resolution)
+	require.Nil(t, repo.job)
+	require.Len(t, balance.reserves, 1)
+	require.InDelta(t, 3.0, balance.reserves[0].HoldAmount, 1e-12)
+	require.Empty(t, balance.releases)
+}
+
+func TestVideoJobServiceHoldSyncRejectsInsufficientBalance(t *testing.T) {
+	balance := &fakeVideoJobBalanceRepo{reserveErr: ErrVideoInsufficientBalance}
+	svc := &VideoJobService{Repo: &fakeVideoJobServiceRepo{}, Billing: &VideoJobBillingService{BillingRepo: balance}}
+
+	job, err := svc.HoldSync(context.Background(), CreateVideoJobInput{
+		APIKey: newVideoJobServiceTestAPIKey(), User: &User{ID: 1},
+		Body: []byte(`{"model":"seedance-2.5","prompt":"waves","resolution":"720p","duration":30}`),
+	})
+
+	require.ErrorIs(t, err, ErrVideoInsufficientBalance)
+	require.Nil(t, job)
+	require.Len(t, balance.reserves, 1)
+	require.Empty(t, balance.releases)
+}
+
+func TestVideoJobServiceRecordSyncPersistsTerminalJobWithoutBilling(t *testing.T) {
+	repo := &fakeVideoJobServiceRepo{}
+	balance := &fakeVideoJobBalanceRepo{}
+	svc := &VideoJobService{Repo: repo, Billing: &VideoJobBillingService{BillingRepo: balance}}
+	apiKey := newVideoJobServiceTestAPIKey()
+	account := newVideoJobServiceTestAccount(9)
+	raw := json.RawMessage(`{"data":[{"mp4_url":"https://cdn.example/video.mp4"}],"provider":{"generation_id":"leo_gen_1"}}`)
+
+	job, err := svc.RecordSync(context.Background(), RecordSyncVideoJobInput{
+		APIKey: apiKey, User: &User{ID: 1}, Account: account,
+		Body: []byte(`{"model":"seedance","prompt":"waves","resolution":"720p","duration":8}`),
+		Status: VideoJobCompleted, Result: raw,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, job)
+	require.Equal(t, VideoJobCompleted, job.Status)
+	require.Equal(t, "seedance", job.RequestedModel)
+	require.Equal(t, "seedance-2.0", job.UpstreamModel)
+	require.Equal(t, "waves", job.Prompt)
+	require.Equal(t, int64(9), job.AccountID)
+	require.Nil(t, job.HoldAmount)
+	require.Nil(t, job.ActualCost)
+	require.Empty(t, job.BillingSnapshot)
+	require.NotNil(t, job.SettledAt)
+	require.NotNil(t, job.FinishedAt)
+	require.Empty(t, balance.reserves)
+	require.Empty(t, balance.releases)
+	require.NotContains(t, string(job.Result), "provider")
+	require.NotContains(t, string(job.Result), "leo_gen_1")
+	require.Contains(t, string(job.Result), "https://cdn.example/video.mp4")
+	require.Empty(t, repo.transitions)
+}
+
+func TestVideoJobServiceRecordSyncSanitizesFailedJobError(t *testing.T) {
+	repo := &fakeVideoJobServiceRepo{}
+	balance := &fakeVideoJobBalanceRepo{}
+	svc := &VideoJobService{Repo: repo, Billing: &VideoJobBillingService{BillingRepo: balance}}
+
+	job, err := svc.RecordSync(context.Background(), RecordSyncVideoJobInput{
+		APIKey: newVideoJobServiceTestAPIKey(), User: &User{ID: 1}, Account: newVideoJobServiceTestAccount(9),
+		Body: []byte(`{"model":"seedance-2.0","prompt":"waves"}`),
+		Status: VideoJobFailed, ErrorMessage: "Leonardo.ai rejected the prompt via LeoStudio",
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, VideoJobFailed, job.Status)
+	require.Empty(t, job.Result)
+	require.NotContains(t, job.ErrorMessage, "Leonardo")
+	require.NotContains(t, job.ErrorMessage, "LeoStudio")
+	require.Contains(t, strings.ToLower(job.ErrorMessage), "video service")
+	require.Empty(t, balance.reserves)
+	require.Empty(t, balance.releases)
+}
+
 func TestVideoJobServiceValidatesPromptBeforeSelectingAccount(t *testing.T) {
 	selector := &fakeVideoJobSelector{accounts: []*Account{newVideoJobServiceTestAccount(9)}}
 	service := &VideoJobService{Repo: &fakeVideoJobServiceRepo{}, Selector: selector, Client: &fakeVideoJobClient{}, Billing: newVideoJobServiceTestBilling()}
@@ -254,5 +347,6 @@ func cloneVideoJob(job *VideoJob) *VideoJob {
 	}
 	copy := *job
 	copy.BillingSnapshot = append([]byte(nil), job.BillingSnapshot...)
+	copy.Result = append(json.RawMessage(nil), job.Result...)
 	return &copy
 }

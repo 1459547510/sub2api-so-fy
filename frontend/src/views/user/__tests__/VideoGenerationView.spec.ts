@@ -6,6 +6,7 @@ import {
   cancelVideoJob,
   createVideoJob,
   downloadVideoOutput,
+  getVideoJob,
   listGatewayModels,
   listVideoJobs,
   uploadVideoInput,
@@ -21,6 +22,7 @@ vi.mock('@/api/videoGeneration', () => ({
   cancelVideoJob: vi.fn(),
   createVideoJob: vi.fn(),
   downloadVideoOutput: vi.fn(),
+  getVideoJob: vi.fn(),
   listGatewayModels: vi.fn(),
   listVideoJobs: vi.fn(),
   uploadVideoInput: vi.fn(),
@@ -81,6 +83,11 @@ function mountView() {
       stubs: {
         AppLayout: { template: '<div><slot /></div>' },
         Icon: { template: '<span />' },
+        Pagination: {
+          props: ['page', 'total', 'pageSize'],
+          emits: ['update:page'],
+          template: '<div data-testid="video-job-pagination"><span>{{ total }}</span><button data-testid="video-job-next-page" type="button" @click="$emit(\'update:page\', 2)">next</button></div>',
+        },
         VideoSectionTabs: { template: '<nav data-testid="video-section-tabs" />' },
       },
     },
@@ -95,7 +102,10 @@ describe('VideoGenerationView', () => {
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn((blob: Blob) => blob.type === 'video/mp4' ? 'blob:local-video' : `blob:local-image-${++imageIndex}`) })
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
     vi.mocked(keysAPI.list).mockResolvedValue({ items: [leoKey, grokKey] } as any)
-    vi.mocked(listVideoJobs).mockResolvedValue({ data: [] })
+    vi.mocked(listVideoJobs).mockResolvedValue({ data: [], total: 0, limit: 20, offset: 0 })
+    vi.mocked(getVideoJob).mockImplementation(async (_key, jobId) => ({
+      job_id: jobId, status: 'pending', status_url: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    }))
     vi.mocked(listGatewayModels).mockResolvedValue(allWorkbenchModels)
   })
 
@@ -857,27 +867,73 @@ describe('VideoGenerationView', () => {
     wrapper.unmount()
   })
 
-  it('uses the custom API Key to list, cancel, and download jobs', async () => {
+  it('keeps a custom API Key on the current session and never loads its history', async () => {
     vi.mocked(keysAPI.list).mockResolvedValue({ items: [grokKey] } as any)
     vi.mocked(downloadVideoOutput).mockResolvedValue(new Blob(['mp4'], { type: 'video/mp4' }))
-    vi.mocked(listVideoJobs).mockResolvedValue({ data: [
-      { job_id: 'vidjob-custom-done', status: 'completed', status_url: '', model: 'seedance-2.0', prompt: 'done', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), result: { data: [{ mp4_url: '/v1/videos/jobs/vidjob-custom-done/content' }] } },
-      { job_id: 'vidjob-custom-pending', status: 'pending', status_url: '', model: 'seedance-2.0', prompt: 'wait', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    ] })
-    vi.mocked(cancelVideoJob).mockResolvedValue({ job_id: 'vidjob-custom-pending', status: 'canceled', status_url: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    vi.mocked(createVideoJob).mockResolvedValue({
+      job_id: 'vidjob-custom-pending', status: 'pending', status_url: '', model: 'seedance-2.0', prompt: 'wait',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
+    vi.mocked(cancelVideoJob).mockResolvedValue({
+      job_id: 'vidjob-custom-pending', status: 'canceled', status_url: '',
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    })
     const wrapper = mountView()
     await flushPromises()
 
     await wrapper.get('[data-testid="key-mode-custom"]').trigger('click')
-    await wrapper.get('[data-testid="video-custom-api-key"]').setValue('custom-history-key')
+    await wrapper.get('[data-testid="video-custom-api-key"]').setValue('custom-session-key')
     await wrapper.get('[data-testid="refresh-video-jobs"]').trigger('click')
     await flushPromises()
 
-    expect(listVideoJobs).toHaveBeenCalledWith('custom-history-key', { limit: 50 })
-    expect(downloadVideoOutput).toHaveBeenCalledWith('custom-history-key', 'vidjob-custom-done')
+    expect(listVideoJobs).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="video-job-pagination"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('video.noJobs')
+
+    await wrapper.get('[data-testid="video-prompt"]').setValue('session only')
+    await wrapper.get('[data-testid="video-settings"] form').trigger('submit')
+    await flushPromises()
+
+    expect(createVideoJob).toHaveBeenCalledWith('custom-session-key', expect.objectContaining({ prompt: 'session only' }))
+    expect(listVideoJobs).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('vidjob-custom-pending')
     await wrapper.get('[data-testid="cancel-vidjob-custom-pending"]').trigger('click')
     await flushPromises()
-    expect(cancelVideoJob).toHaveBeenCalledWith('custom-history-key', 'vidjob-custom-pending')
+    expect(cancelVideoJob).toHaveBeenCalledWith('custom-session-key', 'vidjob-custom-pending')
+  })
+
+  it('pages every saved-key video job and hides pagination for a custom key', async () => {
+    const history = Array.from({ length: 21 }, (_, index) => ({
+      job_id: `vidjob-page-${index + 1}`,
+      status: 'completed' as const,
+      status_url: '',
+      model: 'seedance-2.0',
+      prompt: `job ${index + 1}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }))
+    vi.mocked(listVideoJobs).mockImplementation(async (_key, options = {}) => {
+      const offset = options.offset ?? 0
+      const limit = options.limit ?? 20
+      return { data: history.slice(offset, offset + limit), total: history.length, limit, offset }
+    })
+    vi.mocked(downloadVideoOutput).mockResolvedValue(new Blob(['mp4'], { type: 'video/mp4' }))
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(listVideoJobs).toHaveBeenCalledWith('sub2-leo-key', { limit: 20, offset: 0 })
+    expect(wrapper.get('[data-testid="video-job-pagination"]').text()).toContain('21')
+    expect(wrapper.text()).toContain('vidjob-page-1')
+
+    await wrapper.get('[data-testid="video-job-next-page"]').trigger('click')
+    await flushPromises()
+    expect(listVideoJobs).toHaveBeenCalledWith('sub2-leo-key', { limit: 20, offset: 20 })
+    expect(wrapper.text()).toContain('vidjob-page-21')
+
+    await wrapper.get('[data-testid="key-mode-custom"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="video-job-pagination"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('vidjob-page-1')
   })
 
   it('clears jobs from the previous Key when switching modes', async () => {

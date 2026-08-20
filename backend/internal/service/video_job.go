@@ -72,7 +72,7 @@ type VideoJobRepository interface {
 	CreateVideoJob(ctx context.Context, job *VideoJob) error
 	GetVideoJob(ctx context.Context, jobID string) (*VideoJob, error)
 	GetVideoJobForAPIKey(ctx context.Context, jobID string, apiKeyID int64) (*VideoJob, error)
-	ListVideoJobsForAPIKey(ctx context.Context, apiKeyID int64, limit int, status string) ([]*VideoJob, error)
+	ListVideoJobsForAPIKey(ctx context.Context, apiKeyID int64, limit, offset int, status string) ([]*VideoJob, int, error)
 	ListActiveVideoJobs(ctx context.Context, limit int) ([]*VideoJob, error)
 	TransitionVideoJob(ctx context.Context, jobID string, allowedStatuses []string, status string, transition VideoJobTransition) error
 }

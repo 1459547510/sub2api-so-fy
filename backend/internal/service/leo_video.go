@@ -267,7 +267,22 @@ func (s *OpenAIGatewayService) ForwardLeoVideo(
 		VideoCount:           1,
 		VideoResolution:      NormalizeLeoVideoBillingResolutionOrDefault(upstreamModel, resolution),
 		VideoDurationSeconds: NormalizeLeoVideoBillingDurationSecondsOrDefault(upstreamModel, durationSeconds),
+		VideoResult:          append(json.RawMessage(nil), responseBody...),
 	}, nil
+}
+
+// LeoVideoRejectedError is a non-failover video rejection that has already
+// been written to the client. The sync handler records a failed workbench job.
+type LeoVideoRejectedError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *LeoVideoRejectedError) Error() string {
+	if e == nil || strings.TrimSpace(e.Message) == "" {
+		return "video service rejected the request"
+	}
+	return e.Message
 }
 
 func (s *OpenAIGatewayService) handleLeoVideoErrorResponse(
@@ -299,7 +314,7 @@ func (s *OpenAIGatewayService) handleLeoVideoErrorResponse(
 			"message": message,
 		},
 	})
-	return nil, nil
+	return nil, &LeoVideoRejectedError{StatusCode: resp.StatusCode, Message: message}
 }
 
 func isLeoVideoFailoverStatus(statusCode int) bool {

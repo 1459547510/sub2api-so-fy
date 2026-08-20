@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -15,6 +16,20 @@ type CreateVideoJobInput struct {
 	Subscription   *UserSubscription
 	Body           []byte
 	LocalInputName string
+}
+
+// RecordSyncVideoJobInput writes a terminal workbench log for a synchronous
+// generation. Billing stays on the sync usage path; this must not hold or settle.
+type RecordSyncVideoJobInput struct {
+	APIKey         *APIKey
+	User           *User
+	Account        *Account
+	Body           []byte
+	LocalInputName string
+	Status         string
+	Result         json.RawMessage
+	ErrorMessage   string
+	OutputStore    *VideoOutputStore
 }
 
 type VideoJobAccountSelector interface {
@@ -163,11 +178,131 @@ func (s *VideoJobService) Create(ctx context.Context, in CreateVideoJobInput) (*
 	return nil, err
 }
 
-func (s *VideoJobService) List(ctx context.Context, apiKeyID int64, limit int, status string) ([]*VideoJob, error) {
+// HoldSync reserves the estimated video cost for a synchronous generation.
+// It does not persist a job or call upstream. The caller must release the
+// hold after usage settlement or on any failure before forwarding completes.
+func (s *VideoJobService) HoldSync(ctx context.Context, in CreateVideoJobInput) (*VideoJob, error) {
+	if s == nil || s.Billing == nil {
+		return nil, errors.New("video job service is not configured")
+	}
+	if in.APIKey == nil || in.User == nil || in.APIKey.Group == nil {
+		return nil, errors.New("video job request context is incomplete")
+	}
+	info, err := parseVideoJobCreateBody(in.Body)
+	if err != nil {
+		return nil, err
+	}
+	groupID := in.APIKey.Group.ID
+	if in.APIKey.GroupID != nil {
+		groupID = *in.APIKey.GroupID
+	}
+	jobID, err := NewVideoJobID()
+	if err != nil {
+		return nil, err
+	}
+	job := &VideoJob{
+		JobID: jobID, UserID: in.User.ID, APIKeyID: in.APIKey.ID, GroupID: groupID,
+		Status: VideoJobPending, RequestedModel: info.Model, UpstreamModel: info.Model,
+		Prompt: info.Prompt, Resolution: info.Resolution, DurationSeconds: info.DurationSeconds,
+		AspectRatio: info.AspectRatio, Audio: info.Audio, RequestHash: HashUsageRequestPayload(in.Body),
+	}
+	if err := s.Billing.Prepare(ctx, job, in.APIKey, in.User, in.Subscription); err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
+func (s *VideoJobService) RecordSync(ctx context.Context, in RecordSyncVideoJobInput) (*VideoJob, error) {
 	if s == nil || s.Repo == nil {
 		return nil, errors.New("video job service is not configured")
 	}
-	return s.Repo.ListVideoJobsForAPIKey(ctx, apiKeyID, limit, status)
+	if in.APIKey == nil || in.User == nil {
+		return nil, errors.New("video job request context is incomplete")
+	}
+	status := strings.TrimSpace(in.Status)
+	if status != VideoJobCompleted && status != VideoJobFailed {
+		return nil, errors.New("sync video job status is invalid")
+	}
+	info, err := parseVideoJobCreateBody(in.Body)
+	if err != nil {
+		return nil, err
+	}
+	groupID := int64(0)
+	if in.APIKey.Group != nil {
+		groupID = in.APIKey.Group.ID
+	}
+	if in.APIKey.GroupID != nil {
+		groupID = *in.APIKey.GroupID
+	}
+	accountID := int64(0)
+	upstreamModel := info.Model
+	if in.Account != nil {
+		accountID = in.Account.ID
+		upstreamModel = accountMappedModel(in.Account, info.Model)
+	}
+	jobID, err := NewVideoJobID()
+	if err != nil {
+		return nil, err
+	}
+	imageSource := "none"
+	if strings.TrimSpace(in.LocalInputName) != "" {
+		imageSource = "local"
+	} else if info.ImageURL != "" {
+		imageSource = "url"
+	}
+	now := time.Now()
+	result := json.RawMessage(nil)
+	if status == VideoJobCompleted && len(in.Result) != 0 {
+		if public := PublicLeoVideoResult(in.Result); len(public) != 0 {
+			result = public
+		} else {
+			result = append(json.RawMessage(nil), in.Result...)
+		}
+	}
+	errorMessage := ""
+	if status == VideoJobFailed {
+		errorMessage = SanitizeVideoProviderMessage(PublicVideoErrorMessage(strings.TrimSpace(in.ErrorMessage)))
+		if errorMessage == "" {
+			errorMessage = "Video service request failed"
+		}
+	}
+	job := &VideoJob{
+		JobID: jobID, UserID: in.User.ID, APIKeyID: in.APIKey.ID, GroupID: groupID, AccountID: accountID,
+		Status: status, RequestedModel: info.Model, UpstreamModel: upstreamModel,
+		Prompt: info.Prompt, Resolution: info.Resolution, DurationSeconds: info.DurationSeconds,
+		AspectRatio: info.AspectRatio, Audio: info.Audio, ImageSource: imageSource, ImageURL: info.ImageURL,
+		LocalInputName: strings.TrimSpace(in.LocalInputName), Result: result, ErrorMessage: errorMessage,
+		RequestHash: HashUsageRequestPayload(in.Body), SettledAt: &now, StartedAt: &now, FinishedAt: &now,
+	}
+	if err := s.Repo.CreateVideoJob(ctx, job); err != nil {
+		return nil, err
+	}
+	_ = MarkVideoInputTerminal(s.Inputs, job.LocalInputName, now)
+	if status == VideoJobCompleted && in.OutputStore != nil && len(in.Result) != 0 {
+		raw := append(json.RawMessage(nil), in.Result...)
+		go s.saveSyncVideoOutput(job.JobID, raw, in.OutputStore)
+	}
+	return job, nil
+}
+
+func (s *VideoJobService) saveSyncVideoOutput(jobID string, raw json.RawMessage, store *VideoOutputStore) {
+	if s == nil || s.Repo == nil || store == nil || strings.TrimSpace(jobID) == "" || len(raw) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	saved, err := store.Save(ctx, jobID, raw)
+	if err != nil || len(saved) == 0 {
+		return
+	}
+	_ = s.Repo.TransitionVideoJob(ctx, jobID, []string{VideoJobCompleted}, VideoJobCompleted, VideoJobTransition{Result: saved})
+}
+
+func (s *VideoJobService) List(ctx context.Context, apiKeyID int64, limit, offset int, status string) ([]*VideoJob, int, error) {
+	if s == nil || s.Repo == nil {
+		return nil, 0, errors.New("video job service is not configured")
+	}
+	return s.Repo.ListVideoJobsForAPIKey(ctx, apiKeyID, limit, offset, status)
 }
 
 func (s *VideoJobService) Get(ctx context.Context, jobID string, apiKeyID int64) (*VideoJob, error) {

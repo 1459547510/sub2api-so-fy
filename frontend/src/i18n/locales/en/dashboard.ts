@@ -1399,6 +1399,8 @@ const dashboardMessages = {
     noKeyHint: 'Create an active video-enabled API Key or use a custom Sub2 API Key.',
     results: 'Latest results',
     resultsHint: 'Active jobs refresh automatically every two seconds.',
+    resultsHintOwnKey: 'Lists every video job for the current Key. Active jobs refresh every two seconds.',
+    resultsHintCustomKey: 'Shows only jobs submitted with this custom Key in the current session.',
     polling: 'Refreshing active jobs',
     queueReady: 'Queue ready',
     previewEmpty: 'Select a completed job to preview it',

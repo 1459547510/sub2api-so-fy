@@ -78,13 +78,14 @@ describe('video generation API', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ job_id: 'vidjob-1', status: 'canceled' }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
 
-    await listVideoJobs('sub2-key', { limit: 50, status: 'pending' })
+    await listVideoJobs('sub2-key', { limit: 20, offset: 20, status: 'pending' })
     await cancelVideoJob('sub2-key', 'vidjob-1')
 
     const [, listInit] = fetchMock.mock.calls[0] as [string, RequestInit]
     const [cancelUrl, cancelInit] = fetchMock.mock.calls[1] as [string, RequestInit]
     expect(listInit.headers).toMatchObject({ Authorization: 'Bearer sub2-key' })
-    expect(fetchMock.mock.calls[0][0]).toContain('limit=50')
+    expect(fetchMock.mock.calls[0][0]).toContain('limit=20')
+    expect(fetchMock.mock.calls[0][0]).toContain('offset=20')
     expect(fetchMock.mock.calls[0][0]).toContain('status=pending')
     expect(cancelUrl).toContain('/v1/videos/jobs/vidjob-1')
     expect(cancelInit.method).toBe('DELETE')

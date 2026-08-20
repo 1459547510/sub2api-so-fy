@@ -6845,3 +6845,57 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This release does not include the in-app Seedance V2 catalog switch still sitting in the worktree.
 - Roll back source behavior with `git revert --no-commit v0.1.178-fy.3..v0.1.178-fy.4` after reviewing the reversal; the previous deployable source tag is `v0.1.178-fy.3`. To withdraw the binary, remove GitHub Release `v0.1.178-fy.4` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-20 - Task: Paginate workbench video logs for saved keys
+### What was done
+- Saved-key workbench logs now page through every video job for the current Key. Custom keys stay session-only and never load history.
+- `GET /v1/videos/jobs` accepts `offset` and returns `total` so the workbench can page without changing the existing `data` list.
+
+### Testing
+- From `frontend/`, `npx vitest run src/views/user/__tests__/VideoGenerationView.spec.ts src/api/__tests__/videoGeneration.spec.ts` is recorded with this change.
+- From `backend/`, `go test ./internal/handler ./internal/repository ./internal/service -count=1 -run "LeoVideoJobs|ListVideoJobs|VideoJob"` is recorded with this change.
+
+### Notes
+- Roll back with `git revert` of this commit. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-20 - Task: Persist sync video generations in the workbench log
+### What was done
+- Synchronous `POST /v1/videos/generations` still returns the video immediately. After a real generation attempt, Sub2API now writes a terminal `video_jobs` row so the same saved Key's workbench log can list it.
+- Sync logs reuse existing usage billing and never open an async video hold. Failed attempts after forwarding are recorded with sanitized public errors; validation/auth failures before a generation attempt are not.
+
+### Testing
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1 -run "ForwardLeoVideo|VideoJobServiceRecordSync|LeoVideoGeneration|PersistSyncVideoJob|LeoVideoJobs"` is recorded with this change.
+
+### Notes
+- Preview/download of a sync job uses the existing `/content` path and may appear a moment after the HTTP response, once the output file is saved in the background.
+- Roll back with `git revert` of this commit. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-20 - Task: Hold estimated cost before sync video generation
+### What was done
+- Synchronous video generation now reserves the estimated resolution × duration × multiplier before selecting an account or calling the video service. A 1-unit balance can no longer start a 24-unit 30-second job.
+- Insufficient hold returns HTTP 402 and writes no workbench job. Failures after the hold release it. Success records usage first, then releases the hold so the charge is not doubled.
+
+### Testing
+- From `backend/`, `go test ./internal/service ./internal/handler -count=1 -run "VideoJobServiceHoldSync|LeoVideoGenerationRejectsInsufficientSyncHold|LeoVideoGenerationIntegration|VideoJobServiceRecordSync"` is recorded with this change.
+
+### Notes
+- The hold uses the requested model, resolution, and duration, matching async `Prepare`. Actual settlement can still differ if the completed output reports a different duration or resolution.
+- Roll back with `git revert` of this commit. Preserve unrelated `.superpowers/` content.
+
+## 2026-08-20 - Task: Release sync video hold and workbench logs as v0.1.178-fy.5
+### What was done
+- Synchronous video generation now reserves the estimated cost before forwarding. A 1-unit balance can no longer start a 24-unit 30-second job.
+- After a real sync generation attempt, Sub2API writes a terminal workbench job. Saved keys page through every video job for that Key; custom keys stay session-only.
+- This tag also includes the already-committed empty leftover video-card save fix that was briefly tagged as withdrawn `v0.1.178-fy.4`.
+- Prepared annotated tag `v0.1.178-fy.5`.
+
+### Testing
+- From `backend/`, `go test -p 1 ./... -count=1` passed.
+- From `backend/`, `go vet ./...` passed.
+- From `frontend/`, `npm.cmd exec -- vitest run` passed, 240 files and 1742 tests.
+- From `frontend/`, `npm.cmd run build` passed (37.28s).
+
+### Notes
+- This release does not include the in-app Seedance V2 catalog switch still sitting in the worktree.
+- The sync hold is in-memory. A process restart during an in-flight sync generation can leave `frozen_balance` until it is released manually.
+- Roll back source behavior with `git revert --no-commit v0.1.178-fy.3..v0.1.178-fy.5` after reviewing the reversal; the previous deployable source tag is `v0.1.178-fy.3`. To withdraw the binary, remove GitHub Release `v0.1.178-fy.5` and its remote tag. Preserve unrelated `.superpowers/` content.
+

@@ -140,10 +140,23 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 		return
 	}
 
+	syncHold, err := h.holdSyncVideoJob(c, apiKey, subject, subscription, body)
+	if err != nil {
+		h.leoVideoCreateErrorResponse(c, err)
+		return
+	}
+	holdSettledWithUsage := false
+	defer func() {
+		if !holdSettledWithUsage {
+			h.releaseSyncVideoHold(syncHold)
+		}
+	}()
+
 	requestCtx := c.Request.Context()
 	sessionHash := h.gatewayService.GenerateExplicitSessionHash(c, body)
 	failedAccountIDs := make(map[int64]struct{})
 	var lastFailoverErr *service.UpstreamFailoverError
+	var lastAccount *service.Account
 	switchCount := 0
 	maxAccountSwitches := h.maxAccountSwitches
 	if maxAccountSwitches <= 0 {
@@ -177,8 +190,10 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 			}
 			if lastFailoverErr != nil {
 				h.handleFailoverExhausted(c, lastFailoverErr, false, requestPlatform)
+				h.persistSyncVideoJob(c, apiKey, subject, lastAccount, body, service.VideoJobFailed, nil, lastFailoverErr)
 			} else {
 				h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
+				h.persistSyncVideoJob(c, apiKey, subject, lastAccount, body, service.VideoJobFailed, nil, errors.New("Upstream request failed"))
 			}
 			return
 		}
@@ -190,6 +205,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 			zap.Int64("latency_ms", scheduleDecision.LatencyMs),
 		)
 		account := selection.Account
+		lastAccount = account
 		setOpsSelectedAccount(c, account.ID, account.Platform)
 		accountReleaseFunc, slotResult := h.acquireResponsesAccountSlot(c, apiKey.GroupID, sessionHash, selection, false, &streamStarted, reqLog, false)
 		if slotResult == openAISlotAcquireProfitVetoed {
@@ -225,11 +241,18 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 				h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", validationErr.Error())
 				return
 			}
+			var rejectedErr *service.LeoVideoRejectedError
+			if errors.As(err, &rejectedErr) {
+				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
+				h.persistSyncVideoJob(c, apiKey, subject, account, body, service.VideoJobFailed, nil, rejectedErr)
+				return
+			}
 			var failoverErr *service.UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
 				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
 				if c.Writer.Size() != writerSizeBeforeForward {
 					h.handleFailoverExhausted(c, failoverErr, true, requestPlatform)
+					h.persistSyncVideoJob(c, apiKey, subject, account, body, service.VideoJobFailed, nil, failoverErr)
 					return
 				}
 				h.gatewayService.RecordOpenAIAccountSwitch()
@@ -237,6 +260,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 				lastFailoverErr = failoverErr
 				if switchCount >= maxAccountSwitches {
 					h.handleFailoverExhausted(c, failoverErr, false, requestPlatform)
+					h.persistSyncVideoJob(c, apiKey, subject, account, body, service.VideoJobFailed, nil, failoverErr)
 					return
 				}
 				switchCount++
@@ -253,6 +277,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 				h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
 			}
 			reqLog.Warn("leo_video.forward_failed", zap.Int64("account_id", account.ID), zap.Error(err))
+			h.persistSyncVideoJob(c, apiKey, subject, account, body, service.VideoJobFailed, nil, err)
 			return
 		}
 
@@ -260,7 +285,11 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 		if result == nil {
 			return
 		}
-		recordLeoVideoUsage(c, h, reqLog, apiKey, subject, subscription, account, result, requestModel, body)
+		holdSettledWithUsage = true
+		recordLeoVideoUsage(c, h, reqLog, apiKey, subject, subscription, account, result, requestModel, body, func() {
+			h.releaseSyncVideoHold(syncHold)
+		})
+		h.persistSyncVideoJob(c, apiKey, subject, account, body, service.VideoJobCompleted, result.VideoResult, nil)
 		return
 	}
 }
@@ -277,6 +306,99 @@ func leoVideoModerationBody(info service.LeoVideoRequestInfo) []byte {
 	return body
 }
 
+func (h *OpenAIGatewayHandler) persistSyncVideoJob(
+	c *gin.Context,
+	apiKey *service.APIKey,
+	subject middleware2.AuthSubject,
+	account *service.Account,
+	body []byte,
+	status string,
+	result json.RawMessage,
+	cause error,
+) {
+	if h == nil || h.videoJobService == nil || apiKey == nil {
+		return
+	}
+	user := apiKey.User
+	if user == nil {
+		user = &service.User{ID: subject.UserID}
+	}
+	localInputName := ""
+	if h.videoInputHandler != nil && h.videoInputHandler.store != nil {
+		localInputName = strings.Join(h.videoInputHandler.store.TokensFromVideoRequest(body), ",")
+	}
+	ctx := context.Background()
+	if c != nil && c.Request != nil {
+		ctx = context.WithoutCancel(c.Request.Context())
+	}
+	_, err := h.videoJobService.RecordSync(ctx, service.RecordSyncVideoJobInput{
+		APIKey: apiKey, User: user, Account: account, Body: body, LocalInputName: localInputName,
+		Status: status, Result: result, ErrorMessage: syncVideoJobErrorMessage(cause),
+		OutputStore: h.videoOutputStore,
+	})
+	if err == nil {
+		return
+	}
+	logger.L().With(
+		zap.String("component", "handler.openai_gateway.leo_video"),
+		zap.Int64("user_id", subject.UserID),
+		zap.Int64("api_key_id", apiKey.ID),
+	).Warn("leo_video.persist_sync_job_failed", zap.Error(err))
+}
+
+func syncVideoJobErrorMessage(err error) string {
+	var rejected *service.LeoVideoRejectedError
+	if errors.As(err, &rejected) && rejected != nil && strings.TrimSpace(rejected.Message) != "" {
+		return rejected.Message
+	}
+	var failoverErr *service.UpstreamFailoverError
+	if errors.As(err, &failoverErr) && failoverErr != nil {
+		message := service.PublicVideoErrorMessage(service.SanitizeVideoProviderMessage(service.ExtractUpstreamErrorMessage(failoverErr.ResponseBody)))
+		if message != "" {
+			return message
+		}
+	}
+	if err != nil && strings.TrimSpace(err.Error()) != "" {
+		return service.SanitizeVideoProviderMessage(service.PublicVideoErrorMessage(err.Error()))
+	}
+	return "Video service request failed"
+}
+
+func (h *OpenAIGatewayHandler) holdSyncVideoJob(
+	c *gin.Context,
+	apiKey *service.APIKey,
+	subject middleware2.AuthSubject,
+	subscription *service.UserSubscription,
+	body []byte,
+) (*service.VideoJob, error) {
+	if h == nil || h.videoJobService == nil || h.videoJobService.Billing == nil {
+		return nil, nil
+	}
+	user := apiKey.User
+	if user == nil {
+		user = &service.User{ID: subject.UserID}
+	}
+	ctx := context.Background()
+	if c != nil && c.Request != nil {
+		ctx = c.Request.Context()
+	}
+	return h.videoJobService.HoldSync(ctx, service.CreateVideoJobInput{
+		APIKey: apiKey, User: user, Subscription: subscription, Body: body,
+	})
+}
+
+func (h *OpenAIGatewayHandler) releaseSyncVideoHold(job *service.VideoJob) {
+	if h == nil || h.videoJobService == nil || h.videoJobService.Billing == nil || job == nil {
+		return
+	}
+	if err := h.videoJobService.Billing.SettleWithoutCharge(context.Background(), job); err != nil {
+		logger.L().With(
+			zap.String("component", "handler.openai_gateway.leo_video"),
+			zap.String("job_id", job.JobID),
+		).Warn("leo_video.release_sync_hold_failed", zap.Error(err))
+	}
+}
+
 func recordLeoVideoUsage(
 	c *gin.Context,
 	h *OpenAIGatewayHandler,
@@ -288,6 +410,7 @@ func recordLeoVideoUsage(
 	result *service.OpenAIForwardResult,
 	requestModel string,
 	body []byte,
+	after func(),
 ) {
 	channelUsageFields := service.ChannelUsageFields{OriginalModel: requestModel, ChannelMappedModel: requestModel}
 	if apiKey.GroupID != nil {
@@ -300,6 +423,11 @@ func recordLeoVideoUsage(
 	requestPayloadHash := service.HashUsageRequestPayload(body)
 	quotaPlatform := service.QuotaPlatform(c.Request.Context(), apiKey)
 	h.submitOpenAIUsageRecordTask(c.Request.Context(), result, func(ctx context.Context) {
+		defer func() {
+			if after != nil {
+				after()
+			}
+		}()
 		if err := h.gatewayService.RecordUsage(ctx, &service.OpenAIRecordUsageInput{
 			Result:             result,
 			APIKey:             apiKey,

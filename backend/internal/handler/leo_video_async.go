@@ -109,7 +109,17 @@ func (h *OpenAIGatewayHandler) LeoVideoJobs(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	jobs, err := h.videoJobService.List(c.Request.Context(), apiKey.ID, limit, strings.TrimSpace(c.Query("status")))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	jobs, total, err := h.videoJobService.List(c.Request.Context(), apiKey.ID, limit, offset, strings.TrimSpace(c.Query("status")))
 	if err != nil {
 		h.errorResponse(c, http.StatusInternalServerError, "api_error", "Video job list unavailable")
 		return
@@ -119,7 +129,7 @@ func (h *OpenAIGatewayHandler) LeoVideoJobs(c *gin.Context) {
 	for _, job := range jobs {
 		responses = append(responses, publicLeoVideoJob(job))
 	}
-	c.JSON(http.StatusOK, gin.H{"data": responses})
+	c.JSON(http.StatusOK, gin.H{"data": responses, "total": total, "limit": limit, "offset": offset})
 }
 
 func (h *OpenAIGatewayHandler) LeoVideoJob(c *gin.Context) {

@@ -64,10 +64,14 @@ export interface VideoJob {
 
 export interface VideoJobsResponse {
   data: VideoJob[]
+  total?: number
+  limit?: number
+  offset?: number
 }
 
 export interface VideoJobListOptions {
   limit?: number
+  offset?: number
   status?: string
 }
 
@@ -121,6 +125,7 @@ export async function createVideoJob(apiKey: string, payload: VideoGenerationReq
 
 export async function listVideoJobs(apiKey: string, options: VideoJobListOptions = {}): Promise<VideoJobsResponse> {
   const params = new URLSearchParams({ limit: String(options.limit || 50) })
+  if (options.offset != null) params.set('offset', String(options.offset))
   if (options.status) params.set('status', options.status)
   const response = await fetch(buildGatewayUrl(`/v1/videos/jobs?${params.toString()}`), {
     headers: authHeaders(apiKey),

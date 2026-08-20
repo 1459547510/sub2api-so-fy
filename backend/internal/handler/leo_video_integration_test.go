@@ -192,6 +192,9 @@ func TestLeoVideoGenerationIntegration(t *testing.T) {
 		nil,
 		cfg,
 	)
+	jobRepo := &handlerVideoJobRepo{}
+	balance := &handlerVideoBillingRepo{}
+	handler.SetVideoServices(newHandlerVideoJobServiceWithBalance(jobRepo, balance), nil, nil)
 	apiKey := &service.APIKey{
 		ID:      9301,
 		GroupID: &groupID,
@@ -251,4 +254,13 @@ func TestLeoVideoGenerationIntegration(t *testing.T) {
 	require.NotNil(t, usageRepo.lastLog.VideoDurationSeconds)
 	require.Equal(t, 12, *usageRepo.lastLog.VideoDurationSeconds)
 	require.InDelta(t, price720P*12*1.5, usageRepo.lastLog.ActualCost, 1e-12)
+	require.NotNil(t, jobRepo.job)
+	require.Equal(t, service.VideoJobCompleted, jobRepo.job.Status)
+	require.Equal(t, "A cinematic city at night", jobRepo.job.Prompt)
+	require.Equal(t, "seedance-2.0", jobRepo.job.RequestedModel)
+	require.Nil(t, jobRepo.job.HoldAmount)
+	require.NotContains(t, string(jobRepo.job.Result), "leo_gen_123")
+	require.NotContains(t, string(jobRepo.job.Result), "provider")
+	require.Equal(t, 1, balance.reserves)
+	require.Equal(t, 1, balance.releases)
 }

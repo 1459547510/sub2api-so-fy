@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -33,12 +34,12 @@ func (r *handlerVideoJobRepo) GetVideoJobForAPIKey(_ context.Context, id string,
 	return &copy, nil
 }
 
-func (r *handlerVideoJobRepo) ListVideoJobsForAPIKey(_ context.Context, apiKeyID int64, _ int, _ string) ([]*service.VideoJob, error) {
+func (r *handlerVideoJobRepo) ListVideoJobsForAPIKey(_ context.Context, apiKeyID int64, _ int, _ int, _ string) ([]*service.VideoJob, int, error) {
 	if r.job == nil || r.job.APIKeyID != apiKeyID {
-		return []*service.VideoJob{}, nil
+		return []*service.VideoJob{}, 0, nil
 	}
 	copy := *r.job
-	return []*service.VideoJob{&copy}, nil
+	return []*service.VideoJob{&copy}, 1, nil
 }
 
 func (r *handlerVideoJobRepo) TransitionVideoJob(_ context.Context, id string, _ []string, status string, transition service.VideoJobTransition) error {
@@ -82,21 +83,42 @@ func (handlerRejectingVideoClient) CreateLeoAsyncVideo(context.Context, *service
 	return nil, &service.LeoAsyncUpstreamError{StatusCode: http.StatusBadRequest, Message: "Leonardo: guidances.image_reference supports at most 4 items"}
 }
 
-type handlerVideoBillingRepo struct{ service.UsageBillingRepository }
+type handlerVideoBillingRepo struct {
+	service.UsageBillingRepository
+	reserves   int
+	releases   int
+	reserveErr error
+}
 
-func (handlerVideoBillingRepo) ReserveVideoBalance(context.Context, *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
+func (r *handlerVideoBillingRepo) ReserveVideoBalance(context.Context, *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
+	if r != nil {
+		r.reserves++
+		if r.reserveErr != nil {
+			return nil, r.reserveErr
+		}
+	}
 	return &service.VideoBalanceHoldResult{Applied: true}, nil
 }
 
-func (handlerVideoBillingRepo) ReleaseVideoBalance(context.Context, *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
+func (r *handlerVideoBillingRepo) ReleaseVideoBalance(context.Context, *service.VideoBalanceHoldCommand) (*service.VideoBalanceHoldResult, error) {
+	if r != nil {
+		r.releases++
+	}
 	return &service.VideoBalanceHoldResult{Applied: true}, nil
 }
 
 func newHandlerVideoJobService(repo *handlerVideoJobRepo) *service.VideoJobService {
+	return newHandlerVideoJobServiceWithBalance(repo, &handlerVideoBillingRepo{})
+}
+
+func newHandlerVideoJobServiceWithBalance(repo *handlerVideoJobRepo, balance *handlerVideoBillingRepo) *service.VideoJobService {
 	selector := handlerVideoAccountSelector{account: &service.Account{ID: 9, Platform: service.PlatformLeo, Type: service.AccountTypeAPIKey, Credentials: map[string]any{
 		"base_url": "http://leo.internal:8000/v1", "api_key": "secret", "model_mapping": map[string]any{"seedance": "seedance-2.0"},
 	}}}
-	billing := &service.VideoJobBillingService{BillingRepo: handlerVideoBillingRepo{}}
+	if balance == nil {
+		balance = &handlerVideoBillingRepo{}
+	}
+	billing := &service.VideoJobBillingService{BillingRepo: balance}
 	return service.NewVideoJobService(repo, selector, handlerVideoClient{}, billing)
 }
 
@@ -166,7 +188,7 @@ func TestLeoVideoAsyncGenerationPreservesNewUpstreamValidationErrors(t *testing.
 	selector := handlerVideoAccountSelector{account: &service.Account{ID: 9, Platform: service.PlatformLeo, Type: service.AccountTypeAPIKey, Credentials: map[string]any{
 		"base_url": "http://leo.internal:8000/v1", "api_key": "secret", "model_mapping": map[string]any{"seedance": "seedance-2.0"},
 	}}}
-	billing := &service.VideoJobBillingService{BillingRepo: handlerVideoBillingRepo{}}
+	billing := &service.VideoJobBillingService{BillingRepo: &handlerVideoBillingRepo{}}
 	h := &OpenAIGatewayHandler{videoJobService: service.NewVideoJobService(repo, selector, handlerRejectingVideoClient{}, billing)}
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
@@ -305,6 +327,86 @@ func TestLeoVideoJobContentStaysAPIKeyScopedAndServesMP4(t *testing.T) {
 			require.Equal(t, video, recorder.Body.Bytes())
 		}
 	}
+}
+
+func TestLeoVideoGenerationRejectsInsufficientSyncHold(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{RunMode: config.RunModeSimple}
+	billingCache := service.NewBillingCacheService(nil, nil, nil, nil, nil, nil, cfg, nil)
+	t.Cleanup(billingCache.Stop)
+	h := NewOpenAIGatewayHandler(
+		&service.OpenAIGatewayService{},
+		service.NewConcurrencyService(nil),
+		billingCache,
+		service.NewAPIKeyService(nil, nil, nil, nil, nil, nil, cfg),
+		nil, nil, nil, nil, cfg,
+	)
+	jobRepo := &handlerVideoJobRepo{}
+	balance := &handlerVideoBillingRepo{reserveErr: service.ErrVideoInsufficientBalance}
+	videoJobs := newHandlerVideoJobServiceWithBalance(jobRepo, balance)
+	h.SetVideoServices(videoJobs, nil, nil)
+	rec, c := newLeoVideoHandlerTestContext(`{"model":"seedance-2.5","prompt":"waves","resolution":"720p","duration":30}`, true)
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 3, Concurrency: 0})
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	require.True(t, ok)
+	price := 0.8
+	apiKey.User = &service.User{ID: 3}
+	apiKey.Group.RateMultiplier = 1
+	apiKey.Group.VideoPrice480P = &price
+	apiKey.Group.VideoPrice720P = &price
+	apiKey.Group.VideoPrice1080P = &price
+	h.LeoVideoGeneration(c)
+
+	require.Equal(t, 1, balance.reserves, rec.Body.String())
+	require.Equal(t, http.StatusPaymentRequired, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), "insufficient balance")
+	require.NotContains(t, strings.ToLower(rec.Body.String()), "leonardo")
+	require.Nil(t, jobRepo.job)
+	require.Equal(t, 0, balance.releases)
+}
+
+func TestPersistSyncVideoJobWritesFailedLogWithoutVendorNames(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &handlerVideoJobRepo{}
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(repo)}
+	_, c := newLeoVideoHandlerTestContext(`{"model":"seedance","prompt":"waves"}`, true)
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	require.True(t, ok)
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	require.True(t, ok)
+
+	h.persistSyncVideoJob(c, apiKey, subject, &service.Account{ID: 9, Platform: service.PlatformLeo},
+		[]byte(`{"model":"seedance","prompt":"waves"}`), service.VideoJobFailed, nil,
+		&service.LeoVideoRejectedError{StatusCode: http.StatusUnprocessableEntity, Message: "Leonardo rejected the prompt"})
+
+	require.NotNil(t, repo.job)
+	require.Equal(t, service.VideoJobFailed, repo.job.Status)
+	require.Equal(t, "waves", repo.job.Prompt)
+	require.Nil(t, repo.job.HoldAmount)
+	require.NotContains(t, repo.job.ErrorMessage, "Leonardo")
+	require.Contains(t, strings.ToLower(repo.job.ErrorMessage), "video service")
+}
+
+func TestLeoVideoJobsReturnsPagedTotal(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &handlerVideoJobRepo{job: &service.VideoJob{
+		JobID: "vidjob_list", APIKeyID: 2, Status: service.VideoJobPending, Prompt: "waves",
+	}}
+	h := &OpenAIGatewayHandler{videoJobService: newHandlerVideoJobService(repo)}
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/videos/jobs?limit=20&offset=0", nil)
+	setHandlerVideoAuth(c)
+
+	h.LeoVideoJobs(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
+	require.Equal(t, float64(1), body["total"])
+	require.Equal(t, float64(20), body["limit"])
+	require.Equal(t, float64(0), body["offset"])
+	require.Len(t, body["data"], 1)
 }
 
 func setHandlerVideoAuth(c *gin.Context) { setHandlerVideoAuthWithKey(c, 2) }

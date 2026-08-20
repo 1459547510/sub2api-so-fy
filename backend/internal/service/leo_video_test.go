@@ -73,6 +73,8 @@ func TestForwardLeoVideoMapsModelAndAddsBearer(t *testing.T) {
 	require.Equal(t, "https://cdn.example/video.mp4", gjson.Get(rec.Body.String(), "data.0.mp4_url").String())
 	require.NotContains(t, rec.Body.String(), "provider")
 	require.NotContains(t, rec.Body.String(), "generation_id")
+	require.Contains(t, string(result.VideoResult), "https://cdn.example/video.mp4")
+	require.Contains(t, string(result.VideoResult), "provider")
 }
 
 func TestForwardLeoVideoPreservesLTXFastTwentySecondDuration(t *testing.T) {
@@ -193,8 +195,12 @@ func TestForwardLeoVideoWritesRequestErrorsWithoutFailover(t *testing.T) {
 
 			result, err := svc.ForwardLeoVideo(context.Background(), c, newLeoVideoTestAccount(), []byte(`{"model":"seedance","prompt":"city"}`))
 
-			require.NoError(t, err)
 			require.Nil(t, result)
+			var rejected *LeoVideoRejectedError
+			require.True(t, errors.As(err, &rejected))
+			require.Equal(t, status, rejected.StatusCode)
+			require.Contains(t, rejected.Message, "bad prompt")
+			require.NotContains(t, strings.ToLower(rejected.Message), "leonardo")
 			require.Equal(t, status, rec.Code)
 			require.Contains(t, rec.Body.String(), "bad prompt")
 			require.NotContains(t, strings.ToLower(rec.Body.String()), "leonardo")

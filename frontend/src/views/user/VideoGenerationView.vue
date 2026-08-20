@@ -248,7 +248,7 @@
             <div class="flex items-center justify-between gap-3">
               <div>
                 <h2 class="text-base font-semibold text-gray-900 dark:text-white">{{ t('video.results') }}</h2>
-                <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('video.resultsHint') }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ apiKeyMode === 'saved' ? t('video.resultsHintOwnKey') : t('video.resultsHintCustomKey') }}</p>
               </div>
               <button type="button" class="btn btn-secondary btn-sm" :disabled="loadingJobs || !effectiveApiKey" :title="t('common.refresh')" data-testid="refresh-video-jobs" @click="loadJobs">
                 <Icon name="refresh" size="sm" :class="loadingJobs ? 'animate-spin' : ''" />
@@ -305,6 +305,15 @@
               </span>
             </article>
           </div>
+          <Pagination
+            v-if="apiKeyMode === 'saved' && jobTotal > 0"
+            data-testid="video-job-pagination"
+            :page="jobPage"
+            :total="jobTotal"
+            :page-size="JOB_PAGE_SIZE"
+            :show-page-size-selector="false"
+            @update:page="handleJobPageChange"
+          />
         </section>
       </div>
     </div>
@@ -316,6 +325,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import Pagination from '@/components/common/Pagination.vue'
 import VideoSectionTabs from '@/components/video/VideoSectionTabs.vue'
 import { keysAPI } from '@/api'
 import type { ApiKey } from '@/types'
@@ -324,12 +334,15 @@ import {
   cancelVideoJob,
   createVideoJob,
   downloadVideoOutput,
+  getVideoJob,
   listGatewayModels,
   listVideoJobs,
   uploadVideoInput,
   type VideoGenerationRequest,
   type VideoJob,
 } from '@/api/videoGeneration'
+
+const JOB_PAGE_SIZE = 20
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -339,6 +352,8 @@ const apiKeyMode = ref<'saved' | 'custom'>('saved')
 const customApiKey = ref('')
 const showCustomApiKey = ref(false)
 const jobs = ref<VideoJob[]>([])
+const jobPage = ref(1)
+const jobTotal = ref(0)
 const selectedJobId = ref('')
 const prompt = ref('')
 const model = ref('seedance-2.0')
@@ -957,15 +972,39 @@ async function loadJobs() {
   const apiKey = effectiveApiKey.value
   if (!apiKey) {
     jobs.value = []
+    jobTotal.value = 0
     stopPolling()
     return
   }
   const request = ++jobsRequest
   loadingJobs.value = true
   try {
-    const result = await listVideoJobs(apiKey, { limit: 50 })
-    if (request !== jobsRequest || apiKey !== effectiveApiKey.value) return
-    jobs.value = result.data || []
+    if (apiKeyMode.value === 'custom') {
+      const refreshed = await Promise.all(jobs.value.map(async (job) => {
+        try {
+          return await getVideoJob(apiKey, job.job_id)
+        } catch {
+          return job
+        }
+      }))
+      if (request !== jobsRequest || apiKey !== effectiveApiKey.value) return
+      jobs.value = refreshed
+      jobTotal.value = refreshed.length
+    } else {
+      const offset = (jobPage.value - 1) * JOB_PAGE_SIZE
+      const result = await listVideoJobs(apiKey, { limit: JOB_PAGE_SIZE, offset })
+      if (request !== jobsRequest || apiKey !== effectiveApiKey.value) return
+      jobs.value = result.data || []
+      jobTotal.value = result.total ?? jobs.value.length
+      const pages = Math.max(1, Math.ceil(jobTotal.value / JOB_PAGE_SIZE) || 1)
+      if (jobPage.value > pages && jobTotal.value > 0) {
+        jobPage.value = pages
+        if (request === jobsRequest) {
+          loadingJobs.value = false
+          return loadJobs()
+        }
+      }
+    }
     if (!selectedJobId.value || !jobs.value.some((job) => job.job_id === selectedJobId.value)) selectedJobId.value = jobs.value[0]?.job_id || ''
     updatePolling()
   } catch (error) {
@@ -973,6 +1012,12 @@ async function loadJobs() {
   } finally {
     if (request === jobsRequest) loadingJobs.value = false
   }
+}
+
+function handleJobPageChange(page: number) {
+  if (apiKeyMode.value !== 'saved' || page === jobPage.value) return
+  jobPage.value = page
+  void loadJobs()
 }
 
 async function submitJob() {
@@ -1074,9 +1119,19 @@ async function submitJob() {
     const accepted = await createVideoJob(apiKey, payload)
     const now = new Date().toISOString()
     const job: VideoJob = { ...accepted, model: accepted.model || requestParameters.model, prompt: accepted.prompt || payload.prompt, created_at: accepted.created_at || now, updated_at: accepted.updated_at || now }
-    jobs.value = [job, ...jobs.value.filter((item) => item.job_id !== job.job_id)].slice(0, 50)
     selectedJobId.value = job.job_id
-    updatePolling()
+    if (apiKeyMode.value === 'custom') {
+      jobs.value = [job, ...jobs.value.filter((item) => item.job_id !== job.job_id)]
+      jobTotal.value = jobs.value.length
+      updatePolling()
+    } else {
+      jobPage.value = 1
+      await loadJobs()
+      if (!jobs.value.some((item) => item.job_id === job.job_id)) {
+        jobs.value = [job, ...jobs.value]
+        jobTotal.value += 1
+      }
+    }
     appStore.showSuccess(t('video.submitSuccess'))
     if (imageMode.value === 'local') clearImageInputs()
     clearMediaInputs()
@@ -1480,6 +1535,8 @@ function resetKeyScopedState() {
   videoOutputRequest++
   loadingJobs.value = false
   jobs.value = []
+  jobPage.value = 1
+  jobTotal.value = 0
   selectedJobId.value = ''
   stopPolling()
   clearSelectedVideo()

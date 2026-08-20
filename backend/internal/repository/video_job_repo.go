@@ -100,20 +100,26 @@ func (r *videoJobRepository) GetVideoJobForAPIKey(ctx context.Context, jobID str
 	return videoJobEntityToService(row), nil
 }
 
-func (r *videoJobRepository) ListVideoJobsForAPIKey(ctx context.Context, apiKeyID int64, limit int, status string) ([]*service.VideoJob, error) {
+func (r *videoJobRepository) ListVideoJobsForAPIKey(ctx context.Context, apiKeyID int64, limit, offset int, status string) ([]*service.VideoJob, int, error) {
 	limit = normalizeVideoJobLimit(limit)
+	offset = normalizeVideoJobOffset(offset)
 	query := r.client.VideoJob.Query().Where(videojob.APIKeyIDEQ(apiKeyID))
 	if status != "" {
 		query.Where(videojob.StatusEQ(status))
 	}
+	total, err := query.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
 	rows, err := query.
 		Order(dbent.Desc(videojob.FieldCreatedAt), dbent.Desc(videojob.FieldID)).
+		Offset(offset).
 		Limit(limit).
 		All(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return videoJobEntitiesToService(rows), nil
+	return videoJobEntitiesToService(rows), total, nil
 }
 
 func (r *videoJobRepository) ListActiveVideoJobs(ctx context.Context, limit int) ([]*service.VideoJob, error) {
@@ -182,6 +188,13 @@ func normalizeVideoJobLimit(limit int) int {
 		return 100
 	}
 	return limit
+}
+
+func normalizeVideoJobOffset(offset int) int {
+	if offset < 0 {
+		return 0
+	}
+	return offset
 }
 
 func applyVideoJobEntity(dst *service.VideoJob, src *dbent.VideoJob) {

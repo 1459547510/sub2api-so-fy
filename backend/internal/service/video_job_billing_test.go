@@ -10,12 +10,16 @@ import (
 
 type fakeVideoJobBalanceRepo struct {
 	UsageBillingRepository
-	reserves []*VideoBalanceHoldCommand
-	releases []*VideoBalanceHoldCommand
+	reserves   []*VideoBalanceHoldCommand
+	releases   []*VideoBalanceHoldCommand
+	reserveErr error
 }
 
 func (r *fakeVideoJobBalanceRepo) ReserveVideoBalance(_ context.Context, cmd *VideoBalanceHoldCommand) (*VideoBalanceHoldResult, error) {
 	r.reserves = append(r.reserves, cmd)
+	if r.reserveErr != nil {
+		return nil, r.reserveErr
+	}
 	return &VideoBalanceHoldResult{Applied: true}, nil
 }
 
