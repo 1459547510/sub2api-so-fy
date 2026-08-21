@@ -6956,3 +6956,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the merge decisions, validation evidence, migration limitation, changed conflict files, and rollback boundary.
 - Roll back the merge with `git revert -m 1 <v0.1.179-fy.1-merge-commit>` after reviewing the reversal; the previous deployable source tag is `v0.1.178-fy.5`. To withdraw the binary, remove GitHub Release `v0.1.179-fy.1` and its remote tag. Preserve the main worktree's unrelated uncommitted files.
 
+## 2026-08-21 - Task: Verify published upstream merge release v0.1.179-fy.1
+### What was done
+- Confirmed the fork release branch and annotated tag are published on GitHub.
+- Confirmed GitHub Actions Release run `32444303977` completed successfully and the public Linux amd64 package is downloadable and internally valid.
+
+### Testing
+- Remote branch `codex/leo-video-channel`: confirmed at merge commit `68edee84ba2591fbf0d036892fa7bddbb1f3b60a` before this verification-log commit.
+- Remote tag `v0.1.179-fy.1`: confirmed at `68edee84ba2591fbf0d036892fa7bddbb1f3b60a`.
+- Release asset download: HTTP `200`; `sub2api_0.1.179-fy.1_linux_amd64.tar.gz` size `37,809,627` bytes.
+- Published SHA-256: `f9a88121653979134f0db6fbf07bdcc4dda905d87ee74d604cdaebe68af32250`; matched the downloaded archive and `checksums.txt`.
+- Archive listing: contains the expected `sub2api` executable.
+
+### Notes
+- Release: https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.179-fy.1
+- Actions run: https://github.com/1459547510/sub2api-so-fy/actions/runs/32444303977
+- `progress.md`: records the remote branch, immutable release tag, successful workflow, asset size, checksum, and archive verification.
+- Roll back this log-only commit with `git revert <verification-log-commit>`; withdrawing the release requires deleting GitHub Release/tag `v0.1.179-fy.1`, while source rollback uses `git revert -m 1 68edee84ba2591fbf0d036892fa7bddbb1f3b60a`.
+
