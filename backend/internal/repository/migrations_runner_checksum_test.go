@@ -153,6 +153,15 @@ func TestIsMigrationChecksumCompatible(t *testing.T) {
 		}
 	})
 
+	t.Run("227上游checksum可升级到媒体平台并集版本", func(t *testing.T) {
+		ok := isMigrationChecksumCompatible(
+			"227_composite_routes_add_cn_providers.sql",
+			"ff6e3323b4bcb195a4f11bfa9b1b22286e77169f551b5c4294ab3d31828d8ff8",
+			"a82335193eefb50ac82d2cfa7712c4f4799594ca95a7483efb2a6196af4f1b2a",
+		)
+		require.True(t, ok)
+	})
+
 	t.Run("119未知checksum不兼容", func(t *testing.T) {
 		ok := isMigrationChecksumCompatible(
 			"119_enforce_payment_orders_out_trade_no_unique.sql",

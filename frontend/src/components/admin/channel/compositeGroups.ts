@@ -1,15 +1,11 @@
 import type { GroupPlatform } from '@/types'
+import { CONCRETE_PLATFORM_OPTIONS } from '@/constants/platforms'
 
-/** Platforms a composite group enables as routing tabs. Media and CN providers stay off this list. */
-export const COMPOSITE_ROUTE_PLATFORMS: readonly GroupPlatform[] = [
-  'anthropic', 'openai', 'gemini', 'antigravity', 'grok',
-]
+/** Platforms a composite group enables as routing and pricing tabs. */
+export const COMPOSITE_ROUTE_PLATFORMS: readonly GroupPlatform[] = CONCRETE_PLATFORM_OPTIONS.map(option => option.value)
 
-/** Composite groups also attach to media pricing tabs so video channels can save. */
 export function compositeGroupAppliesToPlatform(platform: GroupPlatform): boolean {
   return COMPOSITE_ROUTE_PLATFORMS.includes(platform)
-    || platform === 'leo'
-    || platform === 'openai_media'
 }
 
 export function groupMatchesChannelPlatform(

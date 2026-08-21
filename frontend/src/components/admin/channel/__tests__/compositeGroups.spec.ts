@@ -6,23 +6,21 @@ import {
 } from '../compositeGroups'
 
 describe('compositeGroups', () => {
-  it('does not auto-enable media or CN platforms from a composite group', () => {
+  it('enables all concrete platforms from a composite group', () => {
     expect([...COMPOSITE_ROUTE_PLATFORMS]).toEqual([
       'anthropic', 'openai', 'gemini', 'antigravity', 'grok',
+      'leo', 'openai_media', 'kimi', 'zhipu', 'deepseek',
     ])
-    expect(COMPOSITE_ROUTE_PLATFORMS).not.toContain('leo')
-    expect(COMPOSITE_ROUTE_PLATFORMS).not.toContain('openai_media')
-    expect(COMPOSITE_ROUTE_PLATFORMS).not.toContain('kimi')
   })
 
-  it('lets a composite group satisfy leo and openai_media pricing tabs', () => {
+  it('lets a composite group satisfy media and CN pricing tabs', () => {
     expect(compositeGroupAppliesToPlatform('leo')).toBe(true)
     expect(compositeGroupAppliesToPlatform('openai_media')).toBe(true)
-    expect(compositeGroupAppliesToPlatform('kimi')).toBe(false)
+    expect(compositeGroupAppliesToPlatform('kimi')).toBe(true)
     expect(groupMatchesChannelPlatform('composite', 'leo')).toBe(true)
     expect(groupMatchesChannelPlatform('composite', 'openai_media')).toBe(true)
     expect(groupMatchesChannelPlatform('composite', 'openai')).toBe(true)
-    expect(groupMatchesChannelPlatform('composite', 'kimi')).toBe(false)
+    expect(groupMatchesChannelPlatform('composite', 'kimi')).toBe(true)
     expect(groupMatchesChannelPlatform('leo', 'openai_media')).toBe(false)
     expect(groupMatchesChannelPlatform(undefined, 'leo')).toBe(false)
   })

@@ -6899,3 +6899,60 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - The sync hold is in-memory. A process restart during an in-flight sync generation can leave `frozen_balance` until it is released manually.
 - Roll back source behavior with `git revert --no-commit v0.1.178-fy.3..v0.1.178-fy.5` after reviewing the reversal; the previous deployable source tag is `v0.1.178-fy.3`. To withdraw the binary, remove GitHub Release `v0.1.178-fy.5` and its remote tag. Preserve unrelated `.superpowers/` content.
 
+## 2026-08-21 - Task: Merge upstream v0.1.179 and prepare FY release v0.1.179-fy.1
+### What was done
+- Merged the official upstream `v0.1.179` commit `75f88be5f75c27771836b586f7de1503afa0e3bc` into the fork release branch while keeping the fork's Token incentive, Leo/OpenAI Media, video workbench and billing, Codex fingerprint, error redaction, and in-app fork update behavior.
+- Combined upstream adaptive CN protocols, Responses input-token counting, service-tier/context pricing multipliers, request-scoped capacity recovery, channel monitor fixes, and OpenAI/Grok compatibility changes with the fork's 10-platform routing catalog.
+- Made upstream migration 227 safe for existing media routes, accepted its original upstream checksum for databases that already applied it, and added migration 229 to reassert the full media plus CN platform constraint.
+- Corrected merged regression assertions so error passthrough and Composite routing tests cover all 10 concrete platforms. No uncommitted main-worktree home-page or Seedance documentation edits were copied into this release.
+- Normalized the checked-in source version to `0.1.179`; the upstream tag still carries `0.1.178`, although its own release workflow rewrites the file during packaging.
+
+### Testing
+- Backend: `go test -p 1 ./... -count=1` passed after correcting the stale 8-platform assertion.
+- Backend: `go vet ./...` passed.
+- Backend targeted regression: Token incentive, Codex fingerprint/seed, video billing `CostOverride`, channel pricing multipliers, adaptive CN protocol, Composite routes, and migration checksum tests passed across `internal/repository`, `internal/service`, `internal/handler`, and `migrations`.
+- Update policy regression: `go test ./internal/service ./internal/repository -count=1 -run "UpdateService|GitHubRelease|CheckUpdate|Upstream"` passed.
+- Frontend: `npm.cmd run typecheck` passed; `npm.cmd exec vitest run` passed, 249 files and 1788 tests.
+- Frontend targeted regression: 7 files and 48 tests passed for Token incentive usage UI, Composite/media/CN platforms, channel pricing serialization, and Codex fingerprint settings.
+- Frontend: `npm.cmd run build` passed; only existing Vite chunk/import warnings were reported.
+- Linux release path: Go 1.26.6 cross-build with `CGO_ENABLED=0 GOOS=linux GOARCH=amd64`, `-tags embed`, and release ldflags passed. Verification binary SHA-256: `c5ff912a6b9a33f3d8f95258565b485319085d370f6736d32bce58310bdf0afc`.
+- Merge integrity: `git ls-files -u`, `git diff --check`, and staged `git diff --check` reported no unresolved conflict or whitespace error.
+- PostgreSQL container migration was not run because Docker is unavailable on this workstation; migration package and checksum regression tests passed, but production rollout must still monitor migrations 226-229.
+
+### Notes
+- `backend/internal/handler/admin/group_handler.go`: keeps media platforms while accepting upstream CN Composite groups.
+- `backend/cmd/server/VERSION`: records the actual merged upstream base version `0.1.179` for source builds.
+- `backend/internal/handler/endpoint.go`: combines fork media endpoints with upstream Responses input-token handling.
+- `backend/internal/handler/gateway_handler.go`: retains fork dispatch behavior while accepting upstream protocol and recovery changes.
+- `backend/internal/model/error_passthrough_rule.go`: exposes all 10 fork and upstream concrete platforms.
+- `backend/internal/model/error_passthrough_rule_test.go`: verifies the complete 10-platform error-rule catalog.
+- `backend/internal/server/routes/gateway.go`: keeps image/video/task routes alongside the upstream Composite Codex route additions.
+- `backend/internal/service/account_test_service.go`: preserves media account tests and adds adaptive CN endpoint checks.
+- `backend/internal/service/admin_group.go`: combines media, CN, and Composite group validation.
+- `backend/internal/service/channel_service.go`: preserves media pricing and adds upstream service-tier/context multipliers.
+- `backend/internal/service/channel_service_test.go`: covers the merged media and multiplier validation behavior.
+- `backend/internal/service/composite_platform.go`: routes all media and CN concrete platforms through Composite groups.
+- `backend/internal/service/composite_platform_test.go`: verifies the merged 10-platform Composite behavior.
+- `backend/internal/service/openai_gateway_upstream_errors.go`: keeps fork error sanitization with upstream capacity classification.
+- `backend/internal/service/scheduler_snapshot_full_rebuild_lifecycle_test.go`: retains fork platform cases under upstream snapshot lifecycle changes.
+- `backend/internal/service/scheduler_snapshot_group_lifecycle_test.go`: verifies merged group snapshot refresh behavior.
+- `backend/internal/service/scheduler_snapshot_retirement_test.go`: verifies merged account retirement behavior.
+- `backend/internal/service/scheduler_snapshot_service.go`: combines fork media platform snapshots with upstream bulk recovery events.
+- `backend/internal/repository/migrations_runner.go`: accepts both the fork-safe and original upstream 227 checksums.
+- `backend/internal/repository/migrations_runner_checksum_test.go`: verifies 227 checksum compatibility.
+- `backend/migrations/227_composite_routes_add_cn_providers.sql`: applies the complete media plus CN Composite target constraint for databases that have not run upstream 227.
+- `backend/migrations/229_composite_routes_keep_media_and_cn_providers.sql`: restores the complete constraint for databases that already ran original upstream 227.
+- `backend/migrations/composite_routes_media_cn_compat_migration_test.go`: verifies the follow-up compatibility migration.
+- `frontend/src/components/account/__tests__/CreateAccountModal.grok.spec.ts`: retains media account options under the shared platform catalog.
+- `frontend/src/components/admin/account/AccountTableFilters.vue`: combines fork media and upstream CN filters.
+- `frontend/src/components/admin/channel/__tests__/types.spec.ts`: verifies merged media pricing and upstream multiplier serialization.
+- `frontend/src/components/admin/channel/__tests__/compositeGroups.spec.ts`: verifies Composite groups apply to all concrete media and CN platforms.
+- `frontend/src/components/admin/ErrorPassthroughRulesModal.vue`: exposes all 10 concrete platforms in error rules.
+- `frontend/src/views/admin/ChannelsView.vue`: retains media channel management while adding shared upstream platform filtering.
+- `frontend/src/views/admin/GroupsView.vue`: combines media price configuration with upstream Composite CN support.
+- `frontend/src/views/admin/ops/components/OpsDashboardHeader.vue`: keeps fork display behavior with upstream dashboard controls.
+- `README.md`, `README_CN.md`, `README_JA.md`, `deploy/config.example.yaml`, and `docs/COMPOSITE_GROUPS.md`: incorporate upstream 0.1.179 documentation/config cleanup while retaining the fork marker where already present.
+- All other cleanly merged upstream files are the official `v0.1.179` delta; inspect the authoritative manifest with `git diff --name-status v0.1.178-fy.5..v0.1.179-fy.1` after tagging.
+- `progress.md`: records the merge decisions, validation evidence, migration limitation, changed conflict files, and rollback boundary.
+- Roll back the merge with `git revert -m 1 <v0.1.179-fy.1-merge-commit>` after reviewing the reversal; the previous deployable source tag is `v0.1.178-fy.5`. To withdraw the binary, remove GitHub Release `v0.1.179-fy.1` and its remote tag. Preserve the main worktree's unrelated uncommitted files.
+

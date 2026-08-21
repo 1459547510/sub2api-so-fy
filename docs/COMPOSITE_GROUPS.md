@@ -16,6 +16,9 @@ Composite groups can route to these concrete account platforms:
 - Grok
 - Leo (video and image generation)
 - OpenAI Media (self-hosted OpenAI-compatible image/video pools)
+- Kimi
+- Zhipu GLM
+- DeepSeek
 
 The selected concrete platform is used for account selection, user platform
 quota checks, post-usage billing, ops error platform attribution, channel
@@ -55,6 +58,12 @@ For JSON-body endpoints, the gateway rewrites the request `model` field to the
 route's `upstream_model` before dispatch. For Gemini native paths such as
 `/v1beta/models/{model}:generateContent`, the gateway resolves `{model}` and
 the handler forwards the resolved upstream model.
+
+Codex Alpha Search and Live requests use the `responses` route domain. Live
+requests resolve the model from `session.model`, including multipart `session`
+payloads, and apply the configured `upstream_model` before dispatch.
+Codex model manifest requests reuse the existing OpenAI account selection and
+failover path within the Composite group.
 
 ## Built-In Detection
 
