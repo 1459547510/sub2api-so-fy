@@ -7464,3 +7464,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`：记录本轮合并、测试、发布和回滚边界。
 - 回滚方式：源码优先对本轮 `v0.1.182` 合并提交执行 `git revert -m 1 <merge-commit>`；可安装版本回退到上一个已发布的 `v0.1.179-fy.1`，撤回发布还需删除对应 GitHub Release/tag。
 
+## 2026-08-25 - Task: Verify published upstream merge release v0.1.182-fy.1
+### What was done
+- Confirmed the fork branch contains merge commit `aa9f15955` and the annotated tag `v0.1.182-fy.1` points to that verified merge.
+- Confirmed GitHub Actions release run `32820489894` completed successfully and published the Linux amd64 package and checksum file.
+
+### Testing
+- Public release asset download returned successfully; archive size: `39,006,520` bytes.
+- Published SHA-256: `cc3eeba9f3322a7655fc35baa30718bc840fc3664bf6161aa978981f21114331`; matched the downloaded archive and `checksums.txt`.
+- Archive listing contains only the expected executable `sub2api`.
+
+### Notes
+- Release: https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.182-fy.1
+- Actions run: https://github.com/1459547510/sub2api-so-fy/actions/runs/32820489894
+- `progress.md`：追加本次 Release 的远端构建和资产校验记录。
+- 回滚方式：删除 GitHub Release/tag 可撤回安装包；服务器二进制回退到已验证的 `v0.1.179-fy.1`，源码回滚使用对应合并提交的 `git revert -m 1`。
+
