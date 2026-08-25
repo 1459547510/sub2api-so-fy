@@ -114,7 +114,10 @@ func RegisterGatewayRoutes(
 	}
 	videoGenerationHandler := func(c *gin.Context) {
 		switch getGroupPlatform(c) {
-		case service.PlatformGrok:
+		// Video status/content lookups below already allow Composite groups; keep
+		// task creation aligned so composite keys that route to Grok accounts can
+		// submit video generation jobs.
+		case service.PlatformGrok, service.PlatformComposite:
 			h.OpenAIGateway.GrokVideoGeneration(c)
 		case service.PlatformLeo, service.PlatformOpenAIMedia:
 			// OpenAI-compatible relays create through multipart/form-data

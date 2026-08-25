@@ -40,6 +40,7 @@ function mountHome(overrides: Record<string, unknown> = {}) {
       contactInfo: 'support@example.com',
       customMenuItems: [1, 2, 3, 4, 5].map(menuItem),
       docUrl: '',
+      showModelPlazaEntry: false,
       isAuthenticated: false,
       dashboardPath: '/dashboard',
       ...overrides,
@@ -91,6 +92,16 @@ describe('TelemetryHome public settings', () => {
     expect(wrapper.find('[data-testid="custom-menu-toggle"]').exists()).toBe(false)
 
     wrapper.unmount()
+  })
+
+  it('shows the model plaza entry only when enabled by the parent', () => {
+    const hidden = mountHome()
+    expect(hidden.find('[data-to="/model-plaza"]').exists()).toBe(false)
+    hidden.unmount()
+
+    const visible = mountHome({ showModelPlazaEntry: true })
+    expect(visible.get('[data-to="/model-plaza"]').text()).toBe('nav.modelPlaza')
+    visible.unmount()
   })
 
   it('closes the custom menu with Escape', async () => {

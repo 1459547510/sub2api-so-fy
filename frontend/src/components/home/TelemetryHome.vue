@@ -48,6 +48,13 @@
       </RouterLink>
 
       <div class="telemetry-nav-actions">
+        <RouterLink
+          v-if="showModelPlazaEntry"
+          class="telemetry-nav-link telemetry-nav-optional"
+          to="/model-plaza"
+        >
+          {{ t('nav.modelPlaza') }}
+        </RouterLink>
         <RouterLink class="telemetry-nav-link telemetry-nav-optional" to="/models">
           {{ t('home.telemetry.nav.models') }}
         </RouterLink>
@@ -255,6 +262,7 @@ const props = defineProps<{
   contactInfo: string
   customMenuItems: CustomMenuItem[]
   docUrl: string
+  showModelPlazaEntry: boolean
   isAuthenticated: boolean
   dashboardPath: string
 }>()

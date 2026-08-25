@@ -243,13 +243,13 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 			}
 			var rejectedErr *service.LeoVideoRejectedError
 			if errors.As(err, &rejectedErr) {
-				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
+				h.gatewayService.ReportOpenAIAccountScheduleResult(account, account.GetMappedModel(requestModel), false, nil)
 				h.persistSyncVideoJob(c, apiKey, subject, account, body, service.VideoJobFailed, nil, rejectedErr)
 				return
 			}
 			var failoverErr *service.UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
-				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
+				h.gatewayService.ReportOpenAIAccountScheduleResult(account, account.GetMappedModel(requestModel), false, nil)
 				if c.Writer.Size() != writerSizeBeforeForward {
 					h.handleFailoverExhausted(c, failoverErr, true, requestPlatform)
 					h.persistSyncVideoJob(c, apiKey, subject, account, body, service.VideoJobFailed, nil, failoverErr)
@@ -272,7 +272,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 				)
 				continue
 			}
-			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
+			h.gatewayService.ReportOpenAIAccountScheduleResult(account, account.GetMappedModel(requestModel), false, nil)
 			if c.Writer.Size() == writerSizeBeforeForward {
 				h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
 			}
@@ -281,7 +281,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 			return
 		}
 
-		h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), true, nil)
+		h.gatewayService.ReportOpenAIAccountScheduleResult(account, account.GetMappedModel(requestModel), true, nil)
 		if result == nil {
 			return
 		}

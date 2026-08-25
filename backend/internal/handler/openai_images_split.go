@@ -220,7 +220,7 @@ func (h *OpenAIGatewayHandler) runOpenAIImagesNSplitTask(
 			if account.Type == service.AccountTypeOAuth && !account.IsShadow() {
 				h.gatewayService.UpdateCodexUsageSnapshotFromHeaders(child.Request.Context(), account.ID, result.ResponseHeaders)
 			}
-			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), true, result.FirstTokenMs)
+			h.gatewayService.ReportOpenAIAccountScheduleResult(account, account.GetMappedModel(requestModel), true, result.FirstTokenMs)
 			return splitOpenAIImageTaskResult{
 				account: account,
 				result:  result,
@@ -235,10 +235,10 @@ func (h *OpenAIGatewayHandler) runOpenAIImagesNSplitTask(
 
 		var failoverErr *service.UpstreamFailoverError
 		if !errors.As(forwardErr, &failoverErr) {
-			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
+			h.gatewayService.ReportOpenAIAccountScheduleResult(account, account.GetMappedModel(requestModel), false, nil)
 			return splitOpenAIImageTaskResult{err: forwardErr}
 		}
-		h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
+		h.gatewayService.ReportOpenAIAccountScheduleResult(account, account.GetMappedModel(requestModel), false, nil)
 		if failoverErr.RetryableOnSameAccount {
 			retryLimit := account.GetPoolModeRetryCount()
 			if sameAccountRetryCount[account.ID] < retryLimit {

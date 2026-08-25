@@ -210,7 +210,7 @@ func (h *OpenAIGatewayHandler) runGrokImagesNSplitTask(
 			return h.gatewayService.ForwardGrokMedia(requestCtx, child, account, endpoint, "", childBody, childContentType)
 		}()
 		if result != nil && result.ImageCount > 0 && recorder.Body.Len() > 0 {
-			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, grokMediaScheduleModel(account, routingModel, result), true, nil)
+			h.gatewayService.ReportOpenAIAccountScheduleResult(account, grokMediaScheduleModel(account, routingModel, result), true, nil)
 			return splitGrokImageTaskResult{
 				account: account,
 				result:  result,
@@ -224,10 +224,10 @@ func (h *OpenAIGatewayHandler) runGrokImagesNSplitTask(
 		}
 		var failoverErr *service.UpstreamFailoverError
 		if !errors.As(forwardErr, &failoverErr) {
-			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, grokMediaScheduleModel(account, routingModel, nil), false, nil)
+			h.gatewayService.ReportOpenAIAccountScheduleResult(account, grokMediaScheduleModel(account, routingModel, nil), false, nil)
 			return splitGrokImageTaskResult{err: forwardErr}
 		}
-		h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, grokMediaScheduleModel(account, routingModel, nil), false, nil)
+		h.gatewayService.ReportOpenAIAccountScheduleResult(account, grokMediaScheduleModel(account, routingModel, nil), false, nil)
 		if failoverErr.RetryableOnSameAccount {
 			retryLimit := account.GetPoolModeRetryCount()
 			if sameAccountRetryCount[account.ID] < retryLimit {
