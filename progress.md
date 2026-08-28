@@ -7497,3 +7497,22 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `docs/LEO_IMAGE_MULTIPART_COMPAT.md`: documents configuration, supported multipart fields, limits, lifecycle, security, acceptance checks, and rollback.
 - `progress.md`: records implementation and pre-deployment verification evidence.
 - Source rollback: revert this task commit. Production rollback target after deployment is `v0.1.182-fy.1`; restore the pre-deployment binary and `config.yaml`, then restart `sub2api.service`.
+
+## 2026-08-28 - Task: Publish and verify v0.1.182-fy.2
+### What was done
+- Pushed `fix/leo-multipart-image` and published annotated tag `v0.1.182-fy.2` at the reviewed multipart compatibility commit.
+- Confirmed the GitHub Release and Security Scan completed successfully, then downloaded and verified the published Linux amd64 package.
+- Left production unchanged on `v0.1.182-fy.1` because the user explicitly chose to perform the online update.
+
+### Testing
+- Remote branch `fix/leo-multipart-image` resolved to `7daa480a29f33bb809f2857997b2024dd6faa623`; annotated tag `v0.1.182-fy.2` peeled to the same commit.
+- Release run `33139286087` and Security Scan run `33139286085` completed successfully.
+- The published archive is 39,010,166 bytes; SHA-256 `011d5c17c6826ef08413cc7928a82fd7633691054732365298b52007b4bba565` exactly matched `checksums.txt`, and the archive contains `sub2api`.
+- Go build metadata confirms Go 1.27.0, Linux amd64, `embed`, `CGO_ENABLED=0`, and VCS revision `7daa480a29f33bb809f2857997b2024dd6faa623`; binary inspection found the `0.1.182-fy.2`, commit, and release build markers.
+- CI run `33139286042` failed only on the same pre-existing unit-test stub, backend lint, and frontend lint findings already present in `v0.1.182-fy.1` run `32820489807`; annotations matched by file, line, and message and did not touch this task's changed lines.
+
+### Notes
+- Release: https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.182-fy.2
+- Release workflow: https://github.com/1459547510/sub2api-so-fy/actions/runs/33139286087
+- `progress.md`: records remote refs, release and security status, artifact checksum, package metadata, inherited CI findings, and the explicit no-deployment boundary.
+- Release rollback: remove GitHub Release/tag `v0.1.182-fy.2`; source rollback is `git revert 7daa480a`. Production requires no rollback because this task did not update the server.
