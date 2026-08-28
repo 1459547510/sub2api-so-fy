@@ -708,6 +708,25 @@ func TestEmbeddedFrontendBypassesInternalVideoInputRoute(t *testing.T) {
 	require.Equal(t, "jpeg-data", w.Body.String())
 }
 
+func TestEmbeddedFrontendBypassesPublicImageInputRoute(t *testing.T) {
+	server, err := NewFrontendServer(&mockSettingsProvider{})
+	require.NoError(t, err)
+
+	router := gin.New()
+	router.Use(server.Middleware())
+	router.GET("/media/image-inputs/:token", func(c *gin.Context) {
+		c.Data(http.StatusOK, "image/png", []byte("png-data"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/media/image-inputs/public-token", nil)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "image/png", w.Header().Get("Content-Type"))
+	require.Equal(t, "png-data", w.Body.String())
+}
+
 func TestNewFrontendServer(t *testing.T) {
 	t.Run("creates_server_successfully", func(t *testing.T) {
 		provider := &mockSettingsProvider{
