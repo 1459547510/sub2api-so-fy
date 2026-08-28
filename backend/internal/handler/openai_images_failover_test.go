@@ -166,6 +166,14 @@ func (c *openAIImagesSplitGatewayCache) ReleaseGrokVideoBilled(_ context.Context
 	return nil
 }
 
+func (c *openAIImagesSplitGatewayCache) SetReasoningContent(_ context.Context, _ string, _ string, _ time.Duration) error {
+	return nil
+}
+
+func (c *openAIImagesSplitGatewayCache) GetReasoningContent(_ context.Context, _ string) (string, error) {
+	return "", service.ErrReasoningContentNotFound
+}
+
 func (c *openAIImagesSplitGatewayCache) setAccounts() []int64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()

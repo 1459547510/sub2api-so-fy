@@ -7535,3 +7535,22 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Changed files: upstream files from the `v0.1.183` merge and this appended `progress.md` release record; `.cursor/`, `.superpowers/`, `outputs/`, and `work/` remain untracked and are excluded.
 - Rollback: use `backup/pre-v0.1.183-merge-20260828` or revert merge commit `e9eee0f42` with `git revert -m 1 e9eee0f42`; the previous published release is `v0.1.182-fy.1`.
 
+## 2026-08-28 - Task: Fix post-release CI failures and prepare v0.1.183-fy.2
+### What was done
+- Fixed malformed Kimi platform branches in `PlatformTypeBadge` and `GroupBadge`.
+- Added the reasoning-content methods required by the OpenAI image failover test cache stub.
+- Resolved the CI-reported Go lint and formatting findings without changing runtime business behavior.
+
+### Testing
+- `make test-frontend` passed: 15 critical test files and 177 tests.
+- `pnpm run lint:check` passed.
+- `go test -tags=unit ./...` passed.
+- `go test -tags=unit ./internal/handler ./internal/repository ./internal/service` passed.
+- `go vet ./...` passed.
+- `gofmt` checks passed for all changed Go files.
+
+### Notes
+- Changed files: `frontend/src/components/common/PlatformTypeBadge.vue`, `frontend/src/components/common/GroupBadge.vue`, `backend/internal/handler/openai_images_failover_test.go`, and CI-reported Go source/test files.
+- Release: `v0.1.183-fy.2` is the corrective release; `v0.1.183-fy.1` remains available as the previous build and rollback point.
+- Rollback: revert the corrective commit; for deployment, return to `v0.1.183-fy.1` or the earlier `v0.1.182-fy.1` package.
+

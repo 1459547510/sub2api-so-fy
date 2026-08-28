@@ -12,7 +12,7 @@ import (
 func TestUserRepositoryCyberPolicyUserMarker(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	repo := &userRepository{sql: db}
 
 	mock.ExpectExec("INSERT INTO cyber_policy_user_marks").

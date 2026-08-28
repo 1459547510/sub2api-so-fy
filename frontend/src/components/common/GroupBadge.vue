@@ -164,8 +164,8 @@ const labelClass = computed(() => {
   }
   if (props.platform === 'leo' || props.platform === 'openai_media' || props.platform === 'video') {
     return `${base} bg-teal-200/70 text-teal-800 dark:bg-teal-800/50 dark:text-teal-200`
-  if (props.platform === 'kimi') {
   }
+  if (props.platform === 'kimi') {
     return `${base} bg-pink-200/60 text-pink-800 dark:bg-pink-800/40 dark:text-pink-300`
   }
   if (props.platform === 'zhipu') {
@@ -216,8 +216,8 @@ const badgeClass = computed(() => {
     return isSubscription.value
       ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200'
       : 'bg-cyan-50 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200'
-  if (props.platform === 'kimi') {
   }
+  if (props.platform === 'kimi') {
     return isSubscription.value
       ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400'
       : 'bg-pink-50 text-pink-700 dark:bg-pink-900/20 dark:text-pink-400'

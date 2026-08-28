@@ -824,7 +824,9 @@ func (s *SchedulerSnapshotService) rebuildByAccount(ctx context.Context, account
 	return s.rebuildBuckets(ctx, buckets, reason)
 }
 
-func schedulerSnapshotPlatforms() [10]string {
+const schedulerSnapshotPlatformCount = 10
+
+func schedulerSnapshotPlatforms() [schedulerSnapshotPlatformCount]string {
 	return [10]string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrok, PlatformLeo, PlatformOpenAIMedia, PlatformKimi, PlatformZhipu, PlatformDeepseek}
 }
 
@@ -837,7 +839,7 @@ func schedulerBucketsForGroup(groupID int64) []SchedulerBucket {
 }
 
 func schedulerCanonicalBuckets(groupID int64) []SchedulerBucket {
-	buckets := make([]SchedulerBucket, 0, len(schedulerSnapshotPlatforms())*2+2)
+	buckets := make([]SchedulerBucket, 0, schedulerSnapshotPlatformCount*2+2)
 	for _, platform := range schedulerSnapshotPlatforms() {
 		buckets = append(buckets,
 			SchedulerBucket{GroupID: groupID, Platform: platform, Mode: SchedulerModeSingle},
@@ -855,7 +857,7 @@ func (s *SchedulerSnapshotService) rebuildByGroupIDs(ctx context.Context, groupI
 	if len(groupIDs) == 0 {
 		return nil
 	}
-	buckets := make([]SchedulerBucket, 0, len(groupIDs)*(len(schedulerSnapshotPlatforms())*2+2))
+	buckets := make([]SchedulerBucket, 0, len(groupIDs)*(schedulerSnapshotPlatformCount*2+2))
 	for _, platform := range schedulerSnapshotPlatforms() {
 		buckets = append(buckets, s.bucketsForPlatform(platform, groupIDs, seen)...)
 	}

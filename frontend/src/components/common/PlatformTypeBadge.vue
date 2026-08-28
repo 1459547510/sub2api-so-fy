@@ -198,8 +198,8 @@ const platformClass = computed(() => {
   }
   if (props.platform === 'openai_media') {
     return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
-  if (props.platform === 'kimi') {
   }
+  if (props.platform === 'kimi') {
     return 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400'
   }
   if (props.platform === 'zhipu') {

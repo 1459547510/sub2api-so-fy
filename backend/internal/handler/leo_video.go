@@ -193,7 +193,7 @@ func (h *OpenAIGatewayHandler) LeoVideoGeneration(c *gin.Context) {
 				h.persistSyncVideoJob(c, apiKey, subject, lastAccount, body, service.VideoJobFailed, nil, lastFailoverErr)
 			} else {
 				h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
-				h.persistSyncVideoJob(c, apiKey, subject, lastAccount, body, service.VideoJobFailed, nil, errors.New("Upstream request failed"))
+				h.persistSyncVideoJob(c, apiKey, subject, lastAccount, body, service.VideoJobFailed, nil, errors.New("upstream request failed"))
 			}
 			return
 		}

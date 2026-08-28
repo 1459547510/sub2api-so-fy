@@ -826,7 +826,8 @@ func (s *OpenAIGatewayService) buildOpenAIImagesRequest(
 		targetURL = buildOpenAIImagesURL(validatedURL, endpoint)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(body))
+	// targetURL is either a fixed upstream endpoint or derived from the validated account base URL.
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(body)) //nolint:gosec // validated upstream URL
 	if err != nil {
 		return nil, err
 	}
