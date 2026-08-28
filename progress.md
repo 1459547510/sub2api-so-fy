@@ -7579,7 +7579,7 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - GitHub CI run `33143189728` passed all jobs: shell, frontend, golangci-lint, unit tests, and integration tests.
 - GitHub Security Scan run `33143189675` passed.
 - GitHub Release run `33143189660` passed and uploaded `sub2api_0.1.183-fy.3_linux_amd64.tar.gz`.
-- Published package size: `39014888` bytes; GitHub asset SHA-256: `35d7a015a4544fafe7875cbf030bc69ac033c7ffd31245c1ca504297c6e7a812`.
+- Published package size: `39014250` bytes; `checksums.txt` SHA-256 for the package: `8a67ca56246ded2b69be037ff7a456054791626d9c2f7a00d3d46b89358afc76`.
 
 ### Notes
 - Release page: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.183-fy.3`.
