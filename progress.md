@@ -7570,3 +7570,24 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Release: `v0.1.183-fy.3` contains the final CI lint corrections; `v0.1.183-fy.2` remains an earlier corrective build.
 - Rollback: return to `v0.1.183-fy.2` or `v0.1.183-fy.1`; source rollback can revert the final corrective commit.
 
+## 2026-08-28 - Task: Carry Leo multipart image compatibility onto v0.1.183-fy.4
+
+### What was done
+
+- Rebased the Leo multipart reference-image compatibility implementation onto the released `v0.1.183-fy.3` baseline after confirming that baseline did not contain the earlier `7daa480a` fix.
+- Kept composite image routing compatible with Leo routes by converting multipart uploads into JSON `image_urls` backed by temporary public media URLs; masks remain rejected.
+- Added the required `gateway.leo_image_upload_public_base_url` configuration and public temporary-image route documentation.
+
+### Testing
+
+- `go test ./internal/service ./internal/handler ./internal/server/routes ./internal/config -count=1` passed.
+- `go test ./internal/web -count=1`, `git diff --check`, and Linux amd64 static build passed.
+- Built binary SHA-256: `fa26fe7d3b1ac77937a16921eb3aa03895210b3f83dc2f589e0d08e159128cff`.
+- Production evidence: requests with the reported error used API key `310`, composite group `30`, and an explicit `gpt-image-2` route targeting Leo; the online `v0.1.183-fy.3` binary lacked the multipart fix and the online config lacked the public-base-URL setting.
+
+### Notes
+
+- Changed files: `backend/internal/config/config.go`, `backend/internal/handler/leo_video_async.go`, `backend/internal/handler/openai_images.go`, `backend/internal/handler/video_input.go`, `backend/internal/handler/video_input_test.go`, `backend/internal/server/routes/gateway.go`, `backend/internal/service/leo_image_request.go`, `backend/internal/service/leo_image_request_test.go`, `backend/internal/service/openai_images_test.go`, `backend/internal/service/video_input_store.go`, `backend/internal/service/video_input_store_test.go`, `backend/internal/service/wire.go`, `backend/internal/web/embed_on.go`, `backend/internal/web/embed_test.go`, and `docs/LEO_IMAGE_MULTIPART_COMPAT.md`.
+- Release: `v0.1.183-fy.4` contains this compatibility fix; online deployment is intentionally left to the operator.
+- Rollback: restore the previous `v0.1.183-fy.3` release; this change adds no database migration. Before enabling multipart Leo uploads, configure `gateway.leo_image_upload_public_base_url` with the public API origin.
+
