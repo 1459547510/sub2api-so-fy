@@ -1480,7 +1480,7 @@ func TestOpenAIGatewayServiceParseOpenAIImagesRequest_OpenAIEditsStillRequireIma
 	require.ErrorContains(t, err, "images[].image_url is required")
 }
 
-func TestOpenAIGatewayServiceParseOpenAIImagesRequest_LeoRejectsMaskAndMultipart(t *testing.T) {
+func TestOpenAIGatewayServiceParseOpenAIImagesRequest_LeoRejectsMaskAndAcceptsMultipart(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	body := []byte(`{"model":"Image Model A","prompt":"keep the product","images":[{"image_url":"https://example.com/source.png"}],"mask":{"image_url":"https://example.com/mask.png"}}`)
@@ -1508,8 +1508,10 @@ func TestOpenAIGatewayServiceParseOpenAIImagesRequest_LeoRejectsMaskAndMultipart
 	rec = httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(rec)
 	c.Request = req
-	_, err = (&OpenAIGatewayService{}).ParseOpenAIImagesRequest(c, multipartBody.Bytes())
-	require.ErrorContains(t, err, "multipart uploads are not supported")
+	parsed, err := (&OpenAIGatewayService{}).ParseOpenAIImagesRequest(c, multipartBody.Bytes())
+	require.NoError(t, err)
+	require.True(t, parsed.Multipart)
+	require.Len(t, parsed.Uploads, 1)
 }
 
 func TestOpenAIGatewayServiceForwardImages_APIKeyAccessStateUsesTypedFailover(t *testing.T) {

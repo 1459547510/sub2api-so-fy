@@ -77,6 +77,28 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", err.Error())
 		return
 	}
+	inboundMultipart := parsed.Multipart
+	if requestPlatform == service.PlatformLeo && parsed.Multipart {
+		if h.videoInputHandler == nil {
+			h.errorResponse(c, http.StatusServiceUnavailable, "api_error", "Multipart image upload service is not configured")
+			return
+		}
+		convertedBody, tokens, prepareErr := h.videoInputHandler.PrepareLeoMultipartImageRequest(parsed)
+		if len(tokens) > 0 {
+			defer h.videoInputHandler.MarkTerminal(tokens)
+		}
+		if prepareErr != nil {
+			status := http.StatusBadRequest
+			if errors.Is(prepareErr, service.ErrVideoInputTooLarge) {
+				status = http.StatusRequestEntityTooLarge
+			} else if errors.Is(prepareErr, service.ErrVideoInputPublicURLMissing) {
+				status = http.StatusServiceUnavailable
+			}
+			h.errorResponse(c, status, "invalid_request_error", prepareErr.Error())
+			return
+		}
+		body = convertedBody
+	}
 	requestModel := parsed.Model
 	ensureCompositeTargetPlatform(c, apiKey, requestModel)
 	clientRequestModel := clientRequestedModel(c, requestModel)
@@ -93,7 +115,7 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 		zap.String("model", clientRequestModel),
 		zap.String("routing_model", routingModel),
 		zap.Bool("stream", parsed.Stream),
-		zap.Bool("multipart", parsed.Multipart),
+		zap.Bool("multipart", inboundMultipart),
 		zap.String("capability", string(parsed.RequiredCapability)),
 		zap.String("img_quality", parsed.Quality),
 		zap.String("img_size", parsed.Size),

@@ -42,6 +42,7 @@ var (
 	ErrVideoInputUnsupportedType     = errors.New("video input type is not supported")
 	ErrVideoInputUnsupportedDuration = errors.New("audio input duration must be between 2 and 30 seconds")
 	ErrVideoInputNotFound            = errors.New("video input not found")
+	ErrVideoInputPublicURLMissing    = errors.New("public image input URL is not configured")
 )
 
 type VideoInput struct {
@@ -60,8 +61,9 @@ type videoInputEntry struct {
 }
 
 type VideoInputStore struct {
-	root string
-	port int
+	root          string
+	port          int
+	publicBaseURL string
 
 	mu      sync.RWMutex
 	entries map[string]videoInputEntry
@@ -85,6 +87,26 @@ func MarkVideoInputTerminal(store *VideoInputStore, token string, at time.Time) 
 
 func NewVideoInputStore(dataDir string, port int) *VideoInputStore {
 	return &VideoInputStore{root: filepath.Join(dataDir, "video-inputs"), port: port, entries: make(map[string]videoInputEntry)}
+}
+
+func (s *VideoInputStore) SetPublicBaseURL(raw string) error {
+	if s == nil {
+		return ErrVideoInputPublicURLMissing
+	}
+	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed == nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return ErrVideoInputPublicURLMissing
+	}
+	s.publicBaseURL = raw
+	return nil
+}
+
+func (s *VideoInputStore) PublicImageURL(token string) (string, error) {
+	if s == nil || !validVideoInputToken(token) || s.publicBaseURL == "" {
+		return "", ErrVideoInputPublicURLMissing
+	}
+	return s.publicBaseURL + "/media/image-inputs/" + url.PathEscape(token), nil
 }
 
 func (s *VideoInputStore) Save(reader io.Reader) (*VideoInput, error) {
