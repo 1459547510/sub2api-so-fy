@@ -7570,3 +7570,20 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Release: `v0.1.183-fy.3` contains the final CI lint corrections; `v0.1.183-fy.2` remains an earlier corrective build.
 - Rollback: return to `v0.1.183-fy.2` or `v0.1.183-fy.1`; source rollback can revert the final corrective commit.
 
+## 2026-08-28 - Task: Verify v0.1.183-fy.3 release and CI completion
+### What was done
+- Confirmed `v0.1.183-fy.3` was published from commit `c95fd1a9b` with the Linux amd64 package and `checksums.txt`.
+- Confirmed the fork branch and release tag are pushed to `1459547510/sub2api-so`.
+
+### Testing
+- GitHub CI run `33143189728` passed all jobs: shell, frontend, golangci-lint, unit tests, and integration tests.
+- GitHub Security Scan run `33143189675` passed.
+- GitHub Release run `33143189660` passed and uploaded `sub2api_0.1.183-fy.3_linux_amd64.tar.gz`.
+- Published package size: `39014888` bytes; GitHub asset SHA-256: `35d7a015a4544fafe7875cbf030bc69ac033c7ffd31245c1ca504297c6e7a812`.
+
+### Notes
+- Release page: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.183-fy.3`.
+- Actions: `https://github.com/1459547510/sub2api-so-fy/actions/runs/33143189728`.
+- Changed files: this final `progress.md` record only; local untracked work remains excluded.
+- Rollback: deploy `v0.1.183-fy.2` or `v0.1.183-fy.1`; source rollback can use the prior release tag or revert the corrective commits.
+
