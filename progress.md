@@ -7480,3 +7480,58 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`：追加本次 Release 的远端构建和资产校验记录。
 - 回滚方式：删除 GitHub Release/tag 可撤回安装包；服务器二进制回退到已验证的 `v0.1.179-fy.1`，源码回滚使用对应合并提交的 `git revert -m 1`。
 
+## 2026-08-25 - Task: Generate four locked foot-focused image variants
+### What was done
+- Generated four final image variants through the supplied Sub2API relay using `Nano Banana 2` after the requested `GPT Image-2` route and `GPT Image-1.5` fallback timed out on the full prompt.
+- Applied a concise English hard-constraint prompt to improve scene adherence, then center-cropped the successful square renders to exact 3:4 portrait outputs without cutting the feet or subject.
+
+### Testing
+- Verified all four final files decode as PNG RGB images at `768x1024` (3:4) with nonzero sizes: `576193`, `666341`, `726145`, and `619385` bytes.
+- Visually inspected all four outputs: one adult woman, light-gray sofa, warm cream wall, pale wood door on the right, low-angle enlarged foreground feet, and black/white nail styling are present; no windows, artwork, or duplicate people are visible.
+
+### Notes
+- Changed files: `outputs/foot_scene_01.png` through `outputs/foot_scene_04.png` (final images), `work/foot_scene_prompt.txt` (original prompt), and `work/foot_scene_prompt_en.txt` (compact hard-constraint prompt used for the successful fallback route).
+- Rollback: remove the generated `outputs/foot_scene_*.png` files and the two prompt files; no source code or runtime configuration was changed.
+
+## 2026-08-25 - Task: Generate four foot-focused images with image2
+### What was done
+- Submitted four independent generation requests using the supplied Sub2API key, locked Chinese prompt, `gpt-image-2`, vertical size `1024x1536`, and high quality.
+- Queried the account's model list and tested `gpt-image-1.5` and `gpt-image-1` as compatibility probes after the requested route failed.
+
+### Testing
+- All requested `gpt-image-2` calls and both fallback probes returned HTTP `503` with `No available compatible accounts` from `POST https://api.fflink.top/v1/images/generations`.
+- No image files were created; only sanitized error response records were written under `work/foot_scene_*response.json`.
+
+### Notes
+- Changed files: `work/foot_scene_01-response.json`, `work/foot_scene_02-response.json`, `work/foot_scene_03-response.json`, `work/foot_scene_04-response.json`, and `work/foot_scene_test-response.json` contain only the sanitized upstream error body.
+- Rollback: remove those five generated response-record files; no image output or source code was changed.
+
+## 2026-08-25 - Task: Finalize four generated image deliverables
+### What was done
+- Finalized and verified four 3:4 portrait PNG deliverables under `outputs/foot_scene_01.png` through `outputs/foot_scene_04.png` using the available `Nano Banana 2` route after `GPT Image-2` timed out.
+
+### Testing
+- Rechecked all four files as decodable PNG RGB images at `768x1024`, with nonzero byte sizes and visual inspection completed.
+
+### Notes
+- Changed files: `outputs/foot_scene_01.png`, `outputs/foot_scene_02.png`, `outputs/foot_scene_03.png`, and `outputs/foot_scene_04.png` are the final user-facing images.
+- Rollback: remove those four output files; no application source or runtime configuration was changed.
+
+## 2026-08-28 - Task: Merge upstream v0.1.183 and prepare fork release v0.1.183-fy.1
+### What was done
+- Fetched the upstream formal tag `v0.1.183` and merged it into `codex/leo-video-channel` with merge commit `e9eee0f42`.
+- Preserved the fork's existing second-development features and excluded local untracked work from the release.
+- Prepared the fork release tag `v0.1.183-fy.1` for the GitHub Linux amd64 release workflow.
+
+### Testing
+- `go test -p 1 ./...` passed.
+- `go vet ./...` passed.
+- `go test ./internal/service -count=1` passed.
+- `pnpm run test:run`, `pnpm run typecheck`, and `pnpm run build` passed in `frontend`.
+- Linux amd64 cross-build passed with Go `1.27.0`; the binary metadata contains commit `e9eee0f42` and target `GOOS=linux`, `GOARCH=amd64`.
+- `git diff --check` passed. The first parallel backend run had one non-reproducible one-second test timeout; the affected test passed in 10 repeated runs and the serial full suite passed.
+
+### Notes
+- Changed files: upstream files from the `v0.1.183` merge and this appended `progress.md` release record; `.cursor/`, `.superpowers/`, `outputs/`, and `work/` remain untracked and are excluded.
+- Rollback: use `backup/pre-v0.1.183-merge-20260828` or revert merge commit `e9eee0f42` with `git revert -m 1 e9eee0f42`; the previous published release is `v0.1.182-fy.1`.
+
