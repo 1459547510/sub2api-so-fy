@@ -286,7 +286,7 @@ func TestVideoJobServiceRecordSyncPersistsTerminalJobWithoutBilling(t *testing.T
 
 	job, err := svc.RecordSync(context.Background(), RecordSyncVideoJobInput{
 		APIKey: apiKey, User: &User{ID: 1}, Account: account,
-		Body: []byte(`{"model":"seedance","prompt":"waves","resolution":"720p","duration":8}`),
+		Body:   []byte(`{"model":"seedance","prompt":"waves","resolution":"720p","duration":8}`),
 		Status: VideoJobCompleted, Result: raw,
 	})
 
@@ -317,7 +317,7 @@ func TestVideoJobServiceRecordSyncSanitizesFailedJobError(t *testing.T) {
 
 	job, err := svc.RecordSync(context.Background(), RecordSyncVideoJobInput{
 		APIKey: newVideoJobServiceTestAPIKey(), User: &User{ID: 1}, Account: newVideoJobServiceTestAccount(9),
-		Body: []byte(`{"model":"seedance-2.0","prompt":"waves"}`),
+		Body:   []byte(`{"model":"seedance-2.0","prompt":"waves"}`),
 		Status: VideoJobFailed, ErrorMessage: "Leonardo.ai rejected the prompt via LeoStudio",
 	})
 

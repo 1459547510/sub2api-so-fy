@@ -7554,3 +7554,19 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Release: `v0.1.183-fy.2` is the corrective release; `v0.1.183-fy.1` remains available as the previous build and rollback point.
 - Rollback: revert the corrective commit; for deployment, return to `v0.1.183-fy.1` or the earlier `v0.1.182-fy.1` package.
 
+## 2026-08-28 - Task: Clear remaining CI lint findings and prepare v0.1.183-fy.3
+### What was done
+- Converted the MP3 sample-rate version branch to a tagged switch for staticcheck compliance.
+- Applied the exact gofmt changes reported for the video job test and public settings DTO.
+
+### Testing
+- `go test -tags=unit ./internal/service` passed.
+- `go test -tags=unit ./internal/handler ./internal/repository ./internal/handler/dto` passed.
+- `go vet ./...` passed.
+- `gofmt` checks passed for the final changed Go files.
+
+### Notes
+- Changed files: `backend/internal/service/video_input_store.go`, `backend/internal/service/video_job_service_test.go`, and `backend/internal/handler/dto/settings.go`.
+- Release: `v0.1.183-fy.3` contains the final CI lint corrections; `v0.1.183-fy.2` remains an earlier corrective build.
+- Rollback: return to `v0.1.183-fy.2` or `v0.1.183-fy.1`; source rollback can revert the final corrective commit.
+

@@ -304,9 +304,10 @@ func mp3FrameInfo(header uint32) (int, int, int, bool) {
 	}
 	sampleRates := [...]int{44100, 48000, 32000}
 	sampleRate := sampleRates[sampleRateIndex]
-	if version == 2 {
+	switch version {
+	case 2:
 		sampleRate /= 2
-	} else if version == 0 {
+	case 0:
 		sampleRate /= 4
 	}
 	padding := int((header >> 9) & 1)
