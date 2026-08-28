@@ -7464,3 +7464,36 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`：记录本轮合并、测试、发布和回滚边界。
 - 回滚方式：源码优先对本轮 `v0.1.182` 合并提交执行 `git revert -m 1 <merge-commit>`；可安装版本回退到上一个已发布的 `v0.1.179-fy.1`，撤回发布还需删除对应 GitHub Release/tag。
 
+## 2026-08-28 - Task: Support Leo multipart image edits and prepare v0.1.182-fy.2
+### What was done
+- Added Leo-only compatibility for OpenAI-style multipart `POST /v1/images/edits`: uploaded reference images are stored under opaque temporary tokens and converted to JSON `image_urls` before the existing Leo image forwarding path runs.
+- Added the temporary public image route and the required `gateway.leo_image_upload_public_base_url` setting, while preserving JSON URL behavior and continuing to reject unsupported masks.
+- Prevented the embedded frontend from intercepting the public image route, disabled intermediary caching for reference images, and documented deployment, security, validation, and rollback requirements.
+
+### Testing
+- `backend: go test ./internal/service -count=1` passed in 117.349s.
+- `backend: go test ./internal/server/routes ./internal/config ./internal/handler -count=1` passed.
+- Focused Leo multipart, request rewrite, temporary store, public image handler, and embedded frontend bypass tests passed.
+- `frontend: node node_modules/vue-tsc/bin/vue-tsc.js -b` passed.
+- `frontend: node node_modules/vite/bin/vite.js build` passed with existing dynamic-import and chunk-size warnings.
+- `backend: go build -tags embed -trimpath -ldflags "-s -w -X main.Version=0.1.182-fy.2 -X main.BuildType=release"` passed; the binary reported `Sub2API 0.1.182-fy.2`.
+- `git diff --check` passed.
+
+### Notes
+- `backend/internal/config/config.go`: added the external base URL setting used for temporary Leo image inputs.
+- `backend/internal/handler/leo_video_async.go`: exposed the public image-input handler through the gateway handler.
+- `backend/internal/handler/openai_images.go`: converts Leo multipart image edits before routing and preserves multipart request logging.
+- `backend/internal/handler/video_input.go`: stores multipart images, builds public URLs, marks them terminal, and serves them without caching.
+- `backend/internal/handler/video_input_test.go`: verifies multipart conversion, public image reads, and security headers.
+- `backend/internal/server/routes/gateway.go`: registers GET and HEAD public image-input routes.
+- `backend/internal/service/leo_image_request.go`: builds the JSON `image_urls` request and keeps unconverted multipart blocked at the upstream boundary.
+- `backend/internal/service/leo_image_request_test.go`: verifies request conversion boundaries and URL validation.
+- `backend/internal/service/openai_images_test.go`: updates the Leo parser contract to accept multipart while retaining mask rejection.
+- `backend/internal/service/video_input_store.go`: validates the configured public base URL and generates opaque public image URLs.
+- `backend/internal/service/video_input_store_test.go`: verifies configured public URL generation.
+- `backend/internal/service/wire.go`: applies the new setting to the shared input store at startup.
+- `backend/internal/web/embed_on.go`: bypasses the embedded SPA for public image-input requests.
+- `backend/internal/web/embed_test.go`: verifies that embedded release builds reach the public image route.
+- `docs/LEO_IMAGE_MULTIPART_COMPAT.md`: documents configuration, supported multipart fields, limits, lifecycle, security, acceptance checks, and rollback.
+- `progress.md`: records implementation and pre-deployment verification evidence.
+- Source rollback: revert this task commit. Production rollback target after deployment is `v0.1.182-fy.1`; restore the pre-deployment binary and `config.yaml`, then restart `sub2api.service`.
