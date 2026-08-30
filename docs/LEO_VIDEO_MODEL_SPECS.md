@@ -14,7 +14,6 @@ use a supported resolution/aspect-ratio pair from the same row.
 | --- | --- | --- | --- | ---: | --- |
 | `seedance-2.0` | `480p`, `720p`, `1080p` | `4-15s`; default `8s`; `1080p` is `4-12s` | `480p`/`1080p`: `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`, `9:21`; `720p` excludes `9:21` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
 | `seedance-2.0-fast` | `480p`, `720p` | `4-15s`; default `8s` | `480p`: all seven Seedance ratios; `720p` excludes `9:21` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
-| `seedance-2.0-mini` | `480p`, `720p` | `4-15s`; default `8s` | Both resolutions: `16:9`, `1:1`, `9:16` | 5000 | 1 start frame, 1 end frame, 4 images, 3 videos, 1 audio |
 | `bytedance/seedance-2.5`, `seedance-2.5` | `480p`, `720p` | `4-30s`; default `8s` | Both resolutions: `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9` | 5000 | 1 start frame, 1 end frame, 30 images, 10 videos, 10 audio references totaling at most 30.2s |
 | `happy-horse-1.1` | `720p`, `1080p` | `3-15s`; default `5s` | Both resolutions: `16:9`, `4:3`, `1:1`, `3:4`, `9:16` | 2500 | 1 start frame or 9 images; no end frame/video/audio; `prompt_enhance` |
 | `grok-imagine-1.5` | `auto`, `400p`, `544p`, `720p`, `960p` | `3-15s`; default `6s` | `auto` with `auto`; `400p`/`720p`: `16:9`, `9:16`; `544p`/`960p`: `1:1` | 5000 | exactly 1 start frame; no end frame/image/video/audio |

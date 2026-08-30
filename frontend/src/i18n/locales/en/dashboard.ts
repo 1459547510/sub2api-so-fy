@@ -1031,13 +1031,6 @@ const dashboardMessages = {
             promptLimit: 'This gateway enforces a 5000-character limit',
             references: '1 start frame, 1 end frame, 12 images, 3 videos, 3 audio references; frames may be combined with other references',
           },
-          seedance20Mini: {
-            resolution: '480p, 720p, 1080p, default 480p',
-            duration: '4-12s, default 4s',
-            aspectRatio: '16:9, 9:16, 1:1, 4:3, 3:4, 21:9 at every resolution',
-            promptLimit: 'This gateway enforces a 5000-character limit',
-            references: '1 start frame, 1 end frame, at most 2 images in total; video and audio references are not supported',
-          },
           seedance25: {
             resolution: '480p, 720p, default 480p',
             duration: '4, 5, 6, 8, 10, 12, 15, 20, 25, or 30s, default 4s. At 720p, silent clips max 30s and clips with generated audio max 15s',
@@ -1049,7 +1042,6 @@ const dashboardMessages = {
         models: {
           seedance20: 'Seedance 2.0 supports 480p/720p/1080p/4k, default 480p, for 4-15 seconds, default 4 seconds, at 16:9, 9:16, 1:1, 4:3, 3:4, or 21:9. At 1080p, silent clips max 15 seconds and clips with generated audio max 10 seconds. Up to 12 image, 3 video, and 3 audio references are supported. This example is 4k text-to-video.',
           seedance20Fast: 'Seedance 2.0 Fast supports 480p/720p, default 480p, for 4-15 seconds, default 4 seconds, with the same aspect ratios as standard. Up to 12 image, 3 video, and 3 audio references are supported.',
-          seedance20Mini: 'Seedance 2.0 Mini supports 480p/720p/1080p, default 480p, for 4-12 seconds, default 4 seconds, with the same aspect ratios as standard. At most 2 images in total; video and audio references are not supported. This example is 1080p text-to-video.',
           seedance25: 'Seedance 2.5 supports 480p/720p, default 480p, and only 4, 5, 6, 8, 10, 12, 15, 20, 25, or 30 seconds, default 4 seconds, with the same aspect ratios as 2.0. At 720p, silent clips max 30 seconds and clips with generated audio max 15 seconds. Up to 30 image, 3 video, and 3 audio references are supported.',
         },
         examples: { videoRequest: 'Video creation request', acceptedResponse: '202 accepted response', modelList: 'Model list request', imageGeneration: 'Image generation request', imageReference: 'Image reference request', imageEdit: 'Image edit JSON request', imageMultipart: 'Image edit multipart request', imageResponse: 'Image response', upload: 'Media upload request', uploadResponse: 'Media upload response', uploadMedia: 'Upload video and audio', videoStartFrame: 'Video start-frame request', videoFramePair: 'Video start/end-frame request', videoReferences: 'Video image-reference request', videoAudio: 'Video audio-reference request', modelTitle: 'Per-model request examples', modelDescription: 'Each video model below has a copy-ready curl request. Use only the resolutions, durations, aspect ratios, and reference inputs listed for that model; production clients should still send an ID returned by /v1/models.', videoModelDescription: 'Video models use the asynchronous create, poll, and content download flow.', imageModelDescription: 'Image models use the OpenAI Images generation or edit flow.', poll: 'Poll a job and download video' },
@@ -1103,7 +1095,6 @@ const dashboardMessages = {
         description: 'Each model below has a copy-ready curl request. Use only the resolutions, durations, aspect ratios, and reference inputs listed for that model; media_url values come from the upload endpoint.',
         seedance20: 'Supports 480p/720p/1080p for 4-15 seconds; 1080p is limited to 12 seconds. This example is text-to-video.',
         seedance20Fast: 'Supports 480p/720p for 4-15 seconds. This example is text-to-video.',
-        seedance20Mini: 'Supports 480p/720p for 4-15 seconds and 16:9, 1:1, or 9:16. This example is text-to-video.',
         happyHorse: 'Supports 720p/1080p for 3-15 seconds. Use a start frame or reference images; reference video is currently rejected by the gateway.',
         grokImagine: 'Supports auto, 400p, 544p, 720p, and 960p for 3-15 seconds. Auto must use aspect_ratio auto. Exactly one start-frame URL is required; other guidance inputs are rejected.',
         ltx23Pro: 'Supports 1080p/1440p/2160p at 16:9 for exactly 6, 8, or 10 seconds. Start and end frames, generated audio, and prompt enhancement are supported; media references are not.',
@@ -1149,13 +1140,6 @@ const dashboardMessages = {
           resolution: '480p, 720p',
           duration: '4-15s, default 8s',
           aspectRatio: '480p: all 7 Seedance ratios; 720p excludes 9:21',
-          promptLimit: '5,000 characters',
-          references: '1 start frame, 1 end frame, 4 images, 3 videos, 1 audio',
-        },
-        seedance20Mini: {
-          resolution: '480p, 720p',
-          duration: '4-15s, default 8s',
-          aspectRatio: '16:9, 1:1, 9:16 at both resolutions',
           promptLimit: '5,000 characters',
           references: '1 start frame, 1 end frame, 4 images, 3 videos, 1 audio',
         },

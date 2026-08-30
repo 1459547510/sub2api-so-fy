@@ -21,7 +21,6 @@ export type VideoModelExample = {
 const matrixKeys = [
   ['seedance-2.0', 'seedance20'],
   ['seedance-2.0-fast', 'seedance20Fast'],
-  ['seedance-2.0-mini', 'seedance20Mini'],
   ['bytedance/seedance-2.5', 'seedance25'],
   ['seedance-2.5', 'seedance25'],
   ['happy-horse-1.1', 'happyHorse'],
@@ -106,18 +105,6 @@ const modelExampleBodies: Array<{ model: string; description: string; body: stri
     body: `{
   "model": "seedance-2.0-fast",
   "prompt": "A fast tracking shot through a neon city street",
-  "resolution": "720p",
-  "duration": 8,
-  "aspect_ratio": "16:9",
-  "audio": false
-}`,
-  },
-  {
-    model: 'seedance-2.0-mini',
-    description: 'video.apiDocs.models.seedance20Mini',
-    body: `{
-  "model": "seedance-2.0-mini",
-  "prompt": "A paper boat drifting across a calm lake",
   "resolution": "720p",
   "duration": 8,
   "aspect_ratio": "16:9",

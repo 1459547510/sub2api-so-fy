@@ -10,7 +10,7 @@ vi.mock('vue-i18n', async () => {
 })
 
 const documentedVideoModels = [
-  'seedance-2.0', 'seedance-2.0-fast', 'seedance-2.0-mini', 'bytedance/seedance-2.5', 'seedance-2.5', 'happy-horse-1.1', 'grok-imagine-1.5', 'ltx-2.3-pro', 'ltx-2.3-fast',
+  'seedance-2.0', 'seedance-2.0-fast', 'bytedance/seedance-2.5', 'seedance-2.5', 'happy-horse-1.1', 'grok-imagine-1.5', 'ltx-2.3-pro', 'ltx-2.3-fast',
   'hailuo-03', 'gemini-omni-flash', 'kling-2.1', 'kling-2.5', 'kling-2.5-turbo-standard', 'kling-2.6', 'kling-video-o-1',
   'kling-3.0', 'kling-3.0-turbo', 'kling-video-o-3', 'veo-3.1-generate-001', 'veo-3.1-fast-generate-001', 'veo-3.1-lite',
 ]
@@ -60,12 +60,12 @@ describe('VideoApiDocsView', () => {
     expect(text).toContain('video.apiDocs.v2.compatibility.title')
     expect(text).toContain('video.apiDocs.v2.matrix.title')
     expect(text).toContain('video.apiDocs.version.v1')
-    expect(wrapper.findAll('#model-matrix tbody tr')).toHaveLength(22)
+    expect(wrapper.findAll('#model-matrix tbody tr')).toHaveLength(21)
     expect(wrapper.text()).toContain('video.apiDocs.v2.matrix.seedance20.resolution')
     expect(wrapper.text()).not.toContain('video.apiDocs.matrix.seedance20.resolution')
     const modelExampleHeadings = wrapper.findAll('#model-examples h3').map((heading) => heading.text())
     expect(modelExampleHeadings).toEqual(documentedVideoModels)
-    expect(new Set(modelExampleHeadings).size).toBe(22)
+    expect(new Set(modelExampleHeadings).size).toBe(21)
 
     const examples = wrapper.findAllComponents(ApiCodeBlock).map((component) => component.props('code'))
     expect(examples.some((code) => code.includes('Prefer: respond-async'))).toBe(true)
@@ -79,7 +79,7 @@ describe('VideoApiDocsView', () => {
     expect(examples.some((code) => code.includes('/v1/images/edits') && code.includes('image[]=@./input.png'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "gpt-image-2"') && code.includes('images'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "seedance-2.0"') && code.includes('"resolution": "4k"') && code.includes('"duration": 4'))).toBe(true)
-    expect(examples.some((code) => code.includes('"model": "seedance-2.0-mini"') && code.includes('"resolution": "1080p"'))).toBe(true)
+    expect(examples.every((code) => !code.includes('seedance-2.0-mini'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "seedance-2.0"') && code.includes('/v1/videos/generations'))).toBe(true)
     expect(examples.some((code) => code.includes('-F "video=@./reference.mp4"'))).toBe(true)
     expect(examples.some((code) => code.includes('-F "audio=@./reference.mp3"'))).toBe(true)
@@ -107,7 +107,7 @@ describe('VideoApiDocsView', () => {
     expect(text).toContain('video.apiDocs.uploadMediaFormat')
     expect(text).not.toContain('video.apiDocs.v2.compatibility.title')
     expect(text).not.toContain('/v1/images/generations')
-    expect(wrapper.findAll('#model-matrix tbody tr')).toHaveLength(22)
+    expect(wrapper.findAll('#model-matrix tbody tr')).toHaveLength(21)
     const modelExampleHeadings = wrapper.findAll('#model-examples h3').map((heading) => heading.text())
     expect(modelExampleHeadings).toEqual(documentedVideoModels)
 

@@ -7587,3 +7587,54 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Changed files: this final `progress.md` record only; local untracked work remains excluded.
 - Rollback: deploy `v0.1.183-fy.2` or `v0.1.183-fy.1`; source rollback can use the prior release tag or revert the corrective commits.
 
+## 2026-08-30 - Task: Fix dynamic video pricing page refresh
+### What was done
+- Added authenticated `GET /api/v1/video/pricing` for the video pricing page, independent of the optional available-channel detail switch.
+- Reused current-user group authorization and live channel model pricing while returning only group IDs, public model names, and pricing fields.
+- Switched the frontend pricing page to the new no-store endpoint and documented the data source and exposure boundary.
+- Kept `/api/v1/channels/available` behavior unchanged and added timing/request-marker coverage for the new endpoint.
+
+### Testing
+- `go test -tags=unit ./internal/server/middleware ./internal/handler ./internal/server/routes` passed.
+- `go test ./internal/service` passed.
+- `pnpm.cmd exec vitest run src/utils/__tests__/mediaPricing.spec.ts src/views/user/__tests__/VideoPricingView.spec.ts` passed: 29 tests.
+- `pnpm.cmd exec vitest run src/api/__tests__/adminUIRequest.spec.ts src/views/user/__tests__/VideoPricingView.spec.ts` passed: 64 tests.
+- `pnpm.cmd run typecheck` passed.
+- `pnpm.cmd run build` passed.
+- `git diff --check` passed.
+
+### Notes
+- Changed files: `backend/internal/handler/available_channel_handler.go`, `backend/internal/handler/available_channel_handler_test.go`, `backend/internal/server/routes/user.go`, `backend/internal/server/middleware/server_timing.go`, `backend/internal/server/middleware/server_timing_test.go`, `frontend/src/api/channels.ts`, `frontend/src/api/adminUIRequest.ts`, `frontend/src/api/__tests__/adminUIRequest.spec.ts`, `frontend/src/views/user/VideoPricingView.vue`, `frontend/src/views/user/__tests__/VideoPricingView.spec.ts`, and `docs/LEO_VIDEO_CHANNEL.md`.
+- Rollback: revert this change set; the previous `/channels/available` endpoint remains intact, and the working tree's pre-existing untracked files were not modified or removed.
+
+## 2026-08-30 - Task: Roll back dynamic video pricing page change
+### What was done
+- Reverted the dynamic video pricing endpoint, frontend API switch, timing allowlist changes, related tests, and documentation update from the immediately preceding task.
+- Restored the original video pricing page data flow and kept all pre-existing untracked worktree files untouched.
+
+### Testing
+- `git diff --check` passed.
+- Confirmed no references to `/video/pricing`, `getVideoPricing`, or `UserVideoPricingSource` remain in backend, frontend, or docs.
+
+### Notes
+- Changed files: `progress.md` only; the preceding source and documentation changes were restored to `HEAD`.
+- Rollback: to undo this log-only record, remove the final rollback entry; source behavior is already at the pre-change state.
+
+## 2026-08-30 - Task: Sync current Trioma Seedance V2 API documentation
+### What was done
+- Added a dedicated `trioma` Seedance V2 documentation catalog while retaining the existing `current` and `previous` snapshots, and switched the active V2 source to `trioma`.
+- Aligned the active Seedance 2.0, 2.0 Fast, and 2.5 documentation with the local Trioma capability matrix, including resolutions, durations, audio limits, aspect ratios, and reference-media counts.
+- Removed the invalid `seedance-2.0-mini` model from customer-facing V1/V2 documentation matrices, request examples, localized copy, and public model-spec Markdown.
+
+### Testing
+- `npm run test:run -- src/utils/__tests__/videoApiDocs.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts` passed: 6 tests.
+- `npm run typecheck` passed.
+- `npm run build` passed.
+- `git diff --check` passed.
+- Static scan confirmed no `seedance-2.0-mini` model entry remains in the customer-facing documentation sources or rendered API-doc model lists.
+
+### Notes
+- Changed files: `frontend/src/utils/seedanceV2DocsSource.ts` (active source and version key), `frontend/src/utils/seedanceV2DocsCatalog.ts` (Trioma catalog and Mini removal), `frontend/src/utils/videoApiDocs.ts` (public matrix/examples), `frontend/src/i18n/locales/zh/dashboard.ts`, `frontend/src/i18n/locales/en/dashboard.ts` (localized docs copy), `frontend/src/utils/__tests__/videoApiDocs.spec.ts`, `frontend/src/views/user/__tests__/VideoApiDocsView.spec.ts`, `docs/LEO_VIDEO_MODEL_SPECS.md`, and local ignored `docs/SEEDANCE_API_CLIENT_GUIDE_CN.md`.
+- The video production page and backend compatibility tables were not changed; this task only removed the invalid model from API documentation surfaces.
+- Rollback: restore the pre-task documentation source/catalog, matrix/examples, locale entries, and Markdown row; if committed, revert the task commit. The pre-task `current` and `previous` snapshots remain available in the source map.
+
