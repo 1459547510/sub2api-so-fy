@@ -7638,3 +7638,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - The video production page and backend compatibility tables were not changed; this task only removed the invalid model from API documentation surfaces.
 - Rollback: restore the pre-task documentation source/catalog, matrix/examples, locale entries, and Markdown row; if committed, revert the task commit. The pre-task `current` and `previous` snapshots remain available in the source map.
 
+## 2026-08-30 - Task: Release Trioma Seedance V2 API documentation as v0.1.183-fy.5
+### What was done
+- Committed the documentation synchronization as `8d38a7ed2` and pushed branch `codex/leo-video-channel`.
+- Published immutable tag `v0.1.183-fy.5` after confirming the previously attempted `v0.1.183-fy.4` tag was already owned by an older remote release.
+- Confirmed the GitHub Release generated the Linux amd64 package and checksum file.
+
+### Testing
+- Local targeted Vitest passed: 6 tests across the API documentation and view suites.
+- Local `pnpm.cmd run typecheck`, `pnpm.cmd run build`, and `git diff --check` passed.
+- GitHub CI run `33300714754` passed shell, frontend, golangci-lint, unit, and integration jobs.
+- GitHub Security Scan run `33300714761` passed.
+- GitHub Release run `33300714756` passed; downloaded package SHA-256 `bfbeba65f61ba26456f8aeb319bff5fc3ab2bfce6187288366030a91167c8fb9` matched the published `checksums.txt`.
+
+### Notes
+- Changed files: the nine documentation/catalog/locale/test files listed in the preceding task record, plus this `progress.md` release record.
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.1.183-fy.5`.
+- Rollback: deploy the prior verified `v0.1.183-fy.3` package or revert commit `8d38a7ed2`; remove the `v0.1.183-fy.5` Release/tag only if the published artifact itself must be withdrawn.
+
