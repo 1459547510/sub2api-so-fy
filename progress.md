@@ -7638,3 +7638,23 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - The video production page and backend compatibility tables were not changed; this task only removed the invalid model from API documentation surfaces.
 - Rollback: restore the pre-task documentation source/catalog, matrix/examples, locale entries, and Markdown row; if committed, revert the task commit. The pre-task `current` and `previous` snapshots remain available in the source map.
 
+## 2026-08-31 - Task: Restore Leo multipart compatibility on the latest release baseline
+
+### What was done
+
+- Reapplied the Leo multipart reference-image conversion to the `v0.1.183-fy.5` baseline so uploaded files are stored as temporary public HTTPS media and forwarded as JSON `image_urls`.
+- Normalized composite model matching for case, underscore, whitespace, and hyphen spelling differences, including the production `GPT Image-2` route.
+- Ensured composite target-platform resolution completes before deciding whether multipart conversion is required, and added a regression test for the production-style alias.
+
+### Testing
+
+- `gofmt` completed for all changed Go files.
+- `go test ./internal/service ./internal/handler ./internal/server/routes` passed.
+- `git diff --check` passed.
+- A release build and online deployment remain pending; no online service was restarted in this task.
+
+### Notes
+
+- Changed files: `backend/internal/config/config.go`, `backend/internal/handler/leo_video_async.go`, `backend/internal/handler/openai_images.go`, `backend/internal/handler/video_input.go`, `backend/internal/handler/video_input_test.go`, `backend/internal/server/routes/composite_platform_test.go`, `backend/internal/server/routes/gateway.go`, `backend/internal/service/composite_route_resolver.go`, `backend/internal/service/leo_image_request.go`, `backend/internal/service/leo_image_request_test.go`, `backend/internal/service/openai_images_test.go`, `backend/internal/service/video_input_store.go`, `backend/internal/service/video_input_store_test.go`, `backend/internal/service/wire.go`, `backend/internal/web/embed_on.go`, `backend/internal/web/embed_test.go`, `docs/LEO_IMAGE_MULTIPART_COMPAT.md`, and `progress.md`.
+- Rollback: deploy the previous `v0.1.183-fy.5` binary; this change has no database migration.
+

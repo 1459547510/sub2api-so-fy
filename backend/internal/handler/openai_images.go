@@ -78,6 +78,9 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 		return
 	}
 	inboundMultipart := parsed.Multipart
+	requestModel := parsed.Model
+	ensureCompositeTargetPlatform(c, apiKey, requestModel)
+	requestPlatform = effectiveAPIKeyPlatform(c, apiKey)
 	if requestPlatform == service.PlatformLeo && parsed.Multipart {
 		if h.videoInputHandler == nil {
 			h.errorResponse(c, http.StatusServiceUnavailable, "api_error", "Multipart image upload service is not configured")
@@ -99,8 +102,6 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 		}
 		body = convertedBody
 	}
-	requestModel := parsed.Model
-	ensureCompositeTargetPlatform(c, apiKey, requestModel)
 	clientRequestModel := clientRequestedModel(c, requestModel)
 	routingModel := requestModel
 	if resolvedModel, ok := service.ResolvedUpstreamModelFromContext(c.Request.Context()); ok {

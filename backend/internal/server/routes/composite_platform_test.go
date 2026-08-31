@@ -315,6 +315,54 @@ func TestCompositeTargetPlatformMiddlewareUsesExplicitLeoRoute(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, w.Code)
 }
 
+func TestCompositeTargetPlatformMiddlewareNormalizesLeoImageModelAlias(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	resolver := service.NewCompositeRouteResolver(compositeRouteRepoStub{
+		routes: []service.CompositeModelRoute{{
+			ID:             34,
+			GroupID:        30,
+			PublicModel:    "GPT Image-2",
+			MatchType:      service.CompositeRouteMatchExact,
+			TargetPlatform: service.PlatformLeo,
+			UpstreamModel:  "GPT Image-2",
+			Endpoint:       service.CompositeRouteEndpointImages,
+			Enabled:        true,
+		}},
+	})
+	router.Use(gin.HandlerFunc(servermiddleware.APIKeyAuthMiddleware(func(c *gin.Context) {
+		groupID := int64(30)
+		c.Set(string(servermiddleware.ContextKeyAPIKey), &service.APIKey{
+			GroupID: &groupID,
+			Group:   &service.Group{ID: groupID, Platform: service.PlatformComposite},
+		})
+		c.Next()
+	})))
+	router.Use(compositeTargetPlatformMiddleware(resolver))
+	router.POST("/v1/images/edits", func(c *gin.Context) {
+		platform, ok := service.ResolvedTargetPlatformFromContext(c.Request.Context())
+		require.True(t, ok)
+		require.Equal(t, service.PlatformLeo, platform)
+		upstreamModel, ok := service.ResolvedUpstreamModelFromContext(c.Request.Context())
+		require.True(t, ok)
+		require.Equal(t, "GPT Image-2", upstreamModel)
+		c.Status(http.StatusNoContent)
+	})
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	require.NoError(t, writer.WriteField("model", "gpt-image-2"))
+	require.NoError(t, writer.WriteField("prompt", "draw"))
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/edits", bytes.NewReader(body.Bytes()))
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+}
+
 func TestCompositeGeminiTargetPlatformMiddlewareUsesPathRoute(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

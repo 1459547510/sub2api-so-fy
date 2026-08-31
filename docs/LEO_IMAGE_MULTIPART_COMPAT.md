@@ -28,6 +28,10 @@ multipart 请求中的 `image` 和 `image[...]` 文件字段会按原顺序转�
 - `input_fidelity`、`style`、`stream`
 - `output_compression`、`partial_images`
 
+复合分组的路由匹配会统一大小写、下划线、连续空白和连字符写法，因此
+`GPT Image-2` 与 `gpt-image-2` 会命中同一条配置路由；转发给上游的模型值仍使用
+路由中配置的 `upstream_model`。
+
 参考图只接受 PNG、JPEG 和 WebP，每张最大 10 MiB。`mask` 仍不受 Leo 图片渠道
 支持；包含 mask 的请求会在 Sub2API 参数校验阶段返回 `400`。
 
