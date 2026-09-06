@@ -7699,3 +7699,21 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records this implementation, verification, file list, and rollback instructions.
 - Rollback this change by reverting this task's commit, or before commit remove the user ID `86` condition, its test case, and the matching documentation text from the files listed above.
 
+## 2026-09-06 - Task: Restore usage integration test parity after the v0.2.1 merge
+
+### What was done
+
+- Added the missing auth-store and token-incentive status mocks to the upstream reasoning-effort integration test so it can mount the fork's token-incentive-enabled user usage page.
+- Kept production behavior unchanged; this task only aligns the merged test fixture with dependencies already installed by the real application entry point.
+
+### Testing
+
+- `cd frontend && pnpm.cmd exec vitest run src/__tests__/integration/usage-reasoning-effort.spec.ts` passed: 3 tests.
+- `git diff --check` passed before this progress entry was appended.
+
+### Notes
+
+- `frontend/src/__tests__/integration/usage-reasoning-effort.spec.ts`: mocks the fork-only auth store and token-incentive status dependency for the upstream page-display test.
+- `progress.md`: records the merge-compatibility test fix, verification, and rollback point.
+- Rollback: revert this task's commit; no production source, configuration, or database migration is affected.
+

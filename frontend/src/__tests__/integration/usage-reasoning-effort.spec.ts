@@ -12,6 +12,7 @@ const {
   userGetDashboardSnapshotV2,
   userKeysList,
   userGroupsGetAvailable,
+  userGetTokenIncentiveStatus,
   adminList,
   adminGetStats,
   adminGetSnapshotV2,
@@ -25,6 +26,7 @@ const {
   userGetDashboardSnapshotV2: vi.fn(),
   userKeysList: vi.fn(),
   userGroupsGetAvailable: vi.fn(),
+  userGetTokenIncentiveStatus: vi.fn(),
   adminList: vi.fn(),
   adminGetStats: vi.fn(),
   adminGetSnapshotV2: vi.fn(),
@@ -91,6 +93,9 @@ vi.mock('@/api', () => ({
   userGroupsAPI: {
     getAvailable: userGroupsGetAvailable,
   },
+  userAPI: {
+    getTokenIncentiveStatus: userGetTokenIncentiveStatus,
+  },
 }))
 
 vi.mock('@/api/admin', () => ({
@@ -126,6 +131,10 @@ vi.mock('@/stores/app', () => ({
     showSuccess: vi.fn(),
     showInfo: vi.fn(),
   }),
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({ refreshUser: vi.fn() }),
 }))
 
 vi.mock('vue-i18n', async () => {
@@ -233,6 +242,7 @@ describe('usage reasoning effort page display', () => {
     })
     userKeysList.mockReset().mockResolvedValue({ items: [{ id: 1, name: 'user-key' }] })
     userGroupsGetAvailable.mockReset().mockResolvedValue([{ id: 1, name: 'default' }])
+    userGetTokenIncentiveStatus.mockReset().mockResolvedValue({ enabled: false })
 
     adminList.mockReset().mockResolvedValue({ items: [adminMappedLog], total: 1, pages: 1 })
     adminGetStats.mockReset().mockResolvedValue(emptyStats)
