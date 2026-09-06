@@ -30,6 +30,18 @@ func TestVideoInputStoreValidatesImageContentAndBuildsOpaqueURL(t *testing.T) {
 	require.ErrorIs(t, err, ErrVideoInputUnsupportedType)
 }
 
+func TestVideoInputStoreBuildsConfiguredPublicImageURL(t *testing.T) {
+	store := NewVideoInputStore(t.TempDir(), 8080)
+	require.NoError(t, store.SetPublicBaseURL("https://api.example.com/root/"))
+	input, err := store.Save(bytes.NewReader(videoPNGBytes()))
+	require.NoError(t, err)
+
+	publicURL, err := store.PublicImageURL(input.Token)
+	require.NoError(t, err)
+	require.Equal(t, "https://api.example.com/root/media/image-inputs/"+input.Token, publicURL)
+	require.NotContains(t, publicURL, "127.0.0.1")
+}
+
 func TestVideoInputStoreRejectsOversizedAndCleansTerminalAndOrphanFiles(t *testing.T) {
 	root := t.TempDir()
 	store := NewVideoInputStore(root, 8080)

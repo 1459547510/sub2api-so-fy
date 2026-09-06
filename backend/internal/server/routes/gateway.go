@@ -528,6 +528,8 @@ func RegisterGatewayRoutes(
 	r.POST("/images/edits/async", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, h.AsyncImage.Submit)
 	r.GET("/images/tasks/:task_id", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, h.AsyncImage.Get)
 	r.GET("/internal/video-inputs/:token", h.OpenAIGateway.LeoVideoInputInternal)
+	r.GET("/media/image-inputs/:token", h.OpenAIGateway.LeoImageInputPublic)
+	r.HEAD("/media/image-inputs/:token", h.OpenAIGateway.LeoImageInputPublic)
 	r.POST("/videos", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, videoGenerationHandler)
 	r.POST("/videos/generations", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, videoGenerationHandler)
 	r.POST("/videos/uploads", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, leoVideoOnly(h.OpenAIGateway.LeoVideoUpload))

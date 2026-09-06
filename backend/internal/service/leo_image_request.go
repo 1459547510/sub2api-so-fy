@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"mime"
 	"net/url"
@@ -41,11 +42,11 @@ func validateLeoImageParsedRequest(platform string, req *OpenAIImagesRequest, bo
 	if !isLeoImagePlatform(platform) || req == nil {
 		return nil
 	}
-	if req.Multipart {
-		return newLeoImageRequestError(leoImageMultipartUnsupported)
-	}
 	if req.HasMask || strings.TrimSpace(req.MaskImageURL) != "" || req.MaskUpload != nil || gjson.GetBytes(body, "mask").Exists() {
 		return newLeoImageRequestError(leoImageMaskUnsupported)
+	}
+	if req.Multipart {
+		return nil
 	}
 	for _, imageURL := range collectLeoImageReferenceURLs(body) {
 		if err := validateLeoImageReferenceURL(imageURL); err != nil {
@@ -53,6 +54,60 @@ func validateLeoImageParsedRequest(platform string, req *OpenAIImagesRequest, bo
 		}
 	}
 	return nil
+}
+
+func BuildLeoMultipartImageRequest(req *OpenAIImagesRequest, imageURLs []string) ([]byte, error) {
+	if req == nil || len(imageURLs) == 0 {
+		return nil, newLeoImageRequestError(leoImageURLRequired)
+	}
+	if req.HasMask || strings.TrimSpace(req.MaskImageURL) != "" || req.MaskUpload != nil {
+		return nil, newLeoImageRequestError(leoImageMaskUnsupported)
+	}
+	for _, imageURL := range imageURLs {
+		if err := validateLeoImageReferenceURL(imageURL); err != nil {
+			return nil, err
+		}
+	}
+
+	payload := map[string]any{
+		"model":      req.Model,
+		"prompt":     req.Prompt,
+		"n":          req.N,
+		"image_urls": imageURLs,
+	}
+	setString := func(name, value string) {
+		if strings.TrimSpace(value) != "" {
+			payload[name] = value
+		}
+	}
+	setString("size", req.Size)
+	setString("response_format", req.ResponseFormat)
+	setString("quality", req.Quality)
+	setString("background", req.Background)
+	setString("output_format", req.OutputFormat)
+	setString("moderation", req.Moderation)
+	setString("input_fidelity", req.InputFidelity)
+	setString("style", req.Style)
+	if req.Stream {
+		payload["stream"] = true
+	}
+	if req.OutputCompression != nil {
+		payload["output_compression"] = *req.OutputCompression
+	}
+	if req.PartialImages != nil {
+		payload["partial_images"] = *req.PartialImages
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("encode multipart image request: %w", err)
+	}
+	req.Multipart = false
+	req.ContentType = "application/json"
+	req.InputImageURLs = append([]string(nil), imageURLs...)
+	req.Uploads = nil
+	req.Body = body
+	return body, nil
 }
 
 func rewriteLeoImageUpstreamRequest(body []byte, contentType string, parsed *OpenAIImagesRequest) ([]byte, string, string, error) {

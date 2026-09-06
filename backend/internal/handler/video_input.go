@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"bytes"
 	"errors"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -109,5 +112,57 @@ func (h *VideoInputHandler) GetInternal(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "private, max-age=3600")
+	c.Data(http.StatusOK, input.ContentType, input.Data)
+}
+
+func (h *VideoInputHandler) PrepareLeoMultipartImageRequest(parsed *service.OpenAIImagesRequest) ([]byte, []string, error) {
+	if h == nil || h.store == nil {
+		return nil, nil, service.ErrVideoInputPublicURLMissing
+	}
+	imageURLs := make([]string, 0, len(parsed.Uploads))
+	tokens := make([]string, 0, len(parsed.Uploads))
+	for _, upload := range parsed.Uploads {
+		input, err := h.store.SaveMedia(bytes.NewReader(upload.Data), service.VideoInputKindImage, upload.FileName)
+		if err != nil {
+			return nil, tokens, err
+		}
+		publicURL, err := h.store.PublicImageURL(input.Token)
+		if err != nil {
+			return nil, append(tokens, input.Token), err
+		}
+		tokens = append(tokens, input.Token)
+		imageURLs = append(imageURLs, publicURL)
+	}
+	body, err := service.BuildLeoMultipartImageRequest(parsed, imageURLs)
+	return body, tokens, err
+}
+
+func (h *VideoInputHandler) MarkTerminal(tokens []string) {
+	if h == nil || h.store == nil {
+		return
+	}
+	for _, token := range tokens {
+		_ = h.store.MarkTerminal(token, time.Now())
+	}
+}
+
+func (h *VideoInputHandler) GetPublicImage(c *gin.Context) {
+	input, err := h.store.Open(c.Param("token"))
+	if errors.Is(err, service.ErrVideoInputNotFound) || err == nil && !strings.HasPrefix(input.ContentType, "image/") {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	c.Header("X-Content-Type-Options", "nosniff")
+	if c.Request.Method == http.MethodHead {
+		c.Header("Content-Type", input.ContentType)
+		c.Header("Content-Length", strconv.FormatInt(input.Size, 10))
+		c.Status(http.StatusOK)
+		return
+	}
 	c.Data(http.StatusOK, input.ContentType, input.Data)
 }

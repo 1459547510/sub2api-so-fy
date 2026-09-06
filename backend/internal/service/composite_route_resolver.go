@@ -70,6 +70,7 @@ func matchCompositeRoute(routes []CompositeModelRoute, model, endpoint string) (
 	if len(routes) == 0 {
 		return CompositeModelRoute{}, false
 	}
+	modelMatch := normalizeCompositeModelForMatch(model)
 
 	type candidate struct {
 		route          CompositeModelRoute
@@ -88,17 +89,18 @@ func matchCompositeRoute(routes []CompositeModelRoute, model, endpoint string) (
 		if publicModel == "" {
 			continue
 		}
+		publicModelMatch := normalizeCompositeModelForMatch(publicModel)
 
 		matchStrength := 0
-		prefixLen := len(publicModel)
+		prefixLen := len(publicModelMatch)
 		switch route.MatchType {
 		case CompositeRouteMatchExact:
-			if publicModel != model {
+			if publicModelMatch != modelMatch {
 				continue
 			}
 			matchStrength = 2
 		case CompositeRouteMatchPrefix:
-			if !strings.HasPrefix(model, publicModel) {
+			if !strings.HasPrefix(modelMatch, publicModelMatch) {
 				continue
 			}
 			matchStrength = 1
@@ -137,4 +139,12 @@ func matchCompositeRoute(routes []CompositeModelRoute, model, endpoint string) (
 		return a.route.ID < b.route.ID
 	})
 	return candidates[0].route, true
+}
+
+// normalizeCompositeModelForMatch keeps route matching tolerant of model
+// spelling differences between OpenAI-compatible clients and admin config.
+func normalizeCompositeModelForMatch(model string) string {
+	model = strings.ToLower(strings.TrimSpace(model))
+	model = strings.ReplaceAll(model, "_", "-")
+	return strings.Join(strings.Fields(model), "-")
 }

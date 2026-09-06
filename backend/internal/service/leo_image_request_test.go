@@ -62,7 +62,7 @@ func TestRewriteLeoImageUpstreamRequestKeepsNativeImageURLs(t *testing.T) {
 	require.False(t, gjson.GetBytes(out, "image_url").Exists())
 }
 
-func TestRewriteLeoImageUpstreamRequestRejectsMaskAndMultipart(t *testing.T) {
+func TestRewriteLeoImageUpstreamRequestRejectsMaskAndUnconvertedMultipart(t *testing.T) {
 	_, _, _, err := rewriteLeoImageUpstreamRequest([]byte(`{"prompt":"x","images":[{"image_url":"https://example.com/a.png"}],"mask":{"image_url":"https://example.com/mask.png"}}`), "application/json", &OpenAIImagesRequest{Endpoint: openAIImagesEditsEndpoint})
 	require.ErrorContains(t, err, "does not support mask")
 
@@ -97,7 +97,10 @@ func TestLeoImagePublicErrorMessagesHideVendorNames(t *testing.T) {
 
 func TestValidateLeoImageParsedRequest(t *testing.T) {
 	require.NoError(t, validateLeoImageParsedRequest(PlatformOpenAI, &OpenAIImagesRequest{Multipart: true}, nil))
-	require.ErrorContains(t, validateLeoImageParsedRequest(PlatformLeo, &OpenAIImagesRequest{Multipart: true}, nil), "multipart")
+	require.NoError(t, validateLeoImageParsedRequest(PlatformLeo, &OpenAIImagesRequest{
+		Multipart: true,
+		Uploads:   []OpenAIImagesUpload{{FileName: "reference.png", ContentType: "image/png", Data: []byte("png")}},
+	}, nil))
 	require.ErrorContains(t, validateLeoImageParsedRequest(PlatformLeo, &OpenAIImagesRequest{HasMask: true}, []byte(`{}`)), "mask")
 }
 

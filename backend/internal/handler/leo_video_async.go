@@ -234,6 +234,14 @@ func (h *OpenAIGatewayHandler) LeoVideoInputInternal(c *gin.Context) {
 	h.videoInputHandler.GetInternal(c)
 }
 
+func (h *OpenAIGatewayHandler) LeoImageInputPublic(c *gin.Context) {
+	if h.videoInputHandler == nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	h.videoInputHandler.GetPublicImage(c)
+}
+
 func publicLeoVideoJob(job *service.VideoJob) leoVideoJobResponse {
 	response := leoVideoJobResponse{JobID: job.JobID, Status: job.Status, StatusURL: "/v1/videos/jobs/" + job.JobID,
 		RequestedModel: job.RequestedModel, Prompt: job.Prompt, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"strings"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -113,7 +114,13 @@ func ProvideVideoInputStore(cfg *config.Config) *VideoInputStore {
 			port = cfg.Server.Port
 		}
 	}
-	return NewVideoInputStore(dataDir, port)
+	store := NewVideoInputStore(dataDir, port)
+	if cfg != nil && strings.TrimSpace(cfg.Gateway.LeoImageUploadPublicBaseURL) != "" {
+		if err := store.SetPublicBaseURL(cfg.Gateway.LeoImageUploadPublicBaseURL); err != nil {
+			logger.L().Warn("gateway.leo_image_upload_public_base_url is invalid; multipart Leo image uploads stay disabled", zap.Error(err))
+		}
+	}
+	return store
 }
 
 func ProvideVideoOutputStore(cfg *config.Config) *VideoOutputStore {

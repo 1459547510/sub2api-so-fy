@@ -14,6 +14,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func TestVideoInputHandlerUploadAndLoopbackRead(t *testing.T) {
@@ -69,6 +70,55 @@ func TestVideoInputHandlerRequiresAPIKeyForUpload(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/uploads", strings.NewReader(""))
 	handler.Upload(c)
 	require.Equal(t, http.StatusUnauthorized, recorder.Code)
+}
+
+func TestVideoInputHandlerPreparesLeoMultipartImageRequest(t *testing.T) {
+	store := service.NewVideoInputStore(t.TempDir(), 8080)
+	require.NoError(t, store.SetPublicBaseURL("https://api.example.com"))
+	handler := NewVideoInputHandler(store)
+	parsed := &service.OpenAIImagesRequest{
+		Endpoint:  "/v1/images/edits",
+		Multipart: true,
+		Model:     "GPT Image-2",
+		Prompt:    "keep the subject",
+		N:         1,
+		Size:      "1024x1024",
+		Uploads: []service.OpenAIImagesUpload{{
+			FileName:    "reference.png",
+			ContentType: "image/png",
+			Data:        videoPNGBytes(),
+		}},
+	}
+
+	body, tokens, err := handler.PrepareLeoMultipartImageRequest(parsed)
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+	require.False(t, parsed.Multipart)
+	require.Equal(t, "application/json", parsed.ContentType)
+	require.Equal(t, "GPT Image-2", gjson.GetBytes(body, "model").String())
+	require.Equal(t, "keep the subject", gjson.GetBytes(body, "prompt").String())
+	require.Equal(t, "https://api.example.com/media/image-inputs/"+tokens[0], gjson.GetBytes(body, "image_urls.0").String())
+	_, err = store.Open(tokens[0])
+	require.NoError(t, err)
+}
+
+func TestVideoInputHandlerPublicImageRead(t *testing.T) {
+	store := service.NewVideoInputStore(t.TempDir(), 8080)
+	input, err := store.Save(bytes.NewReader(videoPNGBytes()))
+	require.NoError(t, err)
+	handler := NewVideoInputHandler(store)
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.GET("/media/image-inputs/:token", handler.GetPublicImage)
+	req := httptest.NewRequest(http.MethodGet, "/media/image-inputs/"+input.Token, nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	require.Equal(t, http.StatusOK, resp.Code)
+	require.Equal(t, "image/png", resp.Header().Get("Content-Type"))
+	require.Equal(t, "no-store", resp.Header().Get("Cache-Control"))
+	require.Equal(t, "nosniff", resp.Header().Get("X-Content-Type-Options"))
+	require.Equal(t, videoPNGBytes(), resp.Body.Bytes())
 }
 
 func TestVideoInputHandlerUploadsVideoAndAudioFields(t *testing.T) {
