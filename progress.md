@@ -7768,3 +7768,27 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the post-merge test reconciliation, verification, and rollback point.
 - Rollback: revert this task's commit; no production source, configuration, or database migration is affected.
 
+## 2026-09-06 - Task: Verify published upstream merge release v0.2.1-fy.1
+
+### What was done
+
+- Confirmed the remote annotated tag `v0.2.1-fy.1` dereferences to the validated release commit `3c33626ab004a13e5d3afca40afbf9e155a40c93`.
+- Confirmed GitHub Actions published the Linux amd64 package and checksum file from Release run `34006778549`.
+- Downloaded the public release assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `34006251041` passed `shell`, `frontend`, `golangci-lint`, and backend `test` jobs.
+- GitHub Security Scan run `34006250995` passed.
+- GitHub Release run `34006778549` completed successfully.
+- Downloaded `sub2api_0.2.1-fy.1_linux_amd64.tar.gz`: 39,273,443 bytes.
+- Published and downloaded SHA-256 matched: `e6f61b0bf1f00e016360bb9af10d8ecccd30e2bd7d52a3ea98e73a32bf953ba4`.
+- `tar -tzf` returned only `sub2api`; the extracted 122,736,800-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.1-fy.1`.
+
+### Notes
+
+- `progress.md`: records the remote branch/tag, CI and security gates, Release workflow, downloaded asset, checksum, archive, and binary verification.
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.1-fy.1`.
+- The release includes upstream database migrations through the v0.2.1 tag; binary rollback does not automatically reverse applied schema changes.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.1-merge-20260906` or `git revert -m 1 f625c46b4`, while production binary rollback should deploy the prior verified fork release. Preserve all existing stashes and untracked worktree files.
+
