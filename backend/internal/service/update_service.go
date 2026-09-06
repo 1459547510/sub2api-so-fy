@@ -1014,7 +1014,6 @@ func parseVersion(v string) parsedVersion {
 		result.hasSuffix = result.suffix != ""
 		v = v[:dash]
 	}
-
 	parts := strings.Split(v, ".")
 	for i := 0; i < len(parts) && i < 3; i++ {
 		part := leadingDigits(parts[i])

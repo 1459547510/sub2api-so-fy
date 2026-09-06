@@ -10,6 +10,7 @@ type opsRepoMock struct {
 	InsertErrorLogFn              func(ctx context.Context, input *OpsInsertErrorLogInput) (int64, error)
 	BatchInsertErrorLogsFn        func(ctx context.Context, inputs []*OpsInsertErrorLogInput) (int64, error)
 	FindCyberPolicyBanCandidateFn func(ctx context.Context, accountID int64, since, until time.Time) (*CyberPolicyBanCandidate, error)
+	GetErrorLogByIDFn             func(ctx context.Context, id int64) (*OpsErrorLogDetail, error)
 	BatchInsertSystemLogsFn       func(ctx context.Context, inputs []*OpsInsertSystemLogInput) (int64, error)
 	ListSystemLogsFn              func(ctx context.Context, filter *OpsSystemLogFilter) (*OpsSystemLogList, error)
 	DeleteSystemLogsFn            func(ctx context.Context, filter *OpsSystemLogCleanupFilter) (int64, error)
@@ -42,6 +43,9 @@ func (m *opsRepoMock) ListErrorLogs(ctx context.Context, filter *OpsErrorLogFilt
 }
 
 func (m *opsRepoMock) GetErrorLogByID(ctx context.Context, id int64) (*OpsErrorLogDetail, error) {
+	if m.GetErrorLogByIDFn != nil {
+		return m.GetErrorLogByIDFn(ctx, id)
+	}
 	return &OpsErrorLogDetail{}, nil
 }
 
