@@ -23,8 +23,9 @@ account-level toggle and preserves all other `extra` keys.
 - Migration `221_cyber_policy_user_marks.sql` backfills historical flagged
   `cyber_policy` rows. Local `cyber_policy_session_blocked` events are not used.
 - Administrator users are excluded from both the backfill and future marks.
-- User ID `55` (`hjt13845049131@163.com`) is explicitly exempt from account
-  filtering even if a historical marker already exists.
+- User IDs `55` (`hjt13845049131@163.com`) and `86`
+  (`c8289463@outlook.com`) are explicitly exempt from account filtering even
+  if a historical marker already exists.
 - A marked user skips protected accounts before scoring and during final account
   rechecks. Sticky sessions, weighted sticky fallback, previous-response IDs,
   WebSocket turns, model routing, and retry failover therefore fall through to

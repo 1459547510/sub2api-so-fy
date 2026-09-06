@@ -7676,3 +7676,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Changed files: `backend/internal/config/config.go`, `backend/internal/handler/leo_video_async.go`, `backend/internal/handler/openai_images.go`, `backend/internal/handler/video_input.go`, `backend/internal/handler/video_input_test.go`, `backend/internal/server/routes/composite_platform_test.go`, `backend/internal/server/routes/gateway.go`, `backend/internal/service/composite_route_resolver.go`, `backend/internal/service/leo_image_request.go`, `backend/internal/service/leo_image_request_test.go`, `backend/internal/service/openai_images_test.go`, `backend/internal/service/video_input_store.go`, `backend/internal/service/video_input_store_test.go`, `backend/internal/service/wire.go`, `backend/internal/web/embed_on.go`, `backend/internal/web/embed_test.go`, `docs/LEO_IMAGE_MULTIPART_COMPAT.md`, and `progress.md`.
 - Rollback: deploy the previous `v0.1.183-fy.5` binary; this change has no database migration.
 
+## 2026-09-06 - Task: Exempt c8289463 from OpenAI CY history filtering
+### What was done
+- Added user ID `86` (`c8289463@outlook.com`) to the fixed exemption list for the account-level OpenAI CY history filter.
+- Kept the existing administrator and user ID `55` exemptions unchanged; no account, group, marker, billing, or scheduling settings were modified.
+- Updated the account-toggle descriptions and operator documentation to show both explicitly exempt users.
+
+### Testing
+- `cd backend && go test ./internal/service -run 'Test(OpenAICyberPolicyUserFilter|ContentModerationService_MarkCyberPolicyUser|RecordCyberPolicyEvent_)' -count=1` passed.
+- `cd frontend && pnpm.cmd exec vitest run src/i18n/__tests__/localesMessageCompile.spec.ts` passed: 2 tests.
+- `cd frontend && pnpm.cmd exec eslint src/i18n/locales/zh/admin/accounts.ts src/i18n/locales/en/admin/accounts.ts` passed.
+- `cd frontend && pnpm.cmd exec vue-tsc --noEmit` passed.
+- `git diff --check` passed before the progress entry was appended.
+- Production Key retest remains pending deployment because the exemption is enforced by backend code.
+
+### Notes
+- `backend/internal/service/openai_cyber_policy_user_filter.go`: adds user ID `86` to the exact-match CY history filter exemption.
+- `backend/internal/service/openai_cyber_policy_user_filter_test.go`: verifies both fixed exemptions bypass cache and database marker reads.
+- `frontend/src/i18n/locales/zh/admin/accounts.ts`: adds the new exemption to the Chinese account-toggle description.
+- `frontend/src/i18n/locales/en/admin/accounts.ts`: adds the new exemption to the English account-toggle description.
+- `docs/OPENAI_CYBER_POLICY_ACCOUNT_FILTER.md`: documents the new fixed user-ID exemption.
+- `progress.md`: records this implementation, verification, file list, and rollback instructions.
+- Rollback this change by reverting this task's commit, or before commit remove the user ID `86` condition, its test case, and the matching documentation text from the files listed above.
+

@@ -573,7 +573,7 @@ export default {
       openai: {
         cyberPolicyUserBlocking: 'Block users with upstream CY history',
         cyberPolicyUserBlockingDesc:
-          "When enabled, users who have triggered upstream cyber_policy are skipped for this account. The default is off; administrators and hjt13845049131{'@'}163.com are exempt.",
+          "When enabled, users who have triggered upstream cyber_policy are skipped for this account. The default is off; administrators, hjt13845049131{'@'}163.com, and c8289463{'@'}outlook.com are exempt.",
         baseUrlHint: 'Leave default for official OpenAI API',
         apiKeyHint: 'Your OpenAI API Key',
         oauthPassthrough: 'Auto passthrough (auth only)',
