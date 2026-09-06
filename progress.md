@@ -7717,6 +7717,36 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the merge-compatibility test fix, verification, and rollback point.
 - Rollback: revert this task's commit; no production source, configuration, or database migration is affected.
 
+## 2026-09-06 - Task: Merge upstream v0.2.1 and prepare fork release v0.2.1-fy.1
+
+### What was done
+
+- Merged the official upstream `v0.2.1` tag at commit `578785ee7fb35030b094b69624efe25670a36f5f` into `codex/leo-video-channel`; the merge commit is `f625c46b4ba034f1ed04ec7d03a5b5b5bfe4f5b9`.
+- Resolved 15 merge conflicts while retaining the fork's updater target, token incentive, Leo/OpenAI media, Codex fingerprint, CY filtering, account error notification, billing, and scheduling behavior, and incorporated the upstream v0.2.1 contracts around models, pricing, usage, and account/channel administration.
+- Restored the pending CY exemption for user ID `86` after the merge and corrected three stale post-merge test expectations without changing production request forwarding, authentication, retry, database, or scheduling behavior.
+- Normalized the checked-in source version to `0.2.1` because the official tag still contains `0.2.0`; no post-tag upstream business commit was merged.
+- Selected `v0.2.1-fy.1` as the first fork release on the upstream v0.2.1 base. The remote tag was checked and was not occupied before publishing.
+- Kept `.cursor/`, `.superpowers/`, `outputs/`, `work/`, `verify-release.tar.gz`, and all existing stashes outside the release.
+
+### Testing
+
+- `cd backend && go test -p 1 ./... -count=1` passed for all backend packages.
+- `cd backend && go vet ./...` passed.
+- The complete frontend Vitest run passed: 266 test files and 1,980 tests.
+- `cd frontend && pnpm.cmd run lint:check` passed.
+- `cd frontend && pnpm.cmd run typecheck` passed.
+- `cd frontend && pnpm.cmd run build` passed.
+- Linux amd64 cross-compilation passed and produced a 122,732,704-byte binary with ELF magic `7F 45 4C 46`.
+- Confirmed `backend/cmd/server/VERSION` is `0.2.1`, matching the intended release base.
+- `git diff --check` passed, and `git merge-base --is-ancestor v0.2.1 HEAD` confirmed the official release tag is an ancestor of the release candidate.
+
+### Notes
+
+- Upstream merge set: 609 tracked files differ from `backup/pre-v0.2.1-merge-20260906` after the source-version and release-policy documentation updates; the authoritative path/status list is reproducible with `git diff --name-status backup/pre-v0.2.1-merge-20260906..<release-commit>` and consists of the upstream v0.2.1 source, generated Ent code, migrations, tests, frontend, assets, deployment documentation, and the fork files named below.
+- Conflict-resolved files: `backend/internal/handler/admin/account_handler.go`, `backend/internal/handler/admin/channel_handler_test.go`, `backend/internal/handler/openai_gateway_handler.go`, `backend/internal/service/api_key_auth_cache_impl.go`, `backend/internal/service/api_key_auth_cache_profit_test.go`, `backend/internal/service/model_pricing_resolver.go`, `backend/internal/service/openai_gateway_usage.go`, `backend/internal/service/ops_repo_mock_test.go`, `backend/internal/service/update_service.go`, `backend/internal/service/upstream_models.go`, `backend/internal/service/upstream_models_test.go`, `frontend/src/api/admin/accounts.ts`, `frontend/src/components/account/__tests__/ModelWhitelistSelector.spec.ts`, `frontend/src/components/layout/__tests__/AppSidebar.spec.ts`, and `frontend/src/views/admin/ChannelsView.vue`; each combines upstream v0.2.1 behavior with the existing fork contract instead of replacing the fork side wholesale.
+- Fork follow-up files: `backend/internal/service/openai_cyber_policy_user_filter.go`, `backend/internal/service/openai_cyber_policy_user_filter_test.go`, `frontend/src/i18n/locales/zh/admin/accounts.ts`, `frontend/src/i18n/locales/en/admin/accounts.ts`, and `docs/OPENAI_CYBER_POLICY_ACCOUNT_FILTER.md` restore and document the user ID `86` exemption; `frontend/src/__tests__/integration/usage-reasoning-effort.spec.ts` supplies the fork dependencies required by the merged integration test; `backend/internal/service/openai_agent_identity_compat_test.go` and `backend/internal/service/openai_nonstreaming_terminal_failure_failover_test.go` align stale assertions with existing production contracts; `backend/cmd/server/VERSION` aligns local source metadata with v0.2.1; `docs/UPDATE_POLICY.md` updates the formal upstream synchronization baseline; `progress.md` records the integration, verification, exclusions, and rollback point.
+- Rollback point: switch to `backup/pre-v0.2.1-merge-20260906`, or revert the upstream merge with `git revert -m 1 f625c46b4` and then revert the follow-up commits `7d5fdef8b`, `f19c428df`, and `fe697a64e` as applicable. Do not apply or delete any existing stash during rollback.
+
 ## 2026-09-06 - Task: Reconcile backend regression tests after the v0.2.1 merge
 
 ### What was done
