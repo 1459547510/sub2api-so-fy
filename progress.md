@@ -7717,3 +7717,24 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the merge-compatibility test fix, verification, and rollback point.
 - Rollback: revert this task's commit; no production source, configuration, or database migration is affected.
 
+## 2026-09-06 - Task: Reconcile backend regression tests after the v0.2.1 merge
+
+### What was done
+
+- Corrected the Agent Identity recovery test to verify its actual contract: the generated session ID remains non-empty and stable across task recovery, without coupling the assertion to an already transformed prompt-cache key.
+- Aligned the non-streaming capacity-failure test with the fork's established immediate-account-failover policy and the existing streaming-path assertion.
+- Left authentication, request forwarding, retry scheduling, configuration, and database behavior unchanged.
+
+### Testing
+
+- `cd backend && go test ./internal/service -run '^(TestOpenAIAgentIdentityChatRecoveryKeepsAutoDerivedSessionIsolationStable|TestNonStreamingSSEToJSON_CapacityFailedEventFailsOver|TestOpenAIStreamingResponseFailedBeforeOutputCapacityErrorReturnsFailover)$' -count=1 -v` passed: 3 tests.
+- `gofmt` completed for both changed Go test files.
+- `git diff --check` passed before this progress entry was appended.
+
+### Notes
+
+- `backend/internal/service/openai_agent_identity_compat_test.go`: verifies stable Agent Identity recovery headers without double-applying an internal isolation formula.
+- `backend/internal/service/openai_nonstreaming_terminal_failure_failover_test.go`: expects immediate account failover for model-capacity failures, matching the streaming path and commit `2c3c50c057`.
+- `progress.md`: records the post-merge test reconciliation, verification, and rollback point.
+- Rollback: revert this task's commit; no production source, configuration, or database migration is affected.
+
