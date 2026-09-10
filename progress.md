@@ -7792,3 +7792,35 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - The release includes upstream database migrations through the v0.2.1 tag; binary rollback does not automatically reverse applied schema changes.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.1-merge-20260906` or `git revert -m 1 f625c46b4`, while production binary rollback should deploy the prior verified fork release. Preserve all existing stashes and untracked worktree files.
 
+## 2026-09-10 - Task: Merge upstream v0.2.4 and prepare fork release v0.2.4-fy.1
+
+### What was done
+
+- Merged the official upstream `v0.2.4` tag at commit `5de5e2bed035d43591a2e10e51f420ef6a84eb98` into `codex/leo-video-channel`; the merge commit is `39523b5406cdf2fb627e0e3244a245cfe154d2a0`.
+- Resolved 32 merge conflicts while retaining the fork updater target, token incentive, video/media platforms, CY user-ID `86` exemption, and existing billing/scheduling behavior, and absorbed MiniMax, group model allowlists, HTTP/2 keepalive, Grok media eligibility, Image 2.5 / OAuth image fixes, and the channel-monitor user-ranking toggle.
+- Added idempotent migration `238_keep_media_platforms_after_minimax.sql` because upstream `237` rebuilds `user_platform_quotas` / `composite_model_routes` CHECKs without `leo` / `openai_media`. Applying `237` without `238` will abort startup on existing media quota or composite-route rows, the same class of failure as upstream `224`.
+- Aligned leftover fork tests with the merged constructors (`NewChannelService` cache pub/sub, `shouldFailoverOpenAIUpstreamResponse` account argument) and made the new `pg_dump` helper tests run on Windows.
+- Restored the missing video workbench string `video.tooManyAudioReferences` and updated MiniMax-era frontend expectations. User-facing video labels stay `Video`.
+- Selected `v0.2.4-fy.1` as the first fork release on the upstream v0.2.4 base. The remote tag was checked and was not occupied before publishing.
+- Stashed the in-progress registration-email policy work (`stash@{0}`) and left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, `verify-release.tar.gz`, and older stashes outside the release.
+
+### Testing
+
+- `cd backend && go test -p 1 ./... -count=1` passed for all backend packages.
+- `cd backend && go vet ./...` passed.
+- The complete frontend Vitest run passed: 279 test files and 2,093 tests.
+- `cd frontend && pnpm.cmd run lint:check` passed.
+- `cd frontend && pnpm.cmd run typecheck` passed.
+- `cd frontend && pnpm.cmd run build` passed.
+- Linux amd64 cross-compilation passed and produced a 166,238,323-byte binary with ELF magic `7F 45 4C 46`.
+- Confirmed `backend/cmd/server/VERSION` is `0.2.4`, matching the intended release base.
+- `git diff --check` passed, and `git merge-base --is-ancestor v0.2.4 HEAD` confirmed the official release tag is an ancestor of the release candidate.
+
+### Notes
+
+- Conflict-resolved files combined upstream v0.2.4 behavior with the existing fork contract instead of replacing the fork side wholesale. The important ones are `backend/internal/server/routes/gateway.go` (keep video job routes, `soraVideoStatusHandler`, and `rejectLeoUnsupported`), `backend/internal/service/scheduler_snapshot_service.go` (11-platform canonical buckets), `backend/internal/service/setting_public.go` (channel-monitor ranking hide plus video/token-incentive flags), `backend/ent/schema/user_platform_quota.go`, and the frontend platform/i18n/channel-monitor surfaces.
+- Fork follow-up files: `backend/migrations/238_keep_media_platforms_after_minimax.sql`, `backend/migrations/keep_media_platforms_after_minimax_migration_test.go`, `backend/internal/repository/backup_pg_dumper_test.go`, `backend/internal/service/openai_codex_failover_policy_test.go`, `backend/internal/service/video_job_billing_test.go`, `frontend/src/i18n/locales/en/dashboard.ts`, `frontend/src/i18n/locales/zh/dashboard.ts`, `frontend/src/i18n/__tests__/localeKeyCompleteness.spec.ts`, and the MiniMax-era frontend test updates.
+- `backend/cmd/server/UPSTREAM_COMMIT` records `5de5e2bed035d43591a2e10e51f420ef6a84eb98`; `docs/UPDATE_POLICY.md` updates the formal upstream synchronization baseline; `progress.md` records the integration, verification, exclusions, and rollback point.
+- Production install is not part of this task. After this Release is published, `238` must be present before upgrading any database that already has media platform rows.
+- Rollback point: switch to `backup/pre-v0.2.4-merge-20260910`, or revert the upstream merge with `git revert -m 1 39523b540`. Do not apply or drop any existing stash during rollback.
+
