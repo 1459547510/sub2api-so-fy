@@ -23,6 +23,6 @@ func TestOpenAICodexPlanGatedHTTP400IsNotAClassifiedFailover(t *testing.T) {
 	svc := &OpenAIGatewayService{}
 	body := []byte(`{"detail":"The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account."}`)
 
-	require.False(t, svc.shouldFailoverOpenAIUpstreamResponse(http.StatusBadRequest, "", body))
+	require.False(t, svc.shouldFailoverOpenAIUpstreamResponse(newOpenAIUpstreamErrorTestAccount(), http.StatusBadRequest, "", body))
 	require.True(t, isOpenAICodexPlanGatedModelError(http.StatusBadRequest, body))
 }

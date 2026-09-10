@@ -213,7 +213,8 @@ const upstreamSyncPlatforms = new Set([
   'openai_media',
   'kimi',
   'zhipu',
-  'deepseek'
+  'deepseek',
+  'minimax'
 ])
 const canSyncUpstream = computed(() => {
   if (props.accountId) {

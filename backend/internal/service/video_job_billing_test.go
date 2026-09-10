@@ -242,7 +242,7 @@ func TestVideoJobBillingPrepareUsesRequestedChannelCardWhenBillingModelIsMapped(
 		}},
 		groupPlatforms: map[int64]string{groupID: PlatformLeo},
 	}
-	channelService := NewChannelService(repo, nil, nil, nil)
+	channelService := NewChannelService(repo, nil, nil, nil, nil)
 	svc := &VideoJobBillingService{
 		BillingRepo: balance,
 		Gateway:     &OpenAIGatewayService{channelService: channelService},
@@ -581,7 +581,7 @@ func newVideoJobChannelPricingServices(
 		}},
 		groupPlatforms: map[int64]string{groupID: PlatformLeo},
 	}
-	channelService := NewChannelService(repo, nil, nil, nil)
+	channelService := NewChannelService(repo, nil, nil, nil, nil)
 	resolver := NewModelPricingResolver(channelService, &BillingService{fallbackPrices: map[string]*ModelPricing{}})
 	return &OpenAIGatewayService{channelService: channelService}, resolver
 }
@@ -608,7 +608,7 @@ func newLTXVideoJobChannelPricingServices(
 		}},
 		groupPlatforms: map[int64]string{groupID: PlatformLeo},
 	}
-	channelService := NewChannelService(repo, nil, nil, nil)
+	channelService := NewChannelService(repo, nil, nil, nil, nil)
 	resolver := NewModelPricingResolver(channelService, &BillingService{fallbackPrices: map[string]*ModelPricing{}})
 	return &OpenAIGatewayService{channelService: channelService}, resolver
 }
@@ -631,7 +631,7 @@ func newNativeVideoJobChannelPricingServices(
 		}},
 		groupPlatforms: map[int64]string{groupID: PlatformLeo},
 	}
-	channelService := NewChannelService(repo, nil, nil, nil)
+	channelService := NewChannelService(repo, nil, nil, nil, nil)
 	resolver := NewModelPricingResolver(channelService, &BillingService{fallbackPrices: map[string]*ModelPricing{}})
 	return &OpenAIGatewayService{channelService: channelService}, resolver
 }

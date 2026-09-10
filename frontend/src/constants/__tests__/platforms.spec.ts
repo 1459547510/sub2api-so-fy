@@ -11,7 +11,8 @@ const concretePlatforms = [
   'openai_media',
   'kimi',
   'zhipu',
-  'deepseek'
+  'deepseek',
+  'minimax'
 ]
 
 describe('platform option catalogs', () => {

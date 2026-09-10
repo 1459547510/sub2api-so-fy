@@ -9,6 +9,7 @@ describe('Composite channel platform options', () => {
       'kimi',
       'zhipu',
       'deepseek',
+      'minimax',
     ]))
   })
 })

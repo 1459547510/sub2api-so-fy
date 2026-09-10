@@ -9,7 +9,7 @@ describe('compositeGroups', () => {
   it('enables all concrete platforms from a composite group', () => {
     expect([...COMPOSITE_ROUTE_PLATFORMS]).toEqual([
       'anthropic', 'openai', 'gemini', 'antigravity', 'grok',
-      'leo', 'openai_media', 'kimi', 'zhipu', 'deepseek',
+      'leo', 'openai_media', 'kimi', 'zhipu', 'deepseek', 'minimax',
     ])
   })
 

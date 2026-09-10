@@ -647,6 +647,7 @@ var platformToLiteLLMProvider = map[string]string{
 	service.PlatformKimi:        "moonshot",
 	service.PlatformZhipu:       "zhipu",
 	service.PlatformDeepseek:    "deepseek",
+	service.PlatformMiniMax:     "minimax",
 }
 
 // SyncPricingModels 返回指定平台的最新模型列表。

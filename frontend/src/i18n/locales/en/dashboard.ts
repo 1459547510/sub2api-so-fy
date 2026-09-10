@@ -196,6 +196,12 @@ const dashboardMessages = {
         codexConfigTomlHint: 'Download the model catalog below, save both files under the Codex config directory, and restart Codex.',
         codexNote: 'Export SUB2API_API_KEY before starting Codex. The downloaded catalog contains model metadata only, not your API key.',
       },
+      minimax: {
+        description: 'Configure Claude Code, Codex, or OpenCode through the current MiniMax group.',
+        codexDescription: 'Configure Codex with API key authentication through the current MiniMax group.',
+        codexConfigTomlHint: 'Download the model catalog below, save both files under the Codex config directory, and restart Codex.',
+        codexNote: 'Export SUB2API_API_KEY before starting Codex. The downloaded catalog contains model metadata only, not your API key.',
+      },
       composite: {
         description: 'Configure supported clients through the current Composite routing group.',
         codexDescription: 'Configure Codex with API key authentication and the complete model catalog for this Composite group.',
@@ -492,7 +498,8 @@ const dashboardMessages = {
       antigravity: 'Antigravity',
       kimi: 'Kimi',
       zhipu: 'Zhipu GLM',
-      deepseek: 'DeepSeek'
+      deepseek: 'DeepSeek',
+      minimax: 'MiniMax'
     },
     // Check modes (how a monitor performs its checks)
     checkMode: {
@@ -1424,6 +1431,7 @@ const dashboardMessages = {
      audioTooLarge: 'Reference audio must not exceed 15 MiB.',
      audioDuration: 'Reference audio must be between 2 and 30 seconds.',
      audioNeedsVisualReference: 'An audio reference must be paired with a reference image or reference video.',
+     tooManyAudioReferences: 'Select no more than 1 reference audio file.',
     modelGuidanceUnsupported: 'The selected model does not support one of the supplied reference inputs or options.',
     promptEnhance: 'Prompt enhancement',
     promptEnhanceAuto: 'Use the model default (AUTO)',
