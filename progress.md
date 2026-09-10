@@ -7843,3 +7843,29 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the fy.1 asset verification and the fy.2 follow-up.
 - Rollback: revert this commit and keep using the prior verified fork release; do not delete the published `v0.2.4-fy.1` tag unless an operator explicitly retires it.
 
+## 2026-09-10 - Task: Verify published upstream merge release v0.2.4-fy.2
+
+### What was done
+
+- Confirmed the remote annotated tag `v0.2.4-fy.2` dereferences to the validated release commit `1120c4fa45b49c51b4dd9aa1f6fc71717f9f27c3`.
+- Confirmed GitHub Actions published the Linux amd64 package and checksum file from Release run `34454873898`.
+- Downloaded the public release assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `34454873843` passed `shell`, `frontend`, `golangci-lint`, and backend `test` jobs.
+- GitHub Security Scan on `v0.2.4-fy.2` completed successfully.
+- GitHub Release run `34454873898` completed successfully.
+- Downloaded `sub2api_0.2.4-fy.2_linux_amd64.tar.gz`: 39,841,502 bytes.
+- Published and downloaded SHA-256 matched: `66799381765b188b5c68d2bacaa256e815317517f8257c6dab45510225d67727`.
+- `tar -tzf` returned only `sub2api`; the extracted 124,825,760-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.4-fy.2`.
+
+### Notes
+
+- `progress.md`: records the remote branch/tag, CI and security gates, Release workflow, downloaded asset, checksum, archive, and binary verification.
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.4-fy.2`.
+- The earlier `v0.2.4-fy.1` assets also verified, but that tag's CI lint failed; use `v0.2.4-fy.2` for installs.
+- The release includes upstream database migrations through `237` plus fork `238`. Binary rollback does not automatically reverse applied schema changes. Installing without `238` after `237` will reject existing media platform quota/route rows.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.4-merge-20260910` or `git revert -m 1 39523b540`, while production binary rollback should deploy the prior verified fork release. Preserve all existing stashes and untracked worktree files.
+
