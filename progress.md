@@ -7824,3 +7824,22 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production install is not part of this task. After this Release is published, `238` must be present before upgrading any database that already has media platform rows.
 - Rollback point: switch to `backup/pre-v0.2.4-merge-20260910`, or revert the upstream merge with `git revert -m 1 39523b540`. Do not apply or drop any existing stash during rollback.
 
+## 2026-09-10 - Task: Publish v0.2.4-fy.2 after Release CI lint
+
+### What was done
+
+- Published `v0.2.4-fy.1` at `7df48e452`. Release run `34453198396` succeeded and the Linux amd64 assets verified, but CI golangci-lint failed on `G702` in `backup_pg_dumper_test.go`.
+- Added an explicit `//nolint:gosec` trust-boundary comment on the test helper that re-invokes the current test binary. Did not force-move the `v0.2.4-fy.1` tag.
+- Selected `v0.2.4-fy.2` as the install target on the same upstream v0.2.4 base.
+
+### Testing
+
+- `cd backend && go test ./internal/repository -run 'TestPgDumper|TestHelperProcess' -count=1` passed.
+- Asset verification for `v0.2.4-fy.1`: checksums and tarball HTTP 200, SHA-256 `b337ead064b041c071c64366fd9453b655021a4990a097bf4081721e27750c94`, `tar -tzf` returned only `sub2api`, extracted 124,825,760-byte ELF `7F 45 4C 46` containing `0.2.4-fy.1`.
+
+### Notes
+
+- `backend/internal/repository/backup_pg_dumper_test.go`: documents why the helper process is not request-tainted command injection.
+- `progress.md`: records the fy.1 asset verification and the fy.2 follow-up.
+- Rollback: revert this commit and keep using the prior verified fork release; do not delete the published `v0.2.4-fy.1` tag unless an operator explicitly retires it.
+

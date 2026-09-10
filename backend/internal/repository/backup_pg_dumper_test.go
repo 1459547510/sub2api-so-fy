@@ -26,7 +26,7 @@ func TestHelperProcess(t *testing.T) {
 }
 
 func helperDumpCmd(ctx context.Context, stdout string, exitCode int) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestHelperProcess$")
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestHelperProcess$") //nolint:gosec // G702: test helper re-invokes this test binary with a fixed -test.run filter; stdout and exit come from test literals only.
 	cmd.Env = append(os.Environ(),
 		"GO_WANT_HELPER_PROCESS=1",
 		"HELPER_STDOUT="+stdout,
