@@ -7914,3 +7914,29 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Install target is `v0.2.4-fy.3`. Do not force-move `v0.2.4-fy.1` or `v0.2.4-fy.2`.
 - Rollback: keep using the recovered production schema and redeploy `v0.2.4-fy.2` only if the fy.3 binary itself misbehaves; do not re-apply the original upstream 237.
 
+## 2026-09-11 - Task: Verify published MiniMax-migration release v0.2.4-fy.3
+
+### What was done
+
+- Confirmed the remote annotated tag `v0.2.4-fy.3` dereferences to the migration-fix commit `ca437c4039a4d9afb36a180bef3aa48f7db61df6`.
+- Confirmed GitHub Actions published the Linux amd64 package and checksum file from Release run `34579349632`.
+- Downloaded the public release assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `34579349569` on `v0.2.4-fy.3` passed `shell`, `frontend`, `golangci-lint`, and backend `test`.
+- GitHub CI run `34579331791` on `codex/leo-video-channel` passed the same jobs.
+- GitHub Security Scan on `v0.2.4-fy.3` (`34579349565`) and the branch (`34579332012`) completed successfully.
+- GitHub Release run `34579349632` completed successfully.
+- Downloaded `sub2api_0.2.4-fy.3_linux_amd64.tar.gz`: 39,841,107 bytes.
+- Published and downloaded SHA-256 matched: `fd405f32aef89ca55edfdf10634b5d3a0682c49743ea75f32fd29dc2b8ac92ba`.
+- `tar -tzf` returned only `sub2api`; the extracted 124,825,760-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.4-fy.3`.
+
+### Notes
+
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.4-fy.3`.
+- Install target is now `v0.2.4-fy.3`. Leave `v0.2.4-fy.1` and `v0.2.4-fy.2` published and unmoved.
+- Production already has the recovered 11-platform CHECKs and recorded 237/238. A web update to fy.3 should start because the rewritten 237 accepts the stored fy.2 checksum.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; keep the fy.3 tag on `ca437c403`.
+
