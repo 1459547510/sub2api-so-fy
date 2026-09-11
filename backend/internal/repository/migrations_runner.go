@@ -95,6 +95,11 @@ var migrationChecksumCompatibilityRules = map[string]migrationChecksumCompatibil
 	// the original upstream checksum so databases that already ran v0.1.179 can
 	// continue to 229, which re-applies the full platform constraint.
 	"227_composite_routes_add_cn_providers.sql": newMigrationChecksumCompatibilityRule("a82335193eefb50ac82d2cfa7712c4f4799594ca95a7483efb2a6196af4f1b2a", "ff6e3323b4bcb195a4f11bfa9b1b22286e77169f551b5c4294ab3d31828d8ff8"),
+	// Upstream 237 rebuilt CHECKs without leo/openai_media and crashed startup
+	// on existing media quota rows. The rewritten file keeps MiniMax plus the
+	// media platforms. Accept the published fy.2 checksum so production (and
+	// any other host that recorded the original 237) can start the new binary.
+	"237_add_minimax_platform.sql": newMigrationChecksumCompatibilityRule("7ce40da9a545d0c76364f39897781583d94c2d3aa14975a727228a8ca72eb480", "f4c73d2dbce114ca7ade1aac51998c3465490f4f3c9b3e868e53590f3fa8601b"),
 	// 220 originally cleared video prices for all non-grok platforms (including composite);
 	// composite is now preserved because it may route to Grok accounts.
 	"220_clear_non_grok_video_generation_config.sql": newMigrationChecksumCompatibilityRule("85e320b9ec64f2d3fcd8cf705b2b4e76a7b49f7a57140c14bff97f32691c818b", "3da48c8fdffe6390325f43d08b8e353e0a365df43d44a78dbbe655d0deb18402"),

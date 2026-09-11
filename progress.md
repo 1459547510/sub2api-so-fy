@@ -7869,3 +7869,48 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.4-merge-20260910` or `git revert -m 1 39523b540`, while production binary rollback should deploy the prior verified fork release. Preserve all existing stashes and untracked worktree files.
 
+## 2026-09-11 - Task: Recover production 502 after web update to v0.2.4-fy.2
+
+### What was done
+
+- Production `https://api.fflink.top/` returned 502 after the in-app web updater installed `v0.2.4-fy.2`. The process crash-looped on startup.
+- Root cause: embedded `237_add_minimax_platform.sql` dropped and rebuilt `user_platform_quotas` / `composite_model_routes` CHECKs without `leo` / `openai_media`. Existing media quota rows violated the new CHECK. The migration is transactional, so it rolled back and was never recorded. Every restart retried 237 and died before `238`.
+- Stopped systemd `sub2api`, applied the 11-platform CHECK union plus monitor MiniMax CHECKs, and recorded `237_add_minimax_platform.sql` with the published fy.2 checksum `f4c73d2dbce114ca7ade1aac51998c3465490f4f3c9b3e868e53590f3fa8601b`.
+- Restarted the service. Startup then applied `238_keep_media_platforms_after_minimax.sql`. Local `/health` and public `https://api.fflink.top/health` returned 200.
+- Rewrote source `237` to add MiniMax without dropping media platforms, and added a checksum compatibility rule so hosts that already recorded the fy.2 237 hash can start a later binary.
+
+### Testing
+
+- Production `schema_migrations` after recovery: `235`, `236`, `237` (`2026-09-11 12:07:00+08`), `238` (`2026-09-11 12:07:00+08`).
+- `systemctl is-active sub2api` was `active`; `http://127.0.0.1:28080/health` and `https://api.fflink.top/health` returned 200.
+- `go test ./migrations -run 'TestMiniMaxPlatformMigration|TestKeepMediaPlatformsAfterMiniMaxMigration' -count=1` passed.
+- `go test ./internal/repository -run 'TestIsMigrationChecksumCompatible|TestMigrationChecksumCompatibilityRules_CoverEdited' -count=1` passed.
+
+### Notes
+
+- `backend/migrations/237_add_minimax_platform.sql`: idempotent 11-platform union (MiniMax + media) plus MiniMax monitor CHECKs.
+- `backend/internal/repository/migrations_runner.go`: accept published fy.2 checksum `f4c73d2d...` and current file checksum `7ce40da9...`.
+- `238` remains as a second safety net. `237` itself must not reject existing media rows.
+- Do not force-move `v0.2.4-fy.2`. Ship `v0.2.4-fy.3` as the next install target so other hosts do not install the crashing 237.
+- Rollback of the source fix: revert the 237 rewrite and checksum rule. Production schema already has the 11-platform CHECKs; do not re-apply the original upstream 237.
+
+## 2026-09-11 - Task: Publish v0.2.4-fy.3 after MiniMax migration crash
+
+### What was done
+
+- Kept the published `v0.2.4-fy.2` tag immutable after the production 502. Selected `v0.2.4-fy.3` as the next install target on the same upstream `v0.2.4` base.
+- Rewrote `237_add_minimax_platform.sql` so MiniMax is added without dropping `leo` / `openai_media`, and recorded a checksum compatibility rule for the fy.2 file hash already stored in production.
+
+### Testing
+
+- `go test ./migrations -run 'TestMiniMaxPlatformMigration|TestKeepMediaPlatformsAfterMiniMaxMigration' -count=1` passed.
+- `go test ./internal/repository -run 'TestIsMigrationChecksumCompatible|TestMigrationChecksumCompatibilityRules_CoverEdited' -count=1` passed.
+
+### Notes
+
+- `backend/migrations/237_add_minimax_platform.sql` and `backend/migrations/minimax_platform_migration_test.go`: require the 11-platform union in the MiniMax migration itself.
+- `backend/internal/repository/migrations_runner.go` plus checksum tests: accept published fy.2 checksum `f4c73d2d...` and current file checksum `7ce40da9...`.
+- `progress.md`: records the outage recovery and this follow-up release.
+- Install target is `v0.2.4-fy.3`. Do not force-move `v0.2.4-fy.1` or `v0.2.4-fy.2`.
+- Rollback: keep using the recovered production schema and redeploy `v0.2.4-fy.2` only if the fy.3 binary itself misbehaves; do not re-apply the original upstream 237.
+

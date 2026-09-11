@@ -1,8 +1,12 @@
 package repository
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"strings"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/migrations"
 	"github.com/stretchr/testify/require"
 )
 
@@ -160,6 +164,31 @@ func TestIsMigrationChecksumCompatible(t *testing.T) {
 			"a82335193eefb50ac82d2cfa7712c4f4799594ca95a7483efb2a6196af4f1b2a",
 		)
 		require.True(t, ok)
+	})
+
+	t.Run("237当前文件checksum匹配兼容规则", func(t *testing.T) {
+		content, err := migrations.FS.ReadFile("237_add_minimax_platform.sql")
+		require.NoError(t, err)
+		sum := sha256.Sum256([]byte(strings.TrimSpace(string(content))))
+		require.Equal(t, "7ce40da9a545d0c76364f39897781583d94c2d3aa14975a727228a8ca72eb480", hex.EncodeToString(sum[:]))
+	})
+
+	t.Run("237已发布checksum可升级到媒体并集版本", func(t *testing.T) {
+		ok := isMigrationChecksumCompatible(
+			"237_add_minimax_platform.sql",
+			"f4c73d2dbce114ca7ade1aac51998c3465490f4f3c9b3e868e53590f3fa8601b",
+			"7ce40da9a545d0c76364f39897781583d94c2d3aa14975a727228a8ca72eb480",
+		)
+		require.True(t, ok)
+	})
+
+	t.Run("237未知checksum不兼容", func(t *testing.T) {
+		ok := isMigrationChecksumCompatible(
+			"237_add_minimax_platform.sql",
+			"f4c73d2dbce114ca7ade1aac51998c3465490f4f3c9b3e868e53590f3fa8601b",
+			"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+		)
+		require.False(t, ok)
 	})
 
 	t.Run("119未知checksum不兼容", func(t *testing.T) {
