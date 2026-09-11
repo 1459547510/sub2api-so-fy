@@ -7960,4 +7960,30 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production already has the recovered 11-platform CHECKs; fy.4 still includes the rewritten 237 checksum compatibility.
 - Rollback: redeploy `v0.2.4-fy.3`; source rollback is `git revert` of this release commit.
 
+## 2026-09-11 - Task: Verify published Grok CCS release v0.2.4-fy.4
+
+### What was done
+
+- Confirmed the remote annotated tag `v0.2.4-fy.4` dereferences to `baec0fad5cf6fdfafc78e9acd99b54fc7a0d5a66`.
+- Confirmed GitHub Actions published the Linux amd64 package from Release run `34582938859`.
+- Downloaded the public release assets and verified checksum, archive, ELF, and version string.
+
+### Testing
+
+- GitHub CI run `34582938922` on `v0.2.4-fy.4` completed successfully.
+- GitHub CI run `34582925658` on `codex/leo-video-channel` completed successfully.
+- GitHub Security Scan on `v0.2.4-fy.4` (`34582938914`) completed successfully.
+- GitHub Release run `34582938859` completed successfully.
+- Downloaded `sub2api_0.2.4-fy.4_linux_amd64.tar.gz`: 39,840,804 bytes.
+- Published and downloaded SHA-256 matched: `62aea234cf24374b3dad22e25bd1086b0935245420f9993489bbbda7a73c8f14`.
+- `tar -tzf` returned only `sub2api`; the extracted 124,829,856-byte binary has ELF magic `7F 45 4C 46` and contains `0.2.4-fy.4`.
+
+### Notes
+
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.4-fy.4`.
+- Install target is now `v0.2.4-fy.4`. Leave earlier fy tags published and unmoved.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; keep the fy.4 tag on `baec0fad5`.
+
+
 
