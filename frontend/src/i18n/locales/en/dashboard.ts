@@ -250,6 +250,10 @@ const dashboardMessages = {
       claudeCodeDesc: 'Import as Claude Code configuration',
       geminiCli: 'Gemini CLI',
       geminiCliDesc: 'Import as Gemini CLI configuration',
+      grokCli: 'Grok CLI',
+      grokCliDesc: 'Import as Grok Build with grok-4.6',
+      codexCli: 'Codex CLI',
+      codexCliDesc: 'Import as Codex Responses configuration'
     },
     // Quota and expiration
     quotaLimit: 'Quota Limit',

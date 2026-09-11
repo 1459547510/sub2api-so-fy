@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   GROK_CC_SWITCH_MODEL,
   OPENAI_CC_SWITCH_CODEX_MODEL,
-  buildCcSwitchImportDeeplink
+  buildCcSwitchImportDeeplink,
+  decodeCcSwitchConfig,
+  grokClaudeCodeEnv
 } from '@/utils/ccswitchImport'
 import type { GroupPlatform } from '@/types'
 
@@ -16,8 +18,8 @@ describe('ccswitchImport utils', () => {
     expect(OPENAI_CC_SWITCH_CODEX_MODEL).toBe('gpt-5.5')
   })
 
-  it('defaults Grok Build imports to the current Grok model', () => {
-    expect(GROK_CC_SWITCH_MODEL).toBe('grok-4.5')
+  it('defaults Grok imports to the current Grok text model', () => {
+    expect(GROK_CC_SWITCH_MODEL).toBe('grok-4.6')
   })
 
   const baseInput = {
@@ -48,17 +50,53 @@ describe('ccswitchImport utils', () => {
     'https://api.example.com/',
     'https://api.example.com/v1',
     'https://api.example.com/v1/'
-  ])('imports Grok Build with one /v1 suffix for base URL %s', (baseUrl) => {
+  ])('imports Grok CLI as Grok Build with one /v1 suffix for base URL %s', (baseUrl) => {
     const params = paramsFromDeeplink(
       buildCcSwitchImportDeeplink({
         ...baseInput,
         baseUrl,
         platform: 'grok',
-        clientType: 'claude'
+        clientType: 'grok'
       })
     )
 
     expect(params.get('app')).toBe('grokbuild')
+    expect(params.get('endpoint')).toBe('https://api.example.com/v1')
+    expect(params.get('model')).toBe(GROK_CC_SWITCH_MODEL)
+    expect(params.has('config')).toBe(false)
+  })
+
+  it('imports Grok Claude Code with Responses-friendly env aliases', () => {
+    const params = paramsFromDeeplink(
+      buildCcSwitchImportDeeplink({
+        ...baseInput,
+        baseUrl: 'https://api.example.com/v1',
+        platform: 'grok',
+        clientType: 'claude'
+      })
+    )
+
+    expect(params.get('app')).toBe('claude')
+    expect(params.get('endpoint')).toBe('https://api.example.com')
+    expect(params.get('model')).toBe(GROK_CC_SWITCH_MODEL)
+    expect(params.get('haikuModel')).toBe(GROK_CC_SWITCH_MODEL)
+    expect(params.get('sonnetModel')).toBe(GROK_CC_SWITCH_MODEL)
+    expect(params.get('opusModel')).toBe(GROK_CC_SWITCH_MODEL)
+
+    const config = JSON.parse(decodeCcSwitchConfig(params.get('config') || ''))
+    expect(config.env).toEqual(grokClaudeCodeEnv(GROK_CC_SWITCH_MODEL))
+  })
+
+  it('imports Grok Codex as Responses with the current Grok model', () => {
+    const params = paramsFromDeeplink(
+      buildCcSwitchImportDeeplink({
+        ...baseInput,
+        platform: 'grok',
+        clientType: 'codex'
+      })
+    )
+
+    expect(params.get('app')).toBe('codex')
     expect(params.get('endpoint')).toBe('https://api.example.com/v1')
     expect(params.get('model')).toBe(GROK_CC_SWITCH_MODEL)
   })

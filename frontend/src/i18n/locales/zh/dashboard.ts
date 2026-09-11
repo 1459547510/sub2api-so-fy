@@ -254,7 +254,11 @@ const dashboardMessages = {
       claudeCode: 'Claude Code',
       claudeCodeDesc: '导入为 Claude Code 配置',
       geminiCli: 'Gemini CLI',
-      geminiCliDesc: '导入为 Gemini CLI 配置'
+      geminiCliDesc: '导入为 Gemini CLI 配置',
+      grokCli: 'Grok CLI',
+      grokCliDesc: '导入为 Grok Build，默认 grok-4.6',
+      codexCli: 'Codex CLI',
+      codexCliDesc: '导入为 Codex，文本走 Responses'
     },
     // 配额和有效期
     quotaLimit: '额度限制',

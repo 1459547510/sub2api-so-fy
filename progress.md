@@ -7940,3 +7940,24 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; keep the fy.3 tag on `ca437c403`.
 
+## 2026-09-11 - Task: Publish v0.2.4-fy.4 Grok CCS import
+
+### What was done
+
+- Kept `v0.2.4-fy.3` immutable. Selected `v0.2.4-fy.4` as the next install target on the same upstream `v0.2.4` base.
+- Grok API-key CCS import now asks for Grok CLI / Claude Code / Codex instead of always writing a `grok-4.5` Grok Build provider.
+- Default Grok CCS model is `grok-4.6`. Claude import also sets the Grok model aliases and extra Claude Code env.
+
+### Testing
+
+- `npx vitest run src/utils/__tests__/ccswitchImport.spec.ts src/i18n/__tests__/localeKeyCompleteness.spec.ts src/views/user/__tests__/KeysView.spec.ts` passed (25 tests).
+
+### Notes
+
+- `frontend/src/utils/ccswitchImport.ts`: Grok client routing, `grok-4.6`, Claude env payload.
+- `frontend/src/views/user/KeysView.vue`: Grok client picker on 导入到 CCS.
+- Do not force-move `v0.2.4-fy.1` / `fy.2` / `fy.3`.
+- Production already has the recovered 11-platform CHECKs; fy.4 still includes the rewritten 237 checksum compatibility.
+- Rollback: redeploy `v0.2.4-fy.3`; source rollback is `git revert` of this release commit.
+
+

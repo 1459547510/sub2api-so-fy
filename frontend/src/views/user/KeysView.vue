@@ -998,7 +998,7 @@
       @close="closeUseKeyModal"
     />
 
-    <!-- CCS Client Selection Dialog for Antigravity -->
+    <!-- CCS Client Selection Dialog for Antigravity / Grok -->
     <BaseDialog
       :show="showCcsClientSelect"
       :title="t('keys.ccsClientSelect.title')"
@@ -1008,34 +1008,20 @@
       <div class="space-y-4">
         <p class="text-sm text-gray-600 dark:text-gray-400">
           {{ t('keys.ccsClientSelect.description') }}
-	        </p>
-	        <div class="grid grid-cols-2 gap-3">
-	          <button
-	            @click="handleCcsClientSelect('claude')"
-	            class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-dark-600 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all"
-	          >
-	            <Icon name="terminal" size="xl" class="text-gray-600 dark:text-gray-400" />
-	            <span class="font-medium text-gray-900 dark:text-white">{{
-	              t('keys.ccsClientSelect.claudeCode')
-	            }}</span>
-	            <span class="text-xs text-gray-500 dark:text-gray-400">{{
-	              t('keys.ccsClientSelect.claudeCodeDesc')
-	            }}</span>
-	          </button>
-	          <button
-	            @click="handleCcsClientSelect('gemini')"
-	            class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-dark-600 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all"
-	          >
-	            <Icon name="sparkles" size="xl" class="text-gray-600 dark:text-gray-400" />
-	            <span class="font-medium text-gray-900 dark:text-white">{{
-	              t('keys.ccsClientSelect.geminiCli')
-	            }}</span>
-	            <span class="text-xs text-gray-500 dark:text-gray-400">{{
-	              t('keys.ccsClientSelect.geminiCliDesc')
-	            }}</span>
-	          </button>
-	        </div>
-	      </div>
+        </p>
+        <div :class="ccsClientOptions.length > 2 ? 'grid grid-cols-1 gap-3 sm:grid-cols-3' : 'grid grid-cols-2 gap-3'">
+          <button
+            v-for="option in ccsClientOptions"
+            :key="option.id"
+            @click="handleCcsClientSelect(option.id)"
+            class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-dark-600 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all"
+          >
+            <Icon :name="option.icon" size="xl" class="text-gray-600 dark:text-gray-400" />
+            <span class="font-medium text-gray-900 dark:text-white">{{ option.label }}</span>
+            <span class="text-xs text-center text-gray-500 dark:text-gray-400">{{ option.description }}</span>
+          </button>
+        </div>
+      </div>
       <template #footer>
         <div class="flex justify-end">
           <button @click="closeCcsClientSelect" class="btn btn-secondary">
@@ -1869,17 +1855,62 @@ const resetRateLimitUsage = async () => {
   }
 }
 
+type CcsClientOption = {
+  id: CcSwitchClientType
+  icon: 'terminal' | 'sparkles'
+  label: string
+  description: string
+}
+
+const ccsClientOptions = computed((): CcsClientOption[] => {
+  const platform = pendingCcsRow.value?.group?.platform
+  if (platform === 'grok') {
+    return [
+      {
+        id: 'grok',
+        icon: 'terminal',
+        label: t('keys.ccsClientSelect.grokCli'),
+        description: t('keys.ccsClientSelect.grokCliDesc')
+      },
+      {
+        id: 'claude',
+        icon: 'terminal',
+        label: t('keys.ccsClientSelect.claudeCode'),
+        description: t('keys.ccsClientSelect.claudeCodeDesc')
+      },
+      {
+        id: 'codex',
+        icon: 'terminal',
+        label: t('keys.ccsClientSelect.codexCli'),
+        description: t('keys.ccsClientSelect.codexCliDesc')
+      }
+    ]
+  }
+  return [
+    {
+      id: 'claude',
+      icon: 'terminal',
+      label: t('keys.ccsClientSelect.claudeCode'),
+      description: t('keys.ccsClientSelect.claudeCodeDesc')
+    },
+    {
+      id: 'gemini',
+      icon: 'sparkles',
+      label: t('keys.ccsClientSelect.geminiCli'),
+      description: t('keys.ccsClientSelect.geminiCliDesc')
+    }
+  ]
+})
+
 const importToCcswitch = (row: ApiKey) => {
   const platform = row.group?.platform || 'anthropic'
 
-  // For antigravity platform, show client selection dialog
-  if (platform === 'antigravity') {
+  if (platform === 'antigravity' || platform === 'grok') {
     pendingCcsRow.value = row
     showCcsClientSelect.value = true
     return
   }
 
-  // For other platforms, execute directly
   executeCcsImport(row, platform === 'gemini' ? 'gemini' : 'claude')
 }
 
