@@ -10,6 +10,7 @@ describe('Composite channel platform options', () => {
       'zhipu',
       'deepseek',
       'minimax',
+      'opencode_go',
     ]))
   })
 })

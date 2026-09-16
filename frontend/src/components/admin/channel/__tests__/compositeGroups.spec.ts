@@ -9,7 +9,7 @@ describe('compositeGroups', () => {
   it('enables all concrete platforms from a composite group', () => {
     expect([...COMPOSITE_ROUTE_PLATFORMS]).toEqual([
       'anthropic', 'openai', 'gemini', 'antigravity', 'grok',
-      'leo', 'openai_media', 'kimi', 'zhipu', 'deepseek', 'minimax',
+      'leo', 'openai_media', 'kimi', 'zhipu', 'deepseek', 'minimax', 'opencode_go',
     ])
   })
 
@@ -17,6 +17,7 @@ describe('compositeGroups', () => {
     expect(compositeGroupAppliesToPlatform('leo')).toBe(true)
     expect(compositeGroupAppliesToPlatform('openai_media')).toBe(true)
     expect(compositeGroupAppliesToPlatform('kimi')).toBe(true)
+    expect(compositeGroupAppliesToPlatform('opencode_go')).toBe(true)
     expect(groupMatchesChannelPlatform('composite', 'leo')).toBe(true)
     expect(groupMatchesChannelPlatform('composite', 'openai_media')).toBe(true)
     expect(groupMatchesChannelPlatform('composite', 'openai')).toBe(true)

@@ -648,6 +648,7 @@ var platformToLiteLLMProvider = map[string]string{
 	service.PlatformZhipu:       "zhipu",
 	service.PlatformDeepseek:    "deepseek",
 	service.PlatformMiniMax:     "minimax",
+	service.PlatformOpenCodeGo:  "opencode-go",
 }
 
 // SyncPricingModels 返回指定平台的最新模型列表。
