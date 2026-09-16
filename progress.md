@@ -8028,3 +8028,26 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production install is not part of this task.
 - Rollback point: switch to `backup/pre-v0.2.5-merge-20260916`, or revert the upstream merge with `git revert -m 1 3268bdfa6`. Do not apply or drop any existing stash during rollback.
 
+## 2026-09-16 - Task: Publish v0.2.5-fy.2 after Release CI lint
+
+### What was done
+
+- Published `v0.2.5-fy.1` at `c1b86aead`. Release run `35056399145` succeeded and the Linux amd64 assets verified, but CI golangci-lint failed on `gofmt` in the conflict-resolved `SubscriptionEnabled` fields.
+- Aligned those two fields. Did not force-move the `v0.2.5-fy.1` tag.
+- Selected `v0.2.5-fy.2` as the install target on the same upstream v0.2.5 base.
+
+### Testing
+
+- GitHub CI run `35056399149` on `v0.2.5-fy.1` passed `shell`, `frontend`, and backend `test`; `golangci-lint` failed on `setting_public.go` and `settings.go` gofmt.
+- GitHub Security Scan on `v0.2.5-fy.1` (`35056399147`) failed `govulncheck`; frontend security passed.
+- GitHub Release run `35056399145` completed successfully.
+- Downloaded `sub2api_0.2.5-fy.1_linux_amd64.tar.gz`: 39,955,712 bytes.
+- Published and downloaded SHA-256 matched: `3733bb004a3878ec78dc93a5928491fa6d8eabf1c2c09e1511a3d792f3a69737`.
+- `tar -tzf` returned only `sub2api`; the extracted 125,145,248-byte binary has ELF magic `7F 45 4C 46` and contains `0.2.5-fy.1`.
+
+### Notes
+
+- `backend/internal/service/setting_public.go` and `backend/internal/handler/dto/settings.go`: align `SubscriptionEnabled` with neighboring struct tags after the v0.2.5 merge.
+- `progress.md`: records the fy.1 asset verification and the fy.2 follow-up.
+- Rollback: revert this commit and keep using the prior verified fork release; do not delete the published `v0.2.5-fy.1` tag unless an operator explicitly retires it.
+
