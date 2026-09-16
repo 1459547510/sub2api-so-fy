@@ -8051,3 +8051,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `progress.md`: records the fy.1 asset verification and the fy.2 follow-up.
 - Rollback: revert this commit and keep using the prior verified fork release; do not delete the published `v0.2.5-fy.1` tag unless an operator explicitly retires it.
 
+## 2026-09-16 - Task: Verify published upstream merge release v0.2.5-fy.2
+
+### What was done
+
+- Confirmed the remote annotated tag `v0.2.5-fy.2` dereferences to the lint-fix commit `fe9c1a88372ef8bddc1d159f6c987d3c7afef0d7`.
+- Confirmed GitHub Actions published the Linux amd64 package and checksum file from Release run `35057258629`.
+- Downloaded the public release assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `35057258609` on `v0.2.5-fy.2` passed `shell`, `frontend`, `golangci-lint`, and backend `test`.
+- GitHub Security Scan on `v0.2.5-fy.2` (`35057258644`) failed `govulncheck`; frontend security passed. Same result as `v0.2.5-fy.1`.
+- GitHub Release run `35057258629` completed successfully.
+- Downloaded `sub2api_0.2.5-fy.2_linux_amd64.tar.gz`: 39,956,163 bytes.
+- Published and downloaded SHA-256 matched: `a3aa373bcc9ea9c0c017d78fa89cf61d1728a30cfc85aa1472b3d77c1e8f23db`.
+- `tar -tzf` returned only `sub2api`; the extracted 125,145,248-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.5-fy.2`.
+
+### Notes
+
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.5-fy.2`.
+- The earlier `v0.2.5-fy.1` assets also verified, but that tag's CI lint failed; use `v0.2.5-fy.2` for installs.
+- The release includes upstream database migrations through `238_opencode_go_platform.sql` and `238_purge_unlimited_user_platform_quotas.sql` plus the existing fork `238_keep_media_platforms_after_minimax.sql`. Binary rollback does not automatically reverse applied schema changes. Installing the original 10-platform OpenCode 238 after media rows exist will reject those rows.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.5-merge-20260916` or `git revert -m 1 3268bdfa6`, while production binary rollback should deploy the prior verified fork release. Preserve all existing stashes and untracked worktree files.
+
