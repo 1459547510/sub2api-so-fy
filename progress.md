@@ -7996,3 +7996,35 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 ### Notes
 - Switch back with `SEEDANCE_V2_DOCS_SOURCE = 'trioma'`. Roll back this change with `git revert` of the switch commit. Preserve unrelated `.superpowers/` content.
 
+## 2026-09-16 - Task: Merge upstream v0.2.5 and prepare fork release v0.2.5-fy.1
+
+### What was done
+
+- Merged the official upstream `v0.2.5` tag at commit `86f93c28ee34cc74b629dafb748bd5ac5ca8c5ea` into `codex/leo-video-channel`; the merge commit is `3268bdfa6f82c66abc6245a6eb7d03a457c25f25`.
+- Resolved 39 merge conflicts while retaining video/media platforms, site billing (`subscription_enabled` / `payment_balance_disabled`), token incentive, and the marked Seedance V2 docs catalog, and absorbed OpenCode GO, subscription bulk actions, Image 2.5 / OAuth image updates, and the rest of the official v0.2.5 surface.
+- Rewrote incoming `238_opencode_go_platform.sql` as an idempotent 12-platform CHECK (`leo` / `openai_media` / `opencode_go`) instead of applying the original 10-platform DROP/ADD. Production already has rewritten 237 plus `238_keep_media_platforms_after_minimax.sql`; the filename sort is keep → opencode → purge. Applying the original 10-platform 238 would abort startup on existing media quota or composite-route rows, the same class of failure as 224 / 237.
+- Aligned leftover fork tests with the merged constructors and catalogs: Codex image OAuth still sends `OpenAI-Beta: responses=experimental`, key-group provider map covers media/video platforms, composite routes include `opencode_go`, channel-monitor provider count is 10, and the quota modal reset-button count is 21 (7 platforms × 3 windows).
+- Selected `v0.2.5-fy.1` as the first fork release on the upstream v0.2.5 base. The remote tag was checked and was not occupied before publishing.
+- Left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, and `verify-release.tar.gz` outside the release. The official tag still stores `VERSION=0.2.4`; source metadata is corrected to `0.2.5`.
+
+### Testing
+
+- `cd backend && go test ./internal/service -count=1 -timeout=12m` passed.
+- `cd backend && go test ./internal/handler/... ./internal/server/... ./migrations ./internal/domain -count=1` passed.
+- `cd backend && go test ./migrations -run 'TestOpenCodeGoPlatformMigration|TestKeepMediaPlatformsAfterMiniMaxMigration|TestMiniMaxPlatformMigration' -count=1` passed.
+- `cd backend && go vet ./...` passed.
+- `cd frontend && npx vitest run` on the post-merge specs plus Seedance public-docs / locale tests passed (6 files, 27 tests).
+- `cd frontend && pnpm.cmd run typecheck`, `pnpm.cmd run lint:check`, and `pnpm.cmd run build` passed after the merge-resolution fixes.
+- Linux amd64 cross-compilation (`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags embed ./cmd/server`) produced a 166,906,852-byte binary with ELF magic `7F 45 4C 46`.
+- Confirmed `backend/cmd/server/VERSION` is `0.2.5`, matching the intended release base.
+- `git diff --check` passed, and `git merge-base --is-ancestor v0.2.5 HEAD` confirmed the official release tag is an ancestor of the release candidate.
+
+### Notes
+
+- Conflict-resolved files combined upstream v0.2.5 behavior with the existing fork contract. The important ones are `backend/internal/service/domain_constants.go` (12-platform quota list), `backend/internal/service/composite_platform.go` (media + OpenCode concrete platforms), `backend/internal/handler/admin/setting_handler_update.go` and `backend/internal/service/setting_public.go` (keep both `video_generation_enabled` and `subscription_enabled`), and the frontend platform / billing / channel-monitor surfaces.
+- Fork follow-up files: `backend/migrations/238_opencode_go_platform.sql`, `backend/migrations/opencode_go_platform_migration_test.go`, `backend/internal/service/openai_images_test.go`, `frontend/src/utils/keyGroupProviders.ts`, and the MiniMax/OpenCode-era frontend test updates.
+- `backend/cmd/server/UPSTREAM_COMMIT` records `86f93c28ee34cc74b629dafb748bd5ac5ca8c5ea`; `docs/UPDATE_POLICY.md` updates the formal upstream synchronization baseline; `progress.md` records the integration, verification, exclusions, and rollback point.
+- Production already has 237 and `238_keep`. The rewritten OpenCode 238 must be present before upgrading any database that already has media platform rows. Do not apply the original 10-platform upstream 238.
+- Production install is not part of this task.
+- Rollback point: switch to `backup/pre-v0.2.5-merge-20260916`, or revert the upstream merge with `git revert -m 1 3268bdfa6`. Do not apply or drop any existing stash during rollback.
+
