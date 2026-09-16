@@ -78,7 +78,7 @@ describe('VideoApiDocsView', () => {
     expect(examples.some((code) => code.includes('/v1/images/generations') && code.includes('"image_urls"'))).toBe(true)
     expect(examples.some((code) => code.includes('/v1/images/edits') && code.includes('image[]=@./input.png'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "gpt-image-2"') && code.includes('images'))).toBe(true)
-    expect(examples.some((code) => code.includes('"model": "seedance-2.0"') && code.includes('"resolution": "4k"') && code.includes('"duration": 4'))).toBe(true)
+    expect(examples.some((code) => code.includes('"model": "seedance-2.0"') && code.includes('"resolution": "4k"') && code.includes('"duration": 5'))).toBe(true)
     expect(examples.every((code) => !code.includes('seedance-2.0-mini'))).toBe(true)
     expect(examples.some((code) => code.includes('"model": "seedance-2.0"') && code.includes('/v1/videos/generations'))).toBe(true)
     expect(examples.some((code) => code.includes('-F "video=@./reference.mp4"'))).toBe(true)

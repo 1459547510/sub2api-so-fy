@@ -7985,5 +7985,14 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; keep the fy.4 tag on `baec0fad5`.
 
+## 2026-09-14 - Task: Switch public Seedance V2 docs to the marked previous catalog
+### What was done
+- Set `SEEDANCE_V2_DOCS_SOURCE` to `previous` so in-app V2 docs use the marked 4-15s / default 5s / 9-reference Seedance 2.0 matrix. Seedance 2.5 stays on the V1 matrix copy.
+- Updated the docs tests to assert the active catalog without naming backends on public surfaces.
 
+### Testing
+- From `frontend/`, `npx vitest run src/utils/__tests__/videoApiDocs.spec.ts src/views/user/__tests__/VideoApiDocsView.spec.ts` is recorded with this change.
+
+### Notes
+- Switch back with `SEEDANCE_V2_DOCS_SOURCE = 'trioma'`. Roll back this change with `git revert` of the switch commit. Preserve unrelated `.superpowers/` content.
 

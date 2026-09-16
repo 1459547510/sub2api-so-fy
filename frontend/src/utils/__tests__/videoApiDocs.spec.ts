@@ -54,8 +54,9 @@ describe('videoApiDocs', () => {
     }
   })
 
-  it('keeps the previous Seedance V2 catalog available for an internal switch', () => {
-    expect(SEEDANCE_V2_DOCS_SOURCE).toBe('trioma')
+  it('keeps unused Seedance V2 catalogs available for an internal switch', () => {
+    expect(SEEDANCE_V2_DOCS_SOURCE).toBe('previous')
+    expect(SEEDANCE_V2_DOCS_SOURCE).not.toMatch(/trioma|krea/i)
     expect(Object.keys(seedanceV2DocsCatalog).sort()).toEqual(['current', 'previous', 'trioma'])
     expect(seedanceV2DocsCatalog.previous.v2MatrixKeys).not.toContain('seedance25')
     for (const catalog of Object.values(seedanceV2DocsCatalog)) {
@@ -63,13 +64,14 @@ describe('videoApiDocs', () => {
       expect(JSON.stringify(catalog)).not.toContain('seedance-2.0-mini')
     }
 
-    const previousDocs = applySeedanceV2DocsToDashboard(structuredClone(zhDashboard), 'zh', 'previous')
-    expect(previousDocs.video.apiDocs.v2.matrix.seedance20Mini).toBeUndefined()
-    expect(previousDocs.video.apiDocs.v2.matrix.seedance25).toBeUndefined()
+    const currentDocs = applySeedanceV2DocsToDashboard(structuredClone(zhDashboard), 'zh', 'current')
+    expect(currentDocs.video.apiDocs.v2.matrix.seedance20.references).toContain('参考图 12')
+    expect(currentDocs.video.apiDocs.v2.matrix.seedance25?.duration).toContain('4、5、6、8、10、12、15、20、25、30')
     const triomaDocs = applySeedanceV2DocsToDashboard(structuredClone(zhDashboard), 'zh', 'trioma')
     expect(triomaDocs.video.apiDocs.v2.matrix.seedance20.references).toContain('参考图 9')
     expect(triomaDocs.video.apiDocs.v2.matrix.seedance25.references).toContain('参考视频 10')
-    expect(triomaDocs.video.apiDocs.v2.matrix.seedance20Mini).toBeUndefined()
+    expect(zhDashboard.video.apiDocs.v2.matrix.seedance20.duration).toContain('默认 5 秒')
+    expect(zhDashboard.video.apiDocs.v2.matrix.seedance25).toBeUndefined()
   })
 
   it('documents Seedance limits on the V2 matrix and examples', () => {
@@ -79,22 +81,19 @@ describe('videoApiDocs', () => {
     const v2Models = zhDashboard.video.apiDocs.v2.models
 
     expect(seedance?.resolution).toBe('video.apiDocs.v2.matrix.seedance20.resolution')
-    expect(v2VideoModelMatrixRows.find((row) => row.model === 'seedance-2.5')?.duration).toBe('video.apiDocs.v2.matrix.seedance25.duration')
+    expect(v2VideoModelMatrixRows.find((row) => row.model === 'seedance-2.5')?.duration).toBe('video.apiDocs.matrix.seedance25.duration')
     expect(videoModelMatrixRows.find((row) => row.model === 'seedance-2.0')?.resolution).toBe('video.apiDocs.matrix.seedance20.resolution')
     expect(examples.find((example) => example.model === 'seedance-2.0')?.code).toContain('"resolution": "4k"')
-    expect(examples.find((example) => example.model === 'seedance-2.0')?.code).toContain('"duration": 4')
-    expect(examples.find((example) => example.model === 'seedance-2.5')?.code).toContain('"duration": 4')
-    expect(v2Matrix.seedance20.duration).toContain('默认 4 秒')
-    expect(v2Matrix.seedance20.duration).toContain('1080p 无生成音频最长 15 秒')
-    expect(v2Matrix.seedance20.duration).toContain('开启生成音频最长 10 秒')
-    expect(v2Matrix.seedance25.duration).toContain('4、5、6、8、10、12、15、20、25、30')
-    expect(v2Matrix.seedance25.duration).toContain('开启生成音频时最长 15 秒')
-    expect(v2Models.seedance20).toContain('默认 4 秒')
-    expect(v2Models.seedance20).toContain('1080p 无生成音频最长 15 秒')
-    expect(v2Models.seedance25).toContain('开启生成音频时最长 15 秒')
-    expect(enDashboard.video.apiDocs.v2.matrix.seedance20.duration).toContain('silent clips max 15s')
-    expect(enDashboard.video.apiDocs.v2.matrix.seedance20.duration).toContain('generated audio max 10s')
-    expect(enDashboard.video.apiDocs.v2.matrix.seedance25.duration).toContain('4, 5, 6, 8, 10, 12, 15, 20, 25, or 30s')
-    expect(enDashboard.video.apiDocs.v2.matrix.seedance25.duration).toContain('generated audio is limited to 15s')
+    expect(examples.find((example) => example.model === 'seedance-2.0')?.code).toContain('"duration": 5')
+    expect(examples.find((example) => example.model === 'seedance-2.5')?.code).toContain('"duration": 8')
+    expect(v2Matrix.seedance20.duration).toContain('默认 5 秒')
+    expect(v2Matrix.seedance20.references).toContain('参考图 9')
+    expect(v2Matrix.seedance25).toBeUndefined()
+    expect(v2Models.seedance20).toContain('默认 5 秒')
+    expect(v2Models.seedance20).toContain('最多 9 张参考图')
+    expect(v2Models.seedance25).toBeUndefined()
+    expect(enDashboard.video.apiDocs.v2.matrix.seedance20.duration).toContain('default 5s')
+    expect(enDashboard.video.apiDocs.v2.matrix.seedance20.references).toContain('9 images')
+    expect(enDashboard.video.apiDocs.v2.matrix.seedance25).toBeUndefined()
   })
 })

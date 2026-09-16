@@ -66,7 +66,7 @@ const bytedanceSeedance25Example = `{
   "audio": true
 }`
 
-/** 上一份 Seedance V2 文档。 */
+/** 较早标记的 Seedance V2 文档快照。 */
 const previousCatalog: SeedanceV2DocsCatalog = {
   v2MatrixKeys: ['seedance20', 'seedance20Fast'],
   exampleOverrides: {
