@@ -8076,3 +8076,32 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.5-merge-20260916` or `git revert -m 1 3268bdfa6`, while production binary rollback should deploy the prior verified fork release. Preserve all existing stashes and untracked worktree files.
 
+## 2026-09-20 - Task: Merge official v0.2.7 and prepare fork release v0.2.7-fy.1
+
+### What was done
+
+- Created `backup/pre-v0.2.7-merge-20260920` at `bef6107cbe15e7142edff4cb5f4e38d85104e895` before merging.
+- Merged the official `v0.2.7` tag at commit `aea725f2ea644d5592d0bbb1d63b607efa7e200a` into `codex/leo-video-channel`. There is no official `v0.2.6`.
+- Resolved the only content conflict in `backend/internal/handler/grok_media.go` by keeping both Seedance create parsing and the fork image-count validation, and by passing `requestCtx` into Seedance completion billing.
+- Official v0.2.7 adds the Ark Seedance native task API, plugin host services / status bridge, and a batch of Antigravity / DeepSeek / CN-quota / UI fixes. It introduces no new SQL migrations.
+- Kept video/media platforms, site billing, token incentive, and the marked Seedance V2 docs catalog. Sanitized `docs/seedance-api.md` so customer-facing copy does not say 上游, and extended the public-docs vendor-name test to cover that file.
+- Selected `v0.2.7-fy.1` as the first fork release on the official v0.2.7 base. The official tag still stores `VERSION=0.2.5`; source metadata is corrected to `0.2.7`.
+- Left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, and `verify-release.tar.gz` outside the release.
+
+### Testing
+
+- `cd backend && go test ./internal/service -count=1 -timeout=12m` passed.
+- `cd backend && go test ./internal/handler/... ./internal/server/... ./migrations ./internal/domain -count=1` passed.
+- `cd backend && go vet ./...` passed.
+- Linux amd64 cross-compilation (`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags embed ./cmd/server`) produced a 167,312,332-byte binary with ELF magic `7F 45 4C 46`.
+- Frontend: targeted vitest (7 files, 155 tests), `videoApiDocs.spec.ts`, `pnpm typecheck`, `pnpm lint:check`, and `pnpm build` passed.
+- `git diff --check` passed, and `git merge-base --is-ancestor v0.2.7 HEAD` confirmed the official release tag is an ancestor of the release candidate.
+
+### Notes
+
+- Conflict-resolved file: `backend/internal/handler/grok_media.go`. Follow-up files: `docs/seedance-api.md` and `frontend/src/utils/__tests__/videoApiDocs.spec.ts`.
+- `backend/cmd/server/UPSTREAM_COMMIT` records `aea725f2ea644d5592d0bbb1d63b607efa7e200a`; `docs/UPDATE_POLICY.md` updates the formal synchronization baseline.
+- Production already has the v0.2.5-era 237 / 238 media-keep / OpenCode migrations. This tag adds no new schema files.
+- Production install is not part of this task.
+- Rollback point: switch to `backup/pre-v0.2.7-merge-20260920`, or revert the official merge with `git revert -m 1 4a289c44d`. Do not apply or drop any existing stash during rollback.
+
