@@ -38,7 +38,9 @@ describe('videoApiDocs', () => {
   })
 
   it('keeps public API docs free of upstream vendor names', () => {
-    const markdown = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../../../docs/WEB_API_INTEGRATION_V2_CN.md'), 'utf8')
+    const docsDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../docs')
+    const markdown = readFileSync(resolve(docsDir, 'WEB_API_INTEGRATION_V2_CN.md'), 'utf8')
+    const seedanceNative = readFileSync(resolve(docsDir, 'seedance-api.md'), 'utf8')
     for (const text of [
       ...collectStrings(zhDashboard.video.apiDocs),
       ...collectStrings(enDashboard.video.apiDocs),
@@ -49,6 +51,7 @@ describe('videoApiDocs', () => {
       ...collectStrings(seedanceV2DocsCatalog.trioma.zh),
       ...collectStrings(seedanceV2DocsCatalog.trioma.en),
       markdown,
+      seedanceNative,
     ]) {
       expect(text).not.toMatch(publicDocsVendorName)
     }
