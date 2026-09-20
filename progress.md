@@ -8105,3 +8105,27 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production install is not part of this task.
 - Rollback point: switch to `backup/pre-v0.2.7-merge-20260920`, or revert the official merge with `git revert -m 1 4a289c44d`. Do not apply or drop any existing stash during rollback.
 
+## 2026-09-20 - Task: Verify published official merge release v0.2.7-fy.1
+
+### What was done
+
+- Confirmed the remote annotated tag `v0.2.7-fy.1` dereferences to the prepare commit `0b8a0ee0187c2169e5221d7491313c2d34701740`.
+- Confirmed GitHub Actions published the Linux amd64 package and checksum file from Release run `35482323946`.
+- Downloaded the public release assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `35482323909` on `v0.2.7-fy.1` completed successfully.
+- GitHub Security Scan on `v0.2.7-fy.1` (`35482323917`) passed.
+- GitHub Release run `35482323946` completed successfully.
+- Downloaded `sub2api_0.2.7-fy.1_linux_amd64.tar.gz`: 40,055,984 bytes.
+- Published and downloaded SHA-256 matched: `c9c0140adeee030434532ef3605ddbf15e1dece7284461f1d7c192f6bdf64240`.
+- `tar -tzf` returned only `sub2api`; the extracted 125,423,776-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.7-fy.1`.
+
+### Notes
+
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.7-fy.1`.
+- Official v0.2.7 adds no new SQL migrations; production that already has the v0.2.5-era 237 / 238 media-keep / OpenCode files does not need a new schema step for this tag.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.7-merge-20260920` or `git revert -m 1 4a289c44d`, while production binary rollback should deploy the prior verified fork release `v0.2.5-fy.2`. Preserve all existing stashes and untracked worktree files.
+
