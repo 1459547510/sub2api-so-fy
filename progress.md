@@ -8129,3 +8129,31 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.7-merge-20260920` or `git revert -m 1 4a289c44d`, while production binary rollback should deploy the prior verified fork release `v0.2.5-fy.2`. Preserve all existing stashes and untracked worktree files.
 
+## 2026-09-24 - Task: Merge official v0.2.8 and prepare fork release v0.2.8-fy.1
+
+### What was done
+
+- Created `backup/pre-v0.2.8-merge-20260924` at `061bfe7e8d5c6ddeb2d2d02fd1b3afcf3e19ca0c` before merging.
+- Merged the official `v0.2.8` tag at commit `fd80b08c90b55edcad5b00171b53f08721d30da1` into `codex/leo-video-channel`.
+- Kept video/media platforms, CY user filter, site billing, token incentive, and the marked Seedance V2 docs catalog. Combined official TypeSafe moderation engines, reasoning-effort multipliers, Gemini-compatible image models, OpenCode Go usage, and the rewritten release matrix with the fork extras.
+- Official v0.2.8 adds GPT-6 Sol/Luna, Claude Opus 5.5, Grok 4.7, OpenCode Go usage windows, reasoning-effort billing, and migrations `238b`, `239`, and `240`. The official tag still stores `VERSION=0.2.7`; source metadata is corrected to `0.2.8`.
+- Selected `v0.2.8-fy.1` as the first fork release on the official v0.2.8 base. The remote tag was checked and was not occupied before publishing.
+- Left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, and `verify-release.tar.gz` outside the release.
+
+### Testing
+
+- `cd backend && go test ./internal/service -count=1 -timeout=12m` passed.
+- `cd backend && go test ./internal/handler/... ./internal/server/... ./migrations ./internal/domain ./cmd/server -count=1` passed.
+- `cd backend && go vet ./...` passed.
+- Linux amd64 cross-compilation (`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags embed ./cmd/server`) produced a 167,747,782-byte binary with ELF magic `7F 45 4C 46`.
+- Frontend: targeted vitest (7 files, 109 tests), `videoApiDocs.spec.ts`, `pnpm typecheck`, `pnpm lint:check`, and `pnpm run check:i18n` passed.
+- `git diff --check` passed, and `git merge-base --is-ancestor v0.2.8 HEAD` confirmed the official release tag is an ancestor of the release candidate.
+
+### Notes
+
+- Conflict-resolved files included `openai_images` handler/service, `content_moderation.go`, `openai_gateway_scheduling.go`, channel pricing UI, platform quota UI, and `.github/workflows/release.yml` (took official matrix).
+- `backend/cmd/server/UPSTREAM_COMMIT` records `fd80b08c90b55edcad5b00171b53f08721d30da1`; `docs/UPDATE_POLICY.md` updates the formal synchronization baseline.
+- Production that already has the v0.2.5-era 237 / 238 media-keep / OpenCode files will apply `238b_content_moderation_engine_meta.sql`, `239_channel_reasoning_effort_multipliers.sql`, and `240_affiliate_ledger_operation_id.sql` on first start of this binary.
+- Production install is not part of this task.
+- Rollback point: switch to `backup/pre-v0.2.8-merge-20260924`, or revert the official merge with `git revert -m 1 256168e43`. Do not apply or drop any existing stash during rollback.
+
