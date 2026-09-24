@@ -8177,3 +8177,27 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production install is not part of this task.
 - Rollback point for this follow-up is `v0.2.8-fy.1` / `ba26c9904`. Source rollback for the official merge remains `backup/pre-v0.2.8-merge-20260924` or `git revert -m 1 256168e43`.
 
+## 2026-09-24 - Task: Verify published official merge release v0.2.8-fy.2
+
+### What was done
+
+- Confirmed the remote annotated tag `v0.2.8-fy.2` dereferences to the billing-fix commit `b88f2cefc8a2283d337b9d0eec1ae709b8c78465`. Left `v0.2.8-fy.1` published and unmoved.
+- Confirmed GitHub Actions published the official multi-arch packages and checksum file from Release run `35953983168`.
+- Downloaded the public Linux amd64 assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `35953983159` on `v0.2.8-fy.2` completed successfully.
+- GitHub Security Scan on `v0.2.8-fy.2` (`35953983125`) passed.
+- GitHub Release run `35953983168` completed successfully.
+- Downloaded `sub2api_0.2.8-fy.2_linux_amd64.tar.gz`: 40,698,225 bytes.
+- Published and downloaded SHA-256 matched: `07011ad67d369d45e12f88c0fb6dbb17c92e3f0b25d3ecc301ecaf3913eb9c9d`.
+- `tar -tzf` includes `sub2api` plus the official 0.2.8 release-matrix docs/deploy files; the extracted 125,964,448-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.8-fy.2`.
+
+### Notes
+
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.8-fy.2`.
+- Production that already has the v0.2.5-era 237 / 238 media-keep / OpenCode files will apply `238b_content_moderation_engine_meta.sql`, `239_channel_reasoning_effort_multipliers.sql`, and `240_affiliate_ledger_operation_id.sql` on first start of this binary.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.8-merge-20260924` or `git revert -m 1 256168e43`, while production binary rollback should deploy the prior verified fork release `v0.2.5-fy.2`. Preserve all existing stashes and untracked worktree files.
+
