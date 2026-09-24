@@ -1077,11 +1077,13 @@ func TestResolve_ChannelVideoPricingBeatsGroupVideoCards(t *testing.T) {
 		Intervals: []PricingInterval{
 			{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.25)},
 		},
+		ReasoningEffortMultipliers: map[string]float64{"high": 3},
 	}})
 	group := &Group{ID: 100, ModelPricing: []ChannelModelPricing{{
-		Models:      []string{"seedance-2.0"},
-		BillingMode: BillingModeVideo,
-		Intervals:   []PricingInterval{{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.5)}},
+		Models:                     []string{"seedance-2.0"},
+		BillingMode:                BillingModeVideo,
+		Intervals:                  []PricingInterval{{TierLabel: "720p", PerRequestPrice: testPtrFloat64(0.5)}},
+		ReasoningEffortMultipliers: map[string]float64{"high": 1.25},
 	}}}
 	resolved := r.Resolve(context.Background(), PricingInput{Model: "seedance-2.0", GroupID: groupIDPtr(), Group: group})
 
@@ -1089,6 +1091,7 @@ func TestResolve_ChannelVideoPricingBeatsGroupVideoCards(t *testing.T) {
 	require.Equal(t, PricingSourceChannel, resolved.Source)
 	require.Len(t, resolved.RequestTiers, 1)
 	require.InDelta(t, 0.25, *resolved.RequestTiers[0].PerRequestPrice, 1e-12)
+	require.Equal(t, map[string]float64{"high": 1.25}, resolved.channelPricing.ReasoningEffortMultipliers)
 }
 
 func TestResolve_GroupLongContextUsesPresetNotCustomIntervals(t *testing.T) {

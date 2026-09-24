@@ -8157,3 +8157,23 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production install is not part of this task.
 - Rollback point: switch to `backup/pre-v0.2.8-merge-20260924`, or revert the official merge with `git revert -m 1 256168e43`. Do not apply or drop any existing stash during rollback.
 
+## 2026-09-24 - Task: Publish fork release v0.2.8-fy.2
+
+### What was done
+
+- Left published `v0.2.8-fy.1` in place. GitHub CI on that tag failed two `//go:build unit` cases where official 0.2.8 expects group reasoning-effort multipliers to apply to video billing.
+- Kept the fork rule that live channel video unit prices beat group video cards so 渠道定价 edits bill immediately.
+- Overlay the matching group's `ReasoningEffortMultipliers` onto the winning channel video card so official group policy still applies.
+- Selected `v0.2.8-fy.2` as the next fork release on the official v0.2.8 base. Do not move `v0.2.8-fy.1`.
+- Left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, and `verify-release.tar.gz` outside the release.
+
+### Testing
+
+- `cd backend && go test ./internal/service -tags unit -count=1 -timeout=3m -run 'TestCalculateRecordUsageCost_MediaReasoningPricing|TestReasoningEffortBillingGroupOverrideAndUnitBilling|TestResolve_ChannelVideoPricingBeatsGroupVideoCards|TestAccountStatsCustomRulesUseOwnReasoningEffortMultipliers'` passed.
+- `git diff --check` on the touched resolver files passed.
+
+### Notes
+
+- Production install is not part of this task.
+- Rollback point for this follow-up is `v0.2.8-fy.1` / `ba26c9904`. Source rollback for the official merge remains `backup/pre-v0.2.8-merge-20260924` or `git revert -m 1 256168e43`.
+

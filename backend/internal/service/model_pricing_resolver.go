@@ -80,11 +80,13 @@ func (r *ModelPricingResolver) Resolve(ctx context.Context, input PricingInput) 
 	// Live channel video cards beat group video cards so 渠道定价 edits bill
 	// immediately. Group video cards remain the fallback when the channel has
 	// no video price for this model. Token group cards still override first.
+	// Group reasoning-effort multipliers still win: official 0.2.8 bills those
+	// from the group card even when the live channel video unit price wins.
 	if mode := configuredBillingMode(chPricing); mode == BillingModeVideo {
 		resolved := &ResolvedPricing{
 			Mode:           mode,
 			Source:         PricingSourceChannel,
-			channelPricing: chPricing,
+			channelPricing: overlayGroupReasoningEffortMultipliers(chPricing, matchGroupModelPricing(input.Group, input.Model)),
 		}
 		resolved.longContextPricingEnabled = longContextPricingEnabled
 		r.applyRequestTierOverrides(chPricing, resolved)
@@ -155,6 +157,15 @@ func (r *ModelPricingResolver) resolveConfiguredPricing(config *ChannelModelPric
 	resolved.SupportsCacheBreakdown = resolved.BasePricing != nil && resolved.BasePricing.SupportsCacheBreakdown
 	r.applyTokenOverrides(config, resolved)
 	return resolved
+}
+
+func overlayGroupReasoningEffortMultipliers(channel, group *ChannelModelPricing) *ChannelModelPricing {
+	if channel == nil || group == nil {
+		return channel
+	}
+	cloned := channel.Clone()
+	cloned.ReasoningEffortMultipliers = maps.Clone(group.ReasoningEffortMultipliers)
+	return &cloned
 }
 
 func configuredBillingMode(pricing *ChannelModelPricing) BillingMode {
