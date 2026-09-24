@@ -1,5 +1,5 @@
 import type { BillingMode, ChannelTimePricing, PricingInterval, SyncPricingModelDetail } from '@/api/admin/channels'
-import { LEO_VIDEO_MODELS, VIDEO_PRICING_RESOLUTIONS } from '@/constants/channel'
+import { LEO_VIDEO_MODELS, REASONING_EFFORT_LEVELS, VIDEO_PRICING_RESOLUTIONS } from '@/constants/channel'
 
 type TranslateFn = (key: string, params?: Record<string, unknown>) => string
 
@@ -30,7 +30,7 @@ export interface PricingFormEntry {
   cache_read_price: number | string | null
   fast_multiplier?: number | string | null
   flex_multiplier?: number | string | null
-  max_reasoning_effort_multiplier?: number | string | null
+  reasoning_effort_multipliers?: Record<string, number | string> | null
   image_input_price: number | string | null
   image_output_price: number | string | null
   per_request_price: number | string | null
@@ -183,6 +183,30 @@ export function isValidPositiveMultiplier(val: number | string | null | undefine
   return Number.isFinite(multiplier) && multiplier > 0
 }
 
+export function formReasoningEffortMultipliersToAPI(
+  value: PricingFormEntry['reasoning_effort_multipliers'],
+): Record<string, number> | null {
+  const entries = Object.entries(value || {})
+    .filter(([, multiplier]) => multiplier !== '')
+    .map(([effort, multiplier]) => [effort, Number(multiplier)])
+  return entries.length ? Object.fromEntries(entries) : null
+}
+
+export function validateReasoningEffortMultipliers(
+  value: PricingFormEntry['reasoning_effort_multipliers'],
+  t: TranslateFn,
+): string | null {
+  for (const [effort, multiplier] of Object.entries(value || {})) {
+    if (!REASONING_EFFORT_LEVELS.some(level => level === effort)) {
+      return t('admin.channels.form.reasoningEffortLevelInvalid', { effort })
+    }
+    if (multiplier !== '' && !isValidPositiveMultiplier(multiplier)) {
+      return t('admin.channels.form.reasoningEffortMultiplierPositive', { effort })
+    }
+  }
+  return null
+}
+
 /** 前端显示值($/MTok) → 后端存储值(per-token) */
 export function mTokToPerToken(val: number | string | null | undefined): number | null {
   const num = toNullableNumber(val)
@@ -302,7 +326,7 @@ export function createPricingFormEntry(
     cache_read_price: null,
     fast_multiplier: null,
     flex_multiplier: null,
-    max_reasoning_effort_multiplier: null,
+    reasoning_effort_multipliers: null,
     image_input_price: null,
     image_output_price: null,
     per_request_price: null,
