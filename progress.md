@@ -8224,5 +8224,5 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/cmd/server/UPSTREAM_COMMIT` records `3040209f205472038c1ba745a1bedd2edd9053b1`; `docs/UPDATE_POLICY.md` updates the formal synchronization baseline.
 - Production that already has the v0.2.8-fy.2 migrations will apply `241_add_payment_order_bonus_amount.sql` and the rewritten `241_add_typesafe_platform.sql` on first start. Do not apply the original upstream 241 that omits `leo` / `openai_media`.
 - Production install is not part of this task.
-- Rollback point: switch to `backup/pre-v0.2.13-merge-20261003`, or revert this official merge with `git revert -m 1 <merge-commit>`. Do not apply or drop any existing stash during rollback.
+- Rollback point: switch to `backup/pre-v0.2.13-merge-20261003`, or revert this official merge with `git revert -m 1 1dce240f3448778c93c76e7dc8dcc61d66f767e4`. Do not apply or drop any existing stash during rollback.
 
