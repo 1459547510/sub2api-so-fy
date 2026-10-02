@@ -8226,3 +8226,16 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production install is not part of this task.
 - Rollback point: switch to `backup/pre-v0.2.13-merge-20261003`, or revert this official merge with `git revert -m 1 1dce240f3448778c93c76e7dc8dcc61d66f767e4`. Do not apply or drop any existing stash during rollback.
 
+## 2026-10-03 - Task: Publish v0.2.13-fy.2 as a stable release
+
+### What was done
+
+- Left `v0.2.13-fy.1` published. GoReleaser `prerelease: auto` treated the `-fy.1` suffix as a pre-release, so GitHub `/releases/latest` and the in-app updater still resolve to `v0.2.8-fy.2`.
+- Set both GoReleaser configs to `prerelease: false` so fork tags remain normal releases.
+- Selected `v0.2.13-fy.2` as the install target on the same upstream v0.2.13 base. Do not move `v0.2.13-fy.1`.
+
+### Notes
+
+- Production install is not part of this task.
+- Rollback for this follow-up is `v0.2.13-fy.1` / `523628e3e`. Source rollback for the official merge remains `backup/pre-v0.2.13-merge-20261003` or `git revert -m 1 1dce240f3`.
+
