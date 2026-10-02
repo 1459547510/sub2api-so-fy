@@ -8201,3 +8201,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.8-merge-20260924` or `git revert -m 1 256168e43`, while production binary rollback should deploy the prior verified fork release `v0.2.5-fy.2`. Preserve all existing stashes and untracked worktree files.
 
+## 2026-10-03 - Task: Merge official v0.2.13 and prepare fork release v0.2.13-fy.1
+
+### What was done
+
+- Created `backup/pre-v0.2.13-merge-20261003` at `7786c900660f86362599ba19c608bdba5711cab0` before merging.
+- Merged the official `v0.2.13` tag at commit `3040209f205472038c1ba745a1bedd2edd9053b1` into `codex/leo-video-channel`. Official releases `v0.2.9` through `v0.2.13` are included. There is no official `v0.2.6`.
+- Kept video/media platforms, site billing, token incentive, and the channel-video pricing rule from `v0.2.8-fy.2`. Added upstream TypeSafe / Jev System One, recharge bonus, inflight billing reservation, Claude reset credits, and the rest of the official surface.
+- Rewrote incoming `241_add_typesafe_platform.sql` so the rebuilt platform CHECKs stay a superset of the fork's 238 list: `leo` and `openai_media` remain allowed beside `typesafe`. Applying the original 11-value CHECK would abort startup on existing media quota or composite-route rows.
+- Selected `v0.2.13-fy.1` as the first fork release on the official v0.2.13 base. Source `VERSION` is `0.2.13`; the published tag carries the `-fy.1` suffix.
+- Left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, and `verify-release.tar.gz` outside the release.
+
+### Testing
+
+- `cd backend && go test ./migrations -count=1 -run TestTypeSafePlatformMigration` passed.
+- `cd backend && go test ./internal/service -count=1 -run 'TestCompositeGroupSchedulerHasAllCanonicalPlatformBuckets|TestCompositeConcretePlatformsIncludeCNProviders|TestDetectModelPlatform'` passed.
+- `cd backend && go test -tags unit ./internal/service ./internal/handler/admin -count=1 -run 'TestMatchingPlatforms|TestResolve_ChannelVideoPricingBeatsGroupVideoCards|TestCalculateRecordUsageCost_MediaReasoningPricing|TestSyncPricingModels_ValidPlatform_EmptyService'` passed.
+- `cd backend && go test ./migrations ./internal/service ./internal/handler ./cmd/server -count=1 -run TestTypeSafePlatformMigration` compiled those packages.
+
+### Notes
+
+- `backend/cmd/server/UPSTREAM_COMMIT` records `3040209f205472038c1ba745a1bedd2edd9053b1`; `docs/UPDATE_POLICY.md` updates the formal synchronization baseline.
+- Production that already has the v0.2.8-fy.2 migrations will apply `241_add_payment_order_bonus_amount.sql` and the rewritten `241_add_typesafe_platform.sql` on first start. Do not apply the original upstream 241 that omits `leo` / `openai_media`.
+- Production install is not part of this task.
+- Rollback point: switch to `backup/pre-v0.2.13-merge-20261003`, or revert this official merge with `git revert -m 1 <merge-commit>`. Do not apply or drop any existing stash during rollback.
+

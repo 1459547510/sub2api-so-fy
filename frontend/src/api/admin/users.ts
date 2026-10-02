@@ -334,7 +334,7 @@ export async function bindUserAuthIdentity(
 export const PLATFORM_QUOTA_PLATFORMS = [
   'anthropic', 'openai', 'gemini', 'antigravity', 'grok',
   'leo', 'openai_media',
-  'kimi', 'zhipu', 'deepseek', 'minimax', 'opencode_go',
+  'kimi', 'zhipu', 'deepseek', 'minimax', 'opencode_go', 'typesafe',
 ] as const
 export type PlatformQuotaPlatform = typeof PLATFORM_QUOTA_PLATFORMS[number]
 export type PlatformQuotaWindow = 'daily' | 'weekly' | 'monthly'
