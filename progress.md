@@ -8201,3 +8201,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.8-merge-20260924` or `git revert -m 1 256168e43`, while production binary rollback should deploy the prior verified fork release `v0.2.5-fy.2`. Preserve all existing stashes and untracked worktree files.
 
+
+## 2026-10-09 - Task: Merge official v0.2.14 and prepare fork release v0.2.14-fy.1
+
+### What was done
+
+- Created `backup/pre-v0.2.14-merge-20261009` at `7786c9006` before merging.
+- Merged the official `v0.2.14` tag at commit `0363b8cdba8cec3e2ba4b2dbd49c4481143fa55d` into `codex/leo-video-channel`.
+- Kept video/media platforms, CY user filter, site billing, token incentive, and channel video pricing. Combined official TypeSafe, GPT-6.1 Sol, Claude Sonnet 5.5, recharge bonus tiers, admin bootstrap hardening, and the EasyPay callback fix.
+- Official `241_add_typesafe_platform.sql` rebuilt quota and composite-route checks without `leo` / `openai_media`. The fork migration now rebuilds the 13-platform union only when one of those values is missing, so existing media rows do not abort startup.
+- Official tag still stores `VERSION=0.2.13`; source metadata is `0.2.14`.
+- Selected `v0.2.14-fy.1` as the first fork release on the official v0.2.14 base.
+- Left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, `plugins/`, and `verify-release.tar.gz` outside the release.
+
+### Testing
+
+- `cd backend && go test -tags unit ./internal/service -count=1 -timeout=25m` found one clock collision in `TestOllamaProbeCallback_StaleLongDoesNotOverrideNewShort`; the short re-arm is now 30s so it cannot equal the 5s fallback. `go test -tags unit ./internal/service -count=5 -run 'TestOllamaProbeCallback|TestHandle429_Ollama'` passed.
+- `cd backend && go test ./internal/handler/... ./internal/server/... ./migrations ./cmd/server -count=1` passed.
+- Frontend vitest: platform catalog, CC Switch import, user platform quota modal, and composite route options passed.
+
+### Notes
+
+- `backend/cmd/server/UPSTREAM_COMMIT` records `0363b8cdba8cec3e2ba4b2dbd49c4481143fa55d`.
+- Production that already has the v0.2.8-fy.2 migrations will apply `241_add_payment_order_bonus_amount.sql` and `241_add_typesafe_platform.sql` on first start.
+- Production install is not part of this task.
+- Rollback point: switch to `backup/pre-v0.2.14-merge-20261009`, or revert the official merge with `git revert -m 1 427d7e854`.
