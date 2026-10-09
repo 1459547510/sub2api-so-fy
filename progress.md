@@ -8225,4 +8225,5 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `backend/cmd/server/UPSTREAM_COMMIT` records `0363b8cdba8cec3e2ba4b2dbd49c4481143fa55d`.
 - Production that already has the v0.2.8-fy.2 migrations will apply `241_add_payment_order_bonus_amount.sql` and `241_add_typesafe_platform.sql` on first start.
 - Production install is not part of this task.
+- Release config sets `prerelease: false` so a `-fy.N` tag is published as the GitHub latest release.
 - Rollback point: switch to `backup/pre-v0.2.14-merge-20261009`, or revert the official merge with `git revert -m 1 427d7e854`.
