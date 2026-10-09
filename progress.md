@@ -8227,3 +8227,27 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production install is not part of this task.
 - Release config sets `prerelease: false` so a `-fy.N` tag is published as the GitHub latest release.
 - Rollback point: switch to `backup/pre-v0.2.14-merge-20261009`, or revert the official merge with `git revert -m 1 427d7e854`.
+
+## 2026-10-09 - Task: Verify published official merge release v0.2.14-fy.1
+
+### What was done
+
+- Confirmed the remote annotated tag `v0.2.14-fy.1` dereferences to `576dcf4f5`.
+- Confirmed GitHub marks the release as a stable release and as Latest.
+- Downloaded the public Linux amd64 assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `37868926427` on `v0.2.14-fy.1` completed successfully.
+- GitHub Release run `37868926443` completed successfully.
+- GitHub Security Scan on `v0.2.14-fy.1` (`37868926429`) failed in `govulncheck`: the Go 1.27 standard library used by the build has 12 called vulnerabilities fixed in `go1.27.2`.
+- Downloaded `sub2api_0.2.14-fy.1_linux_amd64.tar.gz`: 40,877,170 bytes.
+- Published and downloaded SHA-256 matched: `c5148c381dadb82ae5a1ac05f8ac9a4e3ee05af2e6cbd4292d65f32685e30e31`.
+- `tar -tzf` includes `sub2api` plus the release docs and deploy files; the extracted 126,439,584-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.14-fy.1`.
+
+### Notes
+
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.14-fy.1`.
+- Production that already has the v0.2.8-fy.2 migrations will apply `241_add_payment_order_bonus_amount.sql` and `241_add_typesafe_platform.sql` on first start. The TypeSafe migration keeps `leo` and `openai_media` in the quota and composite-route checks.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.14-merge-20261009` or `git revert -m 1 427d7e854`, while production binary rollback should deploy the prior verified fork release `v0.2.13-fy.2`. Preserve all existing stashes and untracked worktree files.
