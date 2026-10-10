@@ -8293,3 +8293,28 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - `cd frontend && node node_modules/vue-tsc/bin/vue-tsc.js -b --force` passed after the unused imports were removed.
 - `vitest run src/views/admin/__tests__/channelPlatformOptions.spec.ts` passed.
 
+## 2026-10-10 - Task: Verify published official merge release v0.2.15-fy.2
+
+### What was done
+
+- `v0.2.15-fy.1` release run `38017474717` failed before publishing assets because `ChannelsView.vue` had unused imports. That tag was not moved.
+- Confirmed the remote annotated tag `v0.2.15-fy.2` dereferences to `301f49c5c`.
+- Confirmed GitHub marks the release as a stable release and as Latest.
+- Downloaded the public Linux amd64 assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `38017816890` on `v0.2.15-fy.2` completed successfully.
+- GitHub Release run `38017816881` completed successfully.
+- GitHub Security Scan on `v0.2.15-fy.2` (`38017816899`) completed successfully. The module is `go 1.27.2`.
+- Downloaded `sub2api_0.2.15-fy.2_linux_amd64.tar.gz`: 40,975,363 bytes.
+- Published and downloaded SHA-256 matched: `9fba0d1f36488e31dd147f18d4bd111b48a3188e51e295065b02b3761fbc7e82`.
+- `tar -tzf` includes `sub2api` plus the release docs and deploy files; the extracted 126,714,016-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.15-fy.2`.
+
+### Notes
+
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.15-fy.2`.
+- Production that already has the v0.2.14-fy.1 migrations will apply `242_drop_platform_check_constraints.sql` on first start. That drop removes the quota and composite-route platform checks; existing `leo` and `openai_media` rows stay valid.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.15-merge-20261010` or `git revert -m 1 ea08f156f`, while production binary rollback should deploy the prior verified fork release `v0.2.14-fy.1`. Preserve all existing stashes and untracked worktree files.
+
