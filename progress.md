@@ -8280,3 +8280,16 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Release config sets `prerelease: false` so a `-fy.N` tag is published as the GitHub latest release.
 - Rollback point: switch to `backup/pre-v0.2.15-merge-20261010`, or revert the official merge with `git revert -m 1 ea08f156f`.
 
+## 2026-10-10 - Task: Fix v0.2.15-fy.1 frontend release build
+
+### What was done
+
+- `v0.2.15-fy.1` release run `38017474717` failed in `build-frontend`: `ChannelsView.vue` still imported `COMPOSITE_ROUTE_PLATFORMS`, `groupMatchesChannelPlatform`, and `CONCRETE_PLATFORM_OPTIONS` after platform order moved to `listPlatformIds()`.
+- Removed those unused imports. Channel platform order stays on the catalog.
+- Tag `v0.2.15-fy.1` is left in place. The published fork release is `v0.2.15-fy.2`.
+
+### Testing
+
+- `cd frontend && node node_modules/vue-tsc/bin/vue-tsc.js -b --force` passed after the unused imports were removed.
+- `vitest run src/views/admin/__tests__/channelPlatformOptions.spec.ts` passed.
+
