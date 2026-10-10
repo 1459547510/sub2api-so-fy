@@ -8251,3 +8251,32 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Production that already has the v0.2.8-fy.2 migrations will apply `241_add_payment_order_bonus_amount.sql` and `241_add_typesafe_platform.sql` on first start. The TypeSafe migration keeps `leo` and `openai_media` in the quota and composite-route checks.
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.14-merge-20261009` or `git revert -m 1 427d7e854`, while production binary rollback should deploy the prior verified fork release `v0.2.13-fy.2`. Preserve all existing stashes and untracked worktree files.
+
+## 2026-10-10 - Task: Merge official v0.2.15 and prepare fork release v0.2.15-fy.1
+
+### What was done
+
+- Created `backup/pre-v0.2.15-merge-20261010` at `013191187` before merging.
+- Merged the official `v0.2.15` tag at commit `f2669c8cf62555cd92389b3f55920e9e6e7c6ff2` into `codex/leo-video-channel`.
+- Kept video/media platforms, CY user filter, site billing, token incentive, and channel video unit prices. Registered `leo` and `openai_media` in the platform catalog so quota, composite routing, and OpenAI-gateway checks still accept them.
+- Official platforms Cline and Command Code come in through that catalog. Migration `242_drop_platform_check_constraints.sql` drops the quota and composite-route platform checks; channel-monitor provider checks stay.
+- Official tag still stores `VERSION=0.2.14`; source metadata is `0.2.15`.
+- Concrete API-key accounts, including video and media, may opt in to the upstream billing probe, matching the catalog rule.
+- Selected `v0.2.15-fy.1` as the first fork release on the official v0.2.15 base.
+- Left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, `plugins/`, and `verify-release.tar.gz` outside the release.
+
+### Testing
+
+- `cd backend && go test ./internal/domain ./internal/handler/... ./internal/server/... ./migrations ./cmd/server -count=1` passed.
+- `cd backend && go test -tags unit ./internal/service -count=1 -run 'TestPlatformList|TestFrontendBuiltin|TestComposite|TestChannelService_Matching|TestOllamaProbe|TestSchedulerSnapshot|TestUpstreamBillingProbeIdentity'` passed after the media billing-probe baseline was updated.
+- Frontend vitest: platform catalog, composite channel options, user platform quota modal, auth source defaults, usage view, create/edit account, and credentials builder catalog passed (8 files, 177 tests).
+
+### Notes
+
+- `backend/cmd/server/UPSTREAM_COMMIT` records `f2669c8cf62555cd92389b3f55920e9e6e7c6ff2`.
+- Production that already has the v0.2.14-fy.1 migrations will apply `242_drop_platform_check_constraints.sql` on first start. That drop removes the quota and composite-route platform checks; existing `leo` and `openai_media` rows stay valid.
+- Go module is `go 1.27.2`, which is the toolchain the previous security scan asked for.
+- Production install is not part of this task.
+- Release config sets `prerelease: false` so a `-fy.N` tag is published as the GitHub latest release.
+- Rollback point: switch to `backup/pre-v0.2.15-merge-20261010`, or revert the official merge with `git revert -m 1 ea08f156f`.
+
