@@ -182,6 +182,19 @@ func TestIsMigrationChecksumCompatible(t *testing.T) {
 		require.True(t, ok)
 	})
 
+	t.Run("241已记录的旧文件checksum可启动当前版本", func(t *testing.T) {
+		content, err := migrations.FS.ReadFile("241_add_typesafe_platform.sql")
+		require.NoError(t, err)
+		sum := sha256.Sum256([]byte(strings.TrimSpace(string(content))))
+		fileChecksum := hex.EncodeToString(sum[:])
+		require.Equal(t, "780d5099a5168827e53c81e486e6b2efef33f886ad3277340b027d22dca676f4", fileChecksum)
+		require.True(t, isMigrationChecksumCompatible(
+			"241_add_typesafe_platform.sql",
+			"da9ff035ecc3da94901d04a7ebd714d3469e815e074c0b50696bb70ab51a738f",
+			fileChecksum,
+		))
+	})
+
 	t.Run("237未知checksum不兼容", func(t *testing.T) {
 		ok := isMigrationChecksumCompatible(
 			"237_add_minimax_platform.sql",
