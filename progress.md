@@ -8346,4 +8346,16 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - Release config sets `prerelease: false` so a `-fy.N` tag is published as the GitHub latest release.
 - Rollback point: switch to `backup/pre-v0.2.18-merge-20261026`, or revert the official merge with `git revert -m 1 347734624`.
 
+## 2026-10-26 - Task: Fix v0.2.18-fy.1 response-model reprice and publish v0.2.18-fy.2
+
+### What was done
+
+- `v0.2.18-fy.1` tag CI `40295193886` failed `TestOpenAIGatewayServiceRecordUsage_GPT61SolExemptionSurvivesRepricing`. After a response model was adopted, the free-fast standard-tier reprice still used the baseline model, so the lower cache price was dropped.
+- The reprice now keeps the adopted response model. Tag `v0.2.18-fy.1` is left in place. The published fork release is `v0.2.18-fy.2`.
+- The TypeSafe migration checksum compatibility from `v0.2.18-fy.1` remains, so a web update does not exit on the previously recorded checksum.
+
+### Testing
+
+- `go test -tags unit ./internal/service -count=1 -run 'TestOpenAIGatewayServiceRecordUsage_GPT61SolExemptionSurvivesRepricing|TestOpenAIGatewayServiceRecordUsage_FreeOpenAIFastChargesStandard'` passed.
+
 
