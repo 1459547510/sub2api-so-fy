@@ -304,6 +304,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 			if responseErr == nil && responseModelBillingAdoptable(cost, responseCost, baselineChannelPriced, responseChannelPriced) {
 				logResponseModelBillingApplied("service.openai_gateway", account, result.RequestID,
 					baselineBillingModel, responseModel, cost, responseCost)
+				billingModels = responseModels
 				cost = responseCost
 			}
 		}
