@@ -8358,4 +8358,29 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 
 - `go test -tags unit ./internal/service -count=1 -run 'TestOpenAIGatewayServiceRecordUsage_GPT61SolExemptionSurvivesRepricing|TestOpenAIGatewayServiceRecordUsage_FreeOpenAIFastChargesStandard'` passed.
 
+## 2026-10-26 - Task: Verify published official merge release v0.2.18-fy.2
+
+### What was done
+
+- `v0.2.18-fy.1` tag CI failed the response-model reprice test. That tag was not moved.
+- Confirmed the remote annotated tag `v0.2.18-fy.2` dereferences to `2c8775374`.
+- Confirmed GitHub marks the release as a stable release and as Latest.
+- Downloaded the public Linux amd64 assets and verified the archive checksum, content, Linux executable format, and embedded release version.
+
+### Testing
+
+- GitHub CI run `40296818431` on `v0.2.18-fy.2` completed successfully.
+- GitHub Release run `40296818428` completed successfully.
+- GitHub Security Scan on `v0.2.18-fy.2` (`40296818427`) completed successfully. The module is `go 1.27.3`.
+- Downloaded `sub2api_0.2.18-fy.2_linux_amd64.tar.gz`: 41,185,325 bytes.
+- Published and downloaded SHA-256 matched: `36e47b2587565c047baf6999ff60a0afb23eccc30bc7decbc8dac576f2d9eb4b`.
+- The extracted 127,226,016-byte binary has ELF magic `7F 45 4C 46` and contains the version string `0.2.18-fy.2`.
+
+### Notes
+
+- Release: `https://github.com/1459547510/sub2api-so-fy/releases/tag/v0.2.18-fy.2`.
+- Production that already has the v0.2.15-fy.2 migrations will apply `242_group_i18n.sql` and `243` through `246` on first start. Already-applied migration files were not rewritten. Startup accepts the earlier TypeSafe migration checksum `da9ff035…` as well as the current file checksum.
+- This task does not install the binary on the production server.
+- Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.18-merge-20261026` or `git revert -m 1 347734624`, while production binary rollback should deploy the prior verified fork release `v0.2.15-fy.2`. Preserve all existing stashes and untracked worktree files.
+
 
