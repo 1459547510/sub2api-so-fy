@@ -8318,3 +8318,32 @@ ode_modules\@pnpm\exe\pnpm.exe run build`（在 `D:\project\sub2api-sorontend`�
 - This task does not install the binary on the production server.
 - Rollback this log-only commit with `git revert <verification-log-commit>`; source rollback uses `backup/pre-v0.2.15-merge-20261010` or `git revert -m 1 ea08f156f`, while production binary rollback should deploy the prior verified fork release `v0.2.14-fy.1`. Preserve all existing stashes and untracked worktree files.
 
+## 2026-10-26 - Task: Merge official v0.2.18 and prepare fork release v0.2.18-fy.1
+
+### What was done
+
+- Created `backup/pre-v0.2.18-merge-20261026` at `7b885966b` before merging.
+- Merged the official `v0.2.18` tag at commit `ac1b8f1271be0d674fa6f074403c1410f30a3a81` into `codex/leo-video-channel`. The tag also contains official `v0.2.16` and `v0.2.17`.
+- Kept video/media platforms, CY user filter, site billing, token incentive, and channel video unit prices. Already-applied migration files, including `241_add_typesafe_platform.sql`, keep the bytes recorded by `v0.2.15-fy.2`.
+- Startup accepts both the current TypeSafe migration checksum and the earlier checksum `da9ff035…` that previously made the web updater exit before listen.
+- Official tag still stores `VERSION=0.2.17`; source metadata is `0.2.18`.
+- Selected `v0.2.18-fy.1` as the first fork release on the official v0.2.18 base.
+- Left `.cursor/`, `.superpowers/`, `outputs/`, `work/`, `plugins/`, and `verify-release.tar.gz` outside the release.
+
+### Testing
+
+- `go build ./cmd/server` passed.
+- `go test ./internal/repository -count=1 -run TestIsMigrationChecksumCompatible` passed, including the TypeSafe checksum compatibility case.
+- `node node_modules/vue-tsc/bin/vue-tsc.js -b --force` passed.
+- Applied migration SQL files are unchanged from `v0.2.15-fy.2`. New files are `242_group_i18n.sql`, `243_gemini_cached_contents.sql`, `244_gemini_cached_contents_channel_usage.sql`, `245_gemini_cached_contents_mutation_lease.sql`, and `246_enable_gemini_image_generation_groups.sql`.
+
+### Notes
+
+- `backend/cmd/server/UPSTREAM_COMMIT` records `ac1b8f1271be0d674fa6f074403c1410f30a3a81`.
+- Production that already has the v0.2.15-fy.2 migrations will apply `242_group_i18n.sql` and `243` through `246` on first start. `246` enables image generation on existing gemini and antigravity groups.
+- Go module is `go 1.27.3`.
+- Production install is not part of this task.
+- Release config sets `prerelease: false` so a `-fy.N` tag is published as the GitHub latest release.
+- Rollback point: switch to `backup/pre-v0.2.18-merge-20261026`, or revert the official merge with `git revert -m 1 347734624`.
+
+
